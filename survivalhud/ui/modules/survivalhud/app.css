@@ -1,0 +1,373 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Survival HUD — stylesheet
+   Dark glassmorphism theme with neon status colours and glow effects.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Root container ──────────────────────────────────────────────────────── */
+.shud-root {
+  display: flex;
+  flex-direction: column;
+  min-width: 290px;
+  min-height: 240px;
+  background: rgba(10, 14, 22, 0.94);
+  border: 1px solid #1e2d3f;
+  border-radius: 10px;
+  font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+  color: #c8d8e8;
+  overflow: hidden;
+  user-select: none;
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  transition: border-color 0.4s ease;
+}
+
+/* Border colour follows status */
+.shud-root.safe     { border-color: #00e676; }
+.shud-root.caution  { border-color: #ffcc00; }
+.shud-root.danger   { border-color: #ff6d00; }
+.shud-root.critical {
+  border-color: #ff1744;
+  animation: shud-critical-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes shud-critical-pulse {
+  0%, 100% { box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 0 rgba(255,23,68,0); }
+  50%       { box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 18px 4px rgba(255,23,68,0.35); }
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+.shud-tabs {
+  display: flex;
+  border-bottom: 1px solid #1e2d3f;
+  background: rgba(6, 10, 18, 0.8);
+}
+
+.shud-tab {
+  flex: 1;
+  padding: 8px 6px;
+  background: transparent;
+  border: none;
+  color: #4a6a8a;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.shud-tab:hover {
+  color: #a0c8e8;
+  background: rgba(255,255,255,0.04);
+}
+
+.shud-tab.active {
+  color: #e0f0ff;
+  background: rgba(255,255,255,0.06);
+  border-bottom: 2px solid #4a9eff;
+}
+
+.tab-icon { font-size: 13px; }
+
+/* ── Panel (shared) ──────────────────────────────────────────────────────── */
+.shud-panel {
+  padding: 10px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TAB 1 — ШАНС
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Gauge wrapper ───────────────────────────────────────────────────────── */
+.shud-gauge-wrap {
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.shud-gauge-svg {
+  width: 170px;
+  height: 170px;
+  overflow: visible;
+}
+
+/* Arc transitions */
+.shud-arc {
+  transition: stroke-dasharray 0.35s ease, stroke 0.35s ease;
+}
+
+/* Critical arc glow */
+.shud-root.critical .shud-arc {
+  filter: drop-shadow(0 0 6px #ff1744) drop-shadow(0 0 12px #ff174480);
+}
+
+.shud-root.danger .shud-arc {
+  filter: drop-shadow(0 0 4px #ff6d00);
+}
+
+/* Gauge text */
+.shud-pct-text {
+  font-size: 38px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  transition: fill 0.35s ease;
+}
+
+.shud-status-text {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  transition: fill 0.35s ease;
+}
+
+.shud-hint-text {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+}
+
+/* ── Risk factor list ────────────────────────────────────────────────────── */
+.shud-factors {
+  border-top: 1px solid #1a2535;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a4a transparent;
+}
+
+.shud-factors::-webkit-scrollbar { width: 4px; }
+.shud-factors::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 2px; }
+
+.shud-factor-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto 80px auto;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.02);
+  transition: background 0.2s;
+}
+
+.shud-factor-row:hover { background: rgba(255,255,255,0.05); }
+
+.shud-factor-row.risk-critical {
+  background: rgba(255,23,68,0.07);
+}
+
+.shud-f-icon  { font-size: 13px; text-align: center; }
+.shud-f-label { font-size: 10px; color: #7a9ab8; white-space: nowrap; }
+.shud-f-value {
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  color: #c0d8f0;
+  white-space: nowrap;
+  text-align: right;
+  min-width: 52px;
+}
+
+.shud-f-bar-wrap {
+  background: #0e1a28;
+  border-radius: 3px;
+  height: 4px;
+  overflow: hidden;
+}
+
+.shud-f-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.shud-f-pts {
+  font-size: 9px;
+  font-family: 'Courier New', monospace;
+  min-width: 28px;
+  text-align: right;
+  opacity: 0.85;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TAB 2 — ВОДИТЕЛЬ
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.shud-driver-panel { padding: 8px; }
+
+/* ── Status strip ────────────────────────────────────────────────────────── */
+.shud-status-strip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.shud-consciousness,
+.shud-injury-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.strip-icon { font-size: 13px; }
+
+/* Consciousness variants */
+.con-clear   { background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.25); color: #00e676; }
+.con-dazed   { background: rgba(255,204,0,0.08); border-color: rgba(255,204,0,0.25); color: #ffcc00; }
+.con-out     { background: rgba(255,109,0,0.08); border-color: rgba(255,109,0,0.25); color: #ff6d00; }
+.con-coma    {
+  background: rgba(255,23,68,0.10);
+  border-color: rgba(255,23,68,0.35);
+  color: #ff1744;
+  animation: shud-critical-pulse 1.4s ease-in-out infinite;
+}
+
+/* Injury status variants */
+.inj-none     { background: rgba(0,230,118,0.06); border-color: rgba(0,230,118,0.15); color: #00c96a; }
+.inj-mild     { background: rgba(255,204,0,0.06); border-color: rgba(255,204,0,0.15); color: #ffcc00; }
+.inj-moderate { background: rgba(255,109,0,0.08); border-color: rgba(255,109,0,0.25); color: #ff6d00; }
+.inj-critical { background: rgba(255,23,68,0.10); border-color: rgba(255,23,68,0.30); color: #ff1744; }
+
+/* ── Body row ────────────────────────────────────────────────────────────── */
+.shud-body-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* ── SVG silhouette ──────────────────────────────────────────────────────── */
+.shud-body-svg {
+  flex-shrink: 0;
+  width: 90px;
+  height: 216px;
+  overflow: visible;
+}
+
+.shud-zone {
+  cursor: pointer;
+  transition: all 0.25s ease;
+  stroke: #1a2535;
+  stroke-width: 1;
+}
+
+.shud-zone:hover {
+  stroke: #4a8aaa;
+  stroke-width: 1.5;
+}
+
+.shud-zone.selected {
+  stroke: #88ccff;
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}
+
+/* Spine zone: slightly transparent so chest colour shows through edges */
+.shud-zone-spine {
+  opacity: 0.85;
+}
+
+.shud-zone-label {
+  font-size: 7px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Diagnoses ───────────────────────────────────────────────────────────── */
+.shud-diagnoses {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 216px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a4a transparent;
+}
+
+.shud-diagnoses::-webkit-scrollbar { width: 3px; }
+.shud-diagnoses::-webkit-scrollbar-thumb { background: #2a3a4a; }
+
+.shud-diag-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #3a5a7a;
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+.shud-no-injury {
+  font-size: 11px;
+  color: #00c96a;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 0;
+  opacity: 0.8;
+}
+
+.shud-diag-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  border-left: 2px solid transparent;
+  background: rgba(255,255,255,0.02);
+  transition: background 0.2s;
+}
+
+.shud-diag-item:hover { background: rgba(255,255,255,0.05); }
+
+/* Severity variants */
+.shud-diag-item.sev-critical {
+  border-left-color: #ff1744;
+  background: rgba(255,23,68,0.07);
+}
+.shud-diag-item.sev-warning {
+  border-left-color: #ff6d00;
+  background: rgba(255,109,0,0.06);
+}
+.shud-diag-item.sev-mild {
+  border-left-color: #ffcc00;
+  background: rgba(255,204,0,0.04);
+}
+
+.diag-sev-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sev-critical .diag-sev-dot { background: #ff1744; box-shadow: 0 0 4px #ff1744; }
+.sev-warning  .diag-sev-dot { background: #ff6d00; }
+.sev-mild     .diag-sev-dot { background: #ffcc00; }
+
+.diag-text {
+  font-size: 10px;
+  line-height: 1.4;
+  color: #c0d0e0;
+}
+
+.sev-critical .diag-text { color: #ffaabb; }
+.sev-warning  .diag-text { color: #ffbb88; }

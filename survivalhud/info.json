@@ -1,0 +1,8 @@
+{
+  "title": "Survival HUD",
+  "version": "1.0.0",
+  "author": "SurvivalHUD",
+  "description": "Real-time survival probability indicator with 10 risk factors and driver body-damage map. Two tabs: ШАНС (circular gauge + factors) and ВОДИТЕЛЬ (SVG injury map + medical diagnoses).",
+  "type": "module",
+  "dependencies": []
+}
