@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { isHapticsEnabled, setHapticsEnabled, hapticImpact } from '../utils/haptics';
+import { getStats } from '../api';
 import './SettingsScreen.css';
+
+interface Stats {
+  total_rated: number;
+  total_skipped: number;
+  streak_days: number;
+  last_rated_date: string | null;
+}
 
 export default function SettingsScreen() {
   const [haptics, setHaptics] = useState(isHapticsEnabled());
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    getStats().then(setStats).catch(() => null);
+  }, []);
 
   const toggleHaptics = (val: boolean) => {
     setHapticsEnabled(val);
@@ -14,6 +27,28 @@ export default function SettingsScreen() {
   return (
     <div className="settings">
       <h2 className="section-title">Настройки</h2>
+
+      {stats && (
+        <div className="settings__section">
+          <div className="settings__section-title">Моя статистика</div>
+          <div className="settings__group">
+            <div className="settings__row">
+              <span className="settings__row-label">Оценено котов</span>
+              <span className="settings__stat-value">{stats.total_rated}</span>
+            </div>
+            <div className="settings__row">
+              <span className="settings__row-label">Пропущено</span>
+              <span className="settings__stat-value">{stats.total_skipped}</span>
+            </div>
+            <div className="settings__row">
+              <span className="settings__row-label">Серия дней</span>
+              <span className="settings__stat-value settings__stat-streak">
+                {stats.streak_days} {pluralDays(stats.streak_days)} 🔥
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="settings__section">
         <div className="settings__section-title">Интерфейс</div>
@@ -54,4 +89,12 @@ export default function SettingsScreen() {
       <div className="settings__about">Сделано с ❤️ для любителей котов</div>
     </div>
   );
+}
+
+function pluralDays(n: number): string {
+  const r = n % 10;
+  if (n % 100 >= 11 && n % 100 <= 14) return 'дней';
+  if (r === 1) return 'день';
+  if (r >= 2 && r <= 4) return 'дня';
+  return 'дней';
 }

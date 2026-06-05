@@ -36,8 +36,25 @@ db.exec(`
     UNIQUE(cat_id, rater_id)
   );
 
+  CREATE TABLE IF NOT EXISTS skips (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cat_id INTEGER NOT NULL REFERENCES cats(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(cat_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS user_stats (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    total_rated INTEGER DEFAULT 0,
+    total_skipped INTEGER DEFAULT 0,
+    streak_days INTEGER DEFAULT 0,
+    last_rated_date TEXT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_ratings_cat_id ON ratings(cat_id);
   CREATE INDEX IF NOT EXISTS idx_ratings_rater_id ON ratings(rater_id);
   CREATE INDEX IF NOT EXISTS idx_cats_owner ON cats(owner_id);
   CREATE INDEX IF NOT EXISTS idx_ratings_created ON ratings(created_at);
+  CREATE INDEX IF NOT EXISTS idx_skips_user ON skips(user_id);
 `);

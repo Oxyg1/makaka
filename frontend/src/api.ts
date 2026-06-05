@@ -41,6 +41,14 @@ export function rateCat(id: number, score: number): Promise<{ success: boolean }
   });
 }
 
+export function skipCat(id: number): Promise<{ success: boolean }> {
+  return request(`/api/cats/${id}/skip`, { method: 'POST' });
+}
+
+export function getStats(): Promise<{ total_rated: number; total_skipped: number; streak_days: number; last_rated_date: string | null }> {
+  return request('/api/cats/stats');
+}
+
 export function submitCat(formData: FormData): Promise<CatWithStats> {
   return request<CatWithStats>('/api/cats', {
     method: 'POST',

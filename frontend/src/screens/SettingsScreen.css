@@ -67,6 +67,16 @@
 
 .toggle input:checked ~ .toggle__thumb { transform: translateX(20px); }
 
+.settings__stat-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tg-theme-button-color);
+}
+
+.settings__stat-streak {
+  font-size: 15px;
+}
+
 .settings__about {
   text-align: center;
   color: var(--tg-theme-hint-color);
