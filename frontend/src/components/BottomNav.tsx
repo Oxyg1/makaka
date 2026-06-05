@@ -2,10 +2,11 @@ import type { Tab } from '../App';
 import './BottomNav.css';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'rate', label: 'Оценить', icon: '⭐' },
-  { id: 'mycats', label: 'Мои коты', icon: '🐱' },
-  { id: 'submit', label: 'Добавить', icon: '➕' },
-  { id: 'leaderboard', label: 'Топ', icon: '🏆' },
+  { id: 'rate',        label: 'Оценить',    icon: '/icons/rate.png' },
+  { id: 'mycats',      label: 'Мои',        icon: '/icons/mycats.png' },
+  { id: 'submit',      label: 'Добавить',   icon: '/icons/submit.png' },
+  { id: 'leaderboard', label: 'Топ',        icon: '/icons/leaderboard.png' },
+  { id: 'settings',    label: 'Настройки',  icon: '/icons/settings.png' },
 ];
 
 interface Props {
@@ -23,7 +24,12 @@ export default function BottomNav({ activeTab, onTabChange }: Props) {
           onClick={() => onTabChange(tab.id)}
           aria-current={activeTab === tab.id ? 'page' : undefined}
         >
-          <span className="bottom-nav__icon">{tab.icon}</span>
+          <div className="bottom-nav__dot" />
+          <img
+            className="bottom-nav__icon"
+            src={tab.icon}
+            alt={tab.label}
+          />
           <span className="bottom-nav__label">{tab.label}</span>
         </button>
       ))}
