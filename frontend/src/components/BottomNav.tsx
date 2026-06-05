@@ -2,11 +2,11 @@ import type { Tab } from '../App';
 import './BottomNav.css';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'rate',        label: 'Оценить',    icon: '/icons/rate.png' },
-  { id: 'mycats',      label: 'Мои',        icon: '/icons/mycats.png' },
-  { id: 'submit',      label: 'Добавить',   icon: '/icons/submit.png' },
-  { id: 'leaderboard', label: 'Топ',        icon: '/icons/leaderboard.png' },
-  { id: 'settings',    label: 'Настройки',  icon: '/icons/settings.png' },
+  { id: 'rate',        label: 'Оценить',  icon: '/icons/rate.png' },
+  { id: 'feed',        label: 'Лента',    icon: '/icons/feed.png' },
+  { id: 'submit',      label: 'Добавить', icon: '/icons/submit.png' },
+  { id: 'leaderboard', label: 'Топ',      icon: '/icons/leaderboard.png' },
+  { id: 'profile',     label: 'Профиль',  icon: '/icons/profile.png' },
 ];
 
 interface Props {
@@ -28,7 +28,8 @@ export default function BottomNav({ activeTab, onTabChange }: Props) {
           <img
             className="bottom-nav__icon"
             src={tab.icon}
-            alt={tab.label}
+            alt=""
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
           <span className="bottom-nav__label">{tab.label}</span>
         </button>

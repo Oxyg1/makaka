@@ -57,4 +57,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cats_owner ON cats(owner_id);
   CREATE INDEX IF NOT EXISTS idx_ratings_created ON ratings(created_at);
   CREATE INDEX IF NOT EXISTS idx_skips_user ON skips(user_id);
+
+  CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    photo_url TEXT NOT NULL,
+    caption TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS post_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(post_id, user_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at);
+  CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
 `);

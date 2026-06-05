@@ -169,6 +169,24 @@ router.post('/:id/skip', authMiddleware, (req: AuthRequest, res) => {
   }
 });
 
+// GET /api/cats/:id
+router.get('/:id', authMiddleware, (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const cat = db.prepare(`
+    SELECT c.id, c.owner_id, c.name, c.breed, c.age, c.description, c.photo_url, c.created_at,
+      u.first_name AS owner_name,
+      ROUND(COALESCE(AVG(r.score), 0), 1) AS avg_score,
+      COUNT(r.id) AS vote_count
+    FROM cats c
+    JOIN users u ON c.owner_id = u.id
+    LEFT JOIN ratings r ON r.cat_id = c.id
+    WHERE c.id = ?
+    GROUP BY c.id
+  `).get(catId);
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  res.json(cat);
+});
+
 // POST /api/cats — submit a new cat
 router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest, res) => {
   if (!req.file) {

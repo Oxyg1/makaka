@@ -20,7 +20,7 @@ router.get('/', authMiddleware, (req, res) => {
   }
 
   const entries = db.prepare(`
-    SELECT c.id, c.name, c.breed, c.photo_url,
+    SELECT c.id, c.owner_id, c.name, c.breed, c.description, c.age, c.photo_url,
       ROUND(AVG(r.score), 1) AS avg_score,
       COUNT(r.id) AS vote_count,
       u.first_name AS owner_name

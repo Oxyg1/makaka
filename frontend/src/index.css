@@ -36,8 +36,17 @@ body {
 
 .app__content {
   flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.app__content > * {
+  height: 100%;
   overflow-y: auto;
-  padding-bottom: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .btn-primary {

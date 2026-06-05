@@ -56,6 +56,21 @@
   background-color: var(--tg-theme-secondary-bg-color);
   border-radius: 14px;
   padding: 10px 12px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.leaderboard__entry:active { opacity: 0.7; }
+
+.leaderboard__spinner {
+  width: 32px; height: 32px;
+  border: 3px solid rgba(142,142,147,0.2);
+  border-top-color: var(--tg-theme-button-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .leaderboard__rank {

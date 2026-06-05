@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
-import { authUser } from './api';
+import { authUser, getCurrentUser } from './api';
+import type { User } from './types';
 import BottomNav from './components/BottomNav';
+import UserProfileModal from './components/UserProfileModal';
 import RatingScreen from './screens/RatingScreen';
 import SubmitCatScreen from './screens/SubmitCatScreen';
 import LeaderboardScreen from './screens/LeaderboardScreen';
-import MyCatsScreen from './screens/MyCatsScreen';
-import SettingsScreen from './screens/SettingsScreen';
+import FeedScreen from './screens/FeedScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
-export type Tab = 'rate' | 'mycats' | 'submit' | 'leaderboard' | 'settings';
+export type Tab = 'rate' | 'feed' | 'submit' | 'leaderboard' | 'profile';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('rate');
   const [ready, setReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [viewUserId, setViewUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string; ready?: () => void; colorScheme?: string; expand?: () => void } } }).Telegram?.WebApp;
@@ -19,21 +23,26 @@ export default function App() {
     tg?.expand?.();
     tg?.ready?.();
     if (tg?.colorScheme === 'dark') document.documentElement.classList.add('tg-dark');
-    authUser(raw).then(() => setReady(true)).catch(() => setReady(true));
+    authUser(raw).then(u => { setUser(u); setReady(true); }).catch(() => setReady(true));
   }, []);
 
   if (!ready) return <div className="loading-screen">🐾</div>;
+
+  const currentUser = user ?? getCurrentUser();
 
   return (
     <div className="app">
       <main className="app__content">
         {activeTab === 'rate' && <RatingScreen />}
-        {activeTab === 'mycats' && <MyCatsScreen />}
-        {activeTab === 'submit' && <SubmitCatScreen onSubmitted={() => setActiveTab('rate')} />}
-        {activeTab === 'leaderboard' && <LeaderboardScreen />}
-        {activeTab === 'settings' && <SettingsScreen />}
+        {activeTab === 'feed' && <FeedScreen onViewUser={setViewUserId} />}
+        {activeTab === 'submit' && <SubmitCatScreen onSubmitted={() => setActiveTab('feed')} />}
+        {activeTab === 'leaderboard' && <LeaderboardScreen onViewUser={setViewUserId} />}
+        {activeTab === 'profile' && <ProfileScreen user={currentUser} onViewUser={setViewUserId} />}
       </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {viewUserId !== null && (
+        <UserProfileModal userId={viewUserId} currentUserId={currentUser?.id ?? null} onClose={() => setViewUserId(null)} />
+      )}
     </div>
   );
 }
