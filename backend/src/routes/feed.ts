@@ -10,6 +10,10 @@ import { logger } from '../logger';
 
 const router = Router();
 
+function escapeTg(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -130,7 +134,7 @@ router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
       createNotification({ userId: post.user_id, actorId: req.userId!, type: 'like', entityType: 'post', entityId: postId });
       const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(post.user_id) as { telegram_id: string } | undefined;
       const liker = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
-      if (owner && liker) sendBotMessage(owner.telegram_id, `❤️ <b>${liker.first_name}</b> лайкнул ваш пост`);
+      if (owner && liker) sendBotMessage(owner.telegram_id, `❤️ <b>${escapeTg(liker.first_name)}</b> лайкнул ваш пост`);
     }
   }
 
@@ -179,7 +183,7 @@ router.post('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
   if (postOwner) {
     createNotification({ userId: postOwner.user_id, actorId: req.userId!, type: 'comment', entityType: 'post', entityId: postId, text: text.trim() });
     const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(postOwner.user_id) as { telegram_id: string } | undefined;
-    if (owner) sendBotMessage(owner.telegram_id, `💬 <b>${user.first_name}</b> прокомментировал ваш пост: ${text.trim().slice(0, 100)}`);
+    if (owner) sendBotMessage(owner.telegram_id, `💬 <b>${escapeTg(user.first_name)}</b> прокомментировал ваш пост: ${escapeTg(text.trim().slice(0, 100))}`);
   }
 
   res.status(201).json({ ...comment, author_name: user.first_name, author_username: user.username });

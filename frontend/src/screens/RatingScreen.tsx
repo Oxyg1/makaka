@@ -26,10 +26,12 @@ export default function RatingScreen() {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [liking, setLiking] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
   const fetchNext = useCallback(async () => {
+    setFetchError(false);
     try {
       const next = await getNextCat();
       setCat(next ?? null);
@@ -38,7 +40,9 @@ export default function RatingScreen() {
       setLikesCount(next?.likes_count ?? 0);
       setLiking(false);
     } catch {
+      setFetchError(true);
       setCat(null);
+      setSubmitting(false);
     }
   }, []);
 
@@ -82,10 +86,19 @@ export default function RatingScreen() {
     <div className="rs__state"><div className="spinner" /><p>Ищем кота...</p></div>
   );
 
+  if (cat === null && fetchError) return (
+    <div className="rs__state">
+      <p style={{ color: 'var(--tg-theme-destructive-text-color, #ff453a)', marginBottom: 16 }}>Ошибка загрузки</p>
+      <button className="rs__rate-btn" style={{ width: 220, flex: 'none' }} onClick={fetchNext}>
+        Повторить
+      </button>
+    </div>
+  );
+
   if (cat === null) return (
     <RateAgainScreen count={count} plural={plural} onReset={async () => {
+      await resetRatings();
       setCat(undefined);
-      try { await resetRatings(); } catch { /* continue even if reset fails */ }
       await fetchNext();
     }} />
   );
@@ -150,7 +163,17 @@ export default function RatingScreen() {
 
 function RateAgainScreen({ count, plural, onReset }: { count: number; plural: (n: number, a: string, b: string, c: string) => string; onReset: () => Promise<void> }) {
   const [resetting, setResetting] = useState(false);
-  const handle = async () => { setResetting(true); try { await onReset(); } finally { setResetting(false); } };
+  const [resetError, setResetError] = useState('');
+  const handle = async () => {
+    setResetting(true);
+    setResetError('');
+    try {
+      await onReset();
+    } catch {
+      setResetError('Не удалось сбросить оценки. Попробуйте ещё раз.');
+      setResetting(false);
+    }
+  };
   return (
     <div className="rs__state">
       <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.2">
@@ -161,6 +184,7 @@ function RateAgainScreen({ count, plural, onReset }: { count: number; plural: (n
       <h3>Все коты оценены!</h3>
       <p>Заходите позже — появятся новые</p>
       {count > 0 && <p className="rs__session">За сессию: {count} {plural(count,'кот','кота','котов')}</p>}
+      {resetError && <p style={{ color: 'var(--tg-theme-destructive-text-color, #ff453a)', fontSize: 13 }}>{resetError}</p>}
       <button className="rs__rate-btn" style={{ width: 220, flex: 'none' }} onClick={handle} disabled={resetting}>
         {resetting ? '...' : 'Оценить заново'}
       </button>

@@ -27,7 +27,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     return;
   }
 
-  if (process.env.NODE_ENV !== 'production' && initData === 'mock') {
+  if (process.env.NODE_ENV === 'development' && initData === 'mock') {
     db.prepare(`INSERT OR IGNORE INTO users (telegram_id, username, first_name) VALUES ('mock_user', 'mockuser', 'Mock User')`).run();
     const user = db.prepare('SELECT id FROM users WHERE telegram_id = ?').get('mock_user') as { id: number };
     req.userId = user.id;
@@ -41,18 +41,20 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     if (!hash) { res.status(401).json({ error: 'Missing hash' }); return; }
 
     const botToken = process.env.BOT_TOKEN;
-    if (botToken) {
-      const dataCheckString = Array.from(params.entries())
-        .filter(([k]) => k !== 'hash')
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([k, v]) => `${k}=${v}`)
-        .join('\n');
-      const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
-      const expectedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-      if (expectedHash !== hash) {
-        res.status(401).json({ error: 'Invalid signature' });
-        return;
-      }
+    if (!botToken) {
+      res.status(401).json({ error: 'Server misconfigured: missing BOT_TOKEN' });
+      return;
+    }
+    const dataCheckString = Array.from(params.entries())
+      .filter(([k]) => k !== 'hash')
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}=${v}`)
+      .join('\n');
+    const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
+    const expectedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    if (expectedHash !== hash) {
+      res.status(401).json({ error: 'Invalid signature' });
+      return;
     }
 
     const userStr = params.get('user');

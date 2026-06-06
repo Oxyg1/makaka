@@ -25,7 +25,7 @@ function getTg(): TgWebApp | undefined {
 
 interface Props { user: User | null; onViewUser: (id: number) => void; onNotificationsRead?: () => void; }
 
-export default function ProfileScreen({ user, onNotificationsRead }: Props) {
+export default function ProfileScreen({ user, onViewUser, onNotificationsRead }: Props) {
   const [tab, setTab] = useState<PTab>('cats');
   const [cats, setCats] = useState<CatWithStats[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -208,7 +208,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
                   {n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : '⭐'}
                 </div>
                 <div className="profile__notif-body">
-                  <span className="profile__notif-actor">{n.actor_name}</span>
+                  <span className="profile__notif-actor" style={{ cursor: 'pointer' }} onClick={() => onViewUser(n.actor_id)}>{n.actor_name}</span>
                   {' '}
                   <span className="profile__notif-text">
                     {n.type === 'like' ? 'лайкнул ваш пост'

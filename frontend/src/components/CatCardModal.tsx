@@ -5,7 +5,7 @@ import './CatCardModal.css';
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
 const AVATAR_COLORS = ['#1689ff','#49df64','#ff453a','#ff9500','#af52de','#ff2d55','#5ac8fa','#ffcc00'];
-function avatarColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]; }
+function avatarColor(name: string) { return name ? AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] : AVATAR_COLORS[0]; }
 
 export function ageLabel(age: number): string {
   const n = age % 100;

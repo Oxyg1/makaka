@@ -10,6 +10,10 @@ import { logger } from '../logger';
 
 const router = Router();
 
+function escapeTg(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -166,7 +170,7 @@ router.post('/:id/rate', authMiddleware, (req: AuthRequest, res) => {
     createNotification({ userId: cat.owner_id, actorId: req.userId!, type: 'rating', entityType: 'cat', entityId: catId, text: `оценил вашего кота на ${score}/10` });
     const owner = db.prepare('SELECT telegram_id, first_name FROM users WHERE id = ?').get(cat.owner_id) as { telegram_id: string; first_name: string } | undefined;
     const rater = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
-    if (owner && rater) sendBotMessage(owner.telegram_id, `⭐ <b>${rater.first_name}</b> оценил вашего кота на ${score}/10`);
+    if (owner && rater) sendBotMessage(owner.telegram_id, `⭐ <b>${escapeTg(rater.first_name)}</b> оценил вашего кота на ${score}/10`);
   }
   res.json({ success: true });
 });
@@ -230,6 +234,10 @@ router.put('/:id', authMiddleware, (req: AuthRequest, res) => {
   if (name !== undefined && !name.trim()) { res.status(400).json({ error: 'Cat name cannot be empty' }); return; }
 
   const ageInt = age !== undefined ? (age ? parseInt(age, 10) : null) : undefined;
+  if (ageInt !== undefined && ageInt !== null && isNaN(ageInt)) {
+    res.status(400).json({ error: 'Age must be a number' });
+    return;
+  }
 
   const updated = db.prepare(`
     UPDATE cats SET
@@ -290,6 +298,11 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
 
   const photoUrl = `/uploads/${req.file.filename}`;
   const ageInt = age ? parseInt(age, 10) : null;
+  if (ageInt !== null && isNaN(ageInt)) {
+    fs.unlinkSync(req.file.path);
+    res.status(400).json({ error: 'Age must be a number' });
+    return;
+  }
 
   const result = db.prepare(`
     INSERT INTO cats (owner_id, name, breed, age, description, photo_url)

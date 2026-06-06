@@ -7,7 +7,7 @@ import './FeedScreen.css';
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
 const COLORS = ['#1689ff','#49df64','#ff453a','#ff9500','#af52de','#ff2d55','#5ac8fa'];
-function avatarColor(name: string) { return COLORS[name.charCodeAt(0) % COLORS.length]; }
+function avatarColor(name: string) { return name ? COLORS[name.charCodeAt(0) % COLORS.length] : COLORS[0]; }
 
 function UserAvatar({ name, size = 36 }: { name: string; size?: number }) {
   return (
@@ -31,13 +31,15 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setPosts(await getFeed(0)); } finally { setLoading(false); }
+    setLoadError(false);
+    try { setPosts(await getFeed(0)); } catch { setLoadError(true); } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -99,7 +101,14 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
       <div className="feed__list">
         {loading && <div className="feed__center"><div className="spinner" /></div>}
 
-        {!loading && posts.length === 0 && (
+        {!loading && loadError && (
+          <div className="feed__empty">
+            <p>Не удалось загрузить ленту</p>
+            <button className="feed__new-btn" onClick={load} style={{ marginTop: 8 }}>Повторить</button>
+          </div>
+        )}
+
+        {!loading && !loadError && posts.length === 0 && (
           <div className="feed__empty">
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
               <rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12" r="4" />
@@ -168,9 +177,7 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
         <CreateModal
           currentUser={currentUser}
           onClose={() => setShowCreate(false)}
-          onOptimistic={temp => { setPosts(pp => [temp, ...pp]); setShowCreate(false); }}
-          onReplace={(tempId, real) => setPosts(pp => pp.map(p => p.id === tempId ? real : p))}
-          onRemove={tempId => setPosts(pp => pp.filter(p => p.id !== tempId))}
+          onCreated={real => { setPosts(pp => [real, ...pp]); setShowCreate(false); }}
         />
       )}
     </div>
@@ -242,40 +249,36 @@ function CommentsSection({ postId, currentUserId, onCommentPosted, onCommentDele
   );
 }
 
-function CreateModal({ currentUser, onClose, onOptimistic, onReplace, onRemove }: {
+function CreateModal({ currentUser, onClose, onCreated }: {
   currentUser: User | null;
   onClose: () => void;
-  onOptimistic: (p: Post) => void;
-  onReplace: (tempId: number, real: Post) => void;
-  onRemove: (tempId: number) => void;
+  onCreated: (p: Post) => void;
 }) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File) => { setPhoto(f); setPreview(URL.createObjectURL(f)); };
 
-  const handleSubmit = () => {
-    if (!photo || !preview) return;
+  const handleSubmit = async () => {
+    if (!photo || !preview || posting) return;
+    setPosting(true);
+    setPostError('');
     const captionText = caption.trim();
-    const tempId = -Date.now();
-    const tempPost: Post = {
-      id: tempId,
-      user_id: currentUser?.id ?? 0,
-      photo_url: preview,
-      caption: captionText || null,
-      created_at: new Date().toISOString(),
-      author_name: currentUser?.first_name ?? 'Вы',
-      author_username: currentUser?.username ?? null,
-      likes_count: 0, liked_by_me: false, comments_count: 0,
-    };
-    hapticSuccess();
-    onOptimistic(tempPost);
     const fd = new FormData();
     fd.append('photo', photo);
     if (captionText) fd.append('caption', captionText);
-    createPost(fd).then(real => onReplace(tempId, real)).catch(() => onRemove(tempId));
+    try {
+      const real = await createPost(fd);
+      hapticSuccess();
+      onCreated(real);
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Ошибка публикации');
+      setPosting(false);
+    }
   };
 
   return (
@@ -285,11 +288,13 @@ function CreateModal({ currentUser, onClose, onOptimistic, onReplace, onRemove }
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Отмена</button>
           <span className="modal-sheet__title">Новый пост</span>
-          <button className="modal-sheet__action" onClick={handleSubmit} disabled={!photo}>Опубл.</button>
+          <button className="modal-sheet__action" onClick={handleSubmit} disabled={!photo || posting}>
+            {posting ? '...' : 'Опубл.'}
+          </button>
         </div>
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {preview ? (
-            <img src={preview} style={{ width: '100%', borderRadius: 16, objectFit: 'cover', maxHeight: '45vh', cursor: 'pointer' }} onClick={() => fileRef.current?.click()} alt="" />
+            <img src={preview} style={{ width: '100%', borderRadius: 16, objectFit: 'cover', maxHeight: '45vh', cursor: posting ? 'default' : 'pointer' }} onClick={() => !posting && fileRef.current?.click()} alt="" />
           ) : (
             <button onClick={() => fileRef.current?.click()} style={{ width: '100%', height: 180, background: 'var(--bg-card)', border: '1px dashed var(--border-strong)', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', color: 'var(--text-muted)' }}>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
@@ -300,9 +305,12 @@ function CreateModal({ currentUser, onClose, onOptimistic, onReplace, onRemove }
             </button>
           )}
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
-          <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Расскажите о коте..." maxLength={300}
+          <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Расскажите о коте..." maxLength={300} disabled={posting}
             style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', color: 'var(--text)', fontSize: 15, resize: 'none', minHeight: 80, fontFamily: 'inherit' }} />
-          <button className="btn-primary" onClick={handleSubmit} disabled={!photo}>Опубликовать</button>
+          {postError && <p style={{ color: 'var(--tg-theme-destructive-text-color, #ff453a)', fontSize: 13, margin: 0 }}>{postError}</p>}
+          <button className="btn-primary" onClick={handleSubmit} disabled={!photo || posting}>
+            {posting ? 'Публикуем...' : 'Опубликовать'}
+          </button>
         </div>
       </div>
     </div>
