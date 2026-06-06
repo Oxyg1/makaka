@@ -113,7 +113,9 @@ router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
 
 // GET /api/cats/next
 router.get('/next', authMiddleware, (req: AuthRequest, res) => {
-  const cat = db.prepare(`
+  const rerate = req.query.rerate === '1';
+
+  const selectBase = `
     SELECT c.id, c.name, c.breed, c.age, c.description, c.photo_url,
       u.first_name AS owner_name,
       ROUND(COALESCE(AVG(r.score), 0), 1) AS avg_score,
@@ -125,12 +127,16 @@ router.get('/next', authMiddleware, (req: AuthRequest, res) => {
     LEFT JOIN ratings r ON r.cat_id = c.id
     LEFT JOIN cat_likes cl ON cl.cat_id = c.id
     WHERE c.owner_id != ?
-      AND c.id NOT IN (SELECT cat_id FROM ratings WHERE rater_id = ?)
-      AND c.id NOT IN (SELECT cat_id FROM skips WHERE user_id = ?)
-    GROUP BY c.id
-    ORDER BY RANDOM()
-    LIMIT 1
-  `).get(req.userId, req.userId, req.userId, req.userId) as Record<string, unknown> | undefined;
+  `;
+
+  const cat = rerate
+    ? db.prepare(`${selectBase} GROUP BY c.id ORDER BY RANDOM() LIMIT 1`)
+        .get(req.userId, req.userId) as Record<string, unknown> | undefined
+    : db.prepare(`${selectBase}
+        AND c.id NOT IN (SELECT cat_id FROM ratings WHERE rater_id = ?)
+        AND c.id NOT IN (SELECT cat_id FROM skips WHERE user_id = ?)
+        GROUP BY c.id ORDER BY RANDOM() LIMIT 1`)
+        .get(req.userId, req.userId, req.userId, req.userId) as Record<string, unknown> | undefined;
   if (!cat) {
     const total = (db.prepare('SELECT COUNT(*) AS n FROM cats WHERE owner_id != ?').get(req.userId) as { n: number }).n;
     logger.info('next: no cat available', { userId: req.userId, totalOtherCats: total });

@@ -24,8 +24,8 @@ export function authUser(raw: string): Promise<User> {
   return request<User>('/api/auth', { method: 'POST' }).then(u => { _currentUser = u; return u; });
 }
 
-export function getNextCat(): Promise<CatWithStats | null> {
-  return request<CatWithStats | null>('/api/cats/next');
+export function getNextCat(rerate = false): Promise<CatWithStats | null> {
+  return request<CatWithStats | null>(`/api/cats/next${rerate ? '?rerate=1' : ''}`);
 }
 
 export function rateCat(id: number, score: number): Promise<{ success: boolean }> {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getNextCat, rateCat, skipCat, resetRatings, likeCat } from '../api';
+import { getNextCat, rateCat, skipCat, likeCat } from '../api';
 import RatingSlider from '../components/RatingSlider';
 import type { CatWithStats } from '../types';
 import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
@@ -29,17 +29,20 @@ export default function RatingScreen() {
   const [fetchError, setFetchError] = useState(false);
   const scoreRef = useRef(score);
   scoreRef.current = score;
+  const isReratingRef = useRef(false);
 
   const fetchNext = useCallback(async () => {
     setFetchError(false);
     try {
-      const next = await getNextCat();
+      const next = await getNextCat(isReratingRef.current);
+      if (!next) isReratingRef.current = false;
       setCat(next ?? null);
       setScore(5); setDir(null); setSubmitting(false);
       setLiked(next?.liked_by_me ?? false);
       setLikesCount(next?.likes_count ?? 0);
       setLiking(false);
     } catch {
+      isReratingRef.current = false;
       setFetchError(true);
       setCat(null);
       setSubmitting(false);
@@ -97,7 +100,7 @@ export default function RatingScreen() {
 
   if (cat === null) return (
     <RateAgainScreen count={count} plural={plural} onReset={async () => {
-      await resetRatings();
+      isReratingRef.current = true;
       setCat(undefined);
       await fetchNext();
     }} />
@@ -163,16 +166,11 @@ export default function RatingScreen() {
 
 function RateAgainScreen({ count, plural, onReset }: { count: number; plural: (n: number, a: string, b: string, c: string) => string; onReset: () => Promise<void> }) {
   const [resetting, setResetting] = useState(false);
-  const [resetError, setResetError] = useState('');
   const handle = async () => {
     setResetting(true);
-    setResetError('');
-    try {
-      await onReset();
-    } catch {
-      setResetError('Не удалось сбросить оценки. Попробуйте ещё раз.');
-      setResetting(false);
-    }
+    await onReset();
+    // onReset sets isReratingRef=true then calls fetchNext which changes cat state,
+    // so this component unmounts. setResetting(false) here would be a no-op.
   };
   return (
     <div className="rs__state">
@@ -184,7 +182,6 @@ function RateAgainScreen({ count, plural, onReset }: { count: number; plural: (n
       <h3>Все коты оценены!</h3>
       <p>Заходите позже — появятся новые</p>
       {count > 0 && <p className="rs__session">За сессию: {count} {plural(count,'кот','кота','котов')}</p>}
-      {resetError && <p style={{ color: 'var(--tg-theme-destructive-text-color, #ff453a)', fontSize: 13 }}>{resetError}</p>}
       <button className="rs__rate-btn" style={{ width: 220, flex: 'none' }} onClick={handle} disabled={resetting}>
         {resetting ? '...' : 'Оценить заново'}
       </button>
