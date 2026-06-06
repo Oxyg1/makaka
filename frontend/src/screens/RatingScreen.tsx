@@ -81,8 +81,8 @@ export default function RatingScreen() {
   if (cat === null) return (
     <RateAgainScreen count={count} plural={plural} onReset={async () => {
       setCat(undefined);
-      await resetRatings();
-      fetchNext();
+      try { await resetRatings(); } catch { /* continue even if reset fails */ }
+      await fetchNext();
     }} />
   );
 
@@ -157,7 +157,7 @@ function RateAgainScreen({ count, plural, onReset }: { count: number; plural: (n
       <h3>Все коты оценены!</h3>
       <p>Заходите позже — появятся новые</p>
       {count > 0 && <p className="rs__session">За сессию: {count} {plural(count,'кот','кота','котов')}</p>}
-      <button className="rs__rate-btn" style={{ maxWidth: 220 }} onClick={handle} disabled={resetting}>
+      <button className="rs__rate-btn" style={{ width: 220, flex: 'none' }} onClick={handle} disabled={resetting}>
         {resetting ? '...' : 'Оценить заново'}
       </button>
     </div>

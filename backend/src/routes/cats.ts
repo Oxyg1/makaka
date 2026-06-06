@@ -149,22 +149,20 @@ router.post('/:id/rate', authMiddleware, (req: AuthRequest, res) => {
     return;
   }
 
-  try {
-    db.prepare('INSERT INTO ratings (cat_id, rater_id, score) VALUES (?, ?, ?)').run(catId, req.userId!, score);
-    db.prepare('DELETE FROM skips WHERE cat_id = ? AND user_id = ?').run(catId, req.userId);
-    updateStreak(req.userId!);
+  const isNew = !db.prepare('SELECT id FROM ratings WHERE cat_id = ? AND rater_id = ?').get(catId, req.userId!);
+  db.prepare(`
+    INSERT INTO ratings (cat_id, rater_id, score) VALUES (?, ?, ?)
+    ON CONFLICT(cat_id, rater_id) DO UPDATE SET score = excluded.score, created_at = datetime('now')
+  `).run(catId, req.userId!, score);
+  db.prepare('DELETE FROM skips WHERE cat_id = ? AND user_id = ?').run(catId, req.userId);
+  updateStreak(req.userId!);
+  if (isNew) {
     createNotification({ userId: cat.owner_id, actorId: req.userId!, type: 'rating', entityType: 'cat', entityId: catId, text: `оценил вашего кота на ${score}/10` });
     const owner = db.prepare('SELECT telegram_id, first_name FROM users WHERE id = ?').get(cat.owner_id) as { telegram_id: string; first_name: string } | undefined;
     const rater = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
     if (owner && rater) sendBotMessage(owner.telegram_id, `⭐ <b>${rater.first_name}</b> оценил вашего кота на ${score}/10`);
-    res.json({ success: true });
-  } catch (e: unknown) {
-    if (e instanceof Error && 'code' in e && (e as NodeJS.ErrnoException).code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.status(409).json({ error: 'Already rated this cat' });
-      return;
-    }
-    throw e;
   }
+  res.json({ success: true });
 });
 
 // POST /api/cats/:id/skip
