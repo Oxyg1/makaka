@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { createHmac } from 'crypto';
 import { db } from '../db';
 
 export interface AuthRequest extends Request {
@@ -36,6 +37,24 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   try {
     const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    if (!hash) { res.status(401).json({ error: 'Missing hash' }); return; }
+
+    const botToken = process.env.BOT_TOKEN;
+    if (botToken) {
+      const dataCheckString = Array.from(params.entries())
+        .filter(([k]) => k !== 'hash')
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k}=${v}`)
+        .join('\n');
+      const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
+      const expectedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+      if (expectedHash !== hash) {
+        res.status(401).json({ error: 'Invalid signature' });
+        return;
+      }
+    }
+
     const userStr = params.get('user');
     if (!userStr) { res.status(401).json({ error: 'No user in init data' }); return; }
 

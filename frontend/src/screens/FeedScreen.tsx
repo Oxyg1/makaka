@@ -60,7 +60,7 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
     const optimistic = posts.map(p => p.id === post.id ? { ...p, liked_by_me: !p.liked_by_me, likes_count: p.likes_count + (p.liked_by_me ? -1 : 1) } : p);
     setPosts(optimistic);
     try { const r = await likePost(post.id); setPosts(pp => pp.map(p => p.id === post.id ? { ...p, liked_by_me: r.liked, likes_count: r.likes_count } : p)); }
-    catch { setPosts(posts); }
+    catch { setPosts(pp => pp.map(p => p.id === post.id ? { ...p, liked_by_me: post.liked_by_me, likes_count: post.likes_count } : p)); }
   };
 
   const toggleComments = (postId: number) => {

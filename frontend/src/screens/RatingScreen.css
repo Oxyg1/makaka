@@ -24,7 +24,7 @@
 .rs__photo-wrap { position: relative; }
 .rs__photo { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; max-height: 55vh; }
 
-.rs__photo-overlay {
+.rs__overlay {
   position: absolute; top: 12px; left: 12px; right: 12px;
   display: flex; justify-content: space-between; align-items: center;
 }
@@ -47,38 +47,20 @@
 .rs__like-btn--active { background: rgba(255,69,58,0.3); color: #ff453a; border-color: rgba(255,69,58,0.3); }
 .rs__like-btn:active { transform: scale(0.94); }
 
-/* Body */
-.rs__body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+/* Card body */
+.rs__card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
-.rs__meta { display: flex; flex-direction: column; gap: 3px; }
+.rs__info { display: flex; flex-direction: column; gap: 3px; }
 .rs__name { margin: 0; font-size: 20px; font-weight: 700; }
 .rs__breed { margin: 0; font-size: 13px; color: var(--text-muted); }
+.rs__avg { margin: 0; font-size: 13px; color: var(--text-muted); }
+.rs__owner { margin: 0; font-size: 13px; color: var(--text-muted); }
 
-/* Rating section */
-.rs__rating-section { display: flex; flex-direction: column; gap: 10px; }
-.rs__question { margin: 0; font-size: 17px; font-weight: 700; text-align: center; }
-.rs__hint { margin: 0; font-size: 13px; color: var(--text-muted); text-align: center; }
+.rs__desc { margin: 0; font-size: 14px; color: var(--text-muted); line-height: 1.4; }
 
-.rs__numbers {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 0;
-}
-
-.rs__num {
-  width: 30px; height: 30px; border-radius: 50%;
-  border: none; background: none;
-  color: var(--text-muted); font-size: 14px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-  flex-shrink: 0;
-}
-.rs__num--active {
-  background: linear-gradient(135deg, #7c6df9 0%, #9b54de 100%);
-  color: #fff; width: 36px; height: 36px; font-size: 16px;
-  box-shadow: 0 4px 16px rgba(124,109,249,0.45);
-}
-.rs__num:disabled { cursor: default; }
+/* Footer */
+.rs__footer { display: flex; flex-direction: column; gap: 10px; }
+.rs__label { margin: 0; font-size: 15px; font-weight: 600; text-align: center; color: var(--text); }
 
 /* Actions */
 .rs__actions { display: flex; gap: 10px; }
