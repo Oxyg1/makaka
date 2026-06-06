@@ -23,6 +23,4 @@ app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/users', usersRouter);
 
-app.listen(PORT, () => {
-  console.log(`Backend running on :${PORT}`);
-});
+app.listen(PORT, () => console.log(`Backend running on :${PORT}`));
