@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { hapticImpact } from '../utils/haptics';
 import './RatingSlider.css';
 
 const COLORS = ['','#ff453a','#ff453a','#ff6b35','#ff9500','#ffcc00','#a8cc00','#34c759','#00b140','#007aff','#af52de'];
@@ -11,7 +12,7 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
   const color = COLORS[value] || '#6d6d71';
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!disabled) onChange(parseInt(e.target.value));
+    if (!disabled) { hapticImpact('light'); onChange(parseInt(e.target.value)); }
   };
 
   return (

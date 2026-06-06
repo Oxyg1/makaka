@@ -1,4 +1,4 @@
-import type { CatLeaderboardEntry, CatWithStats, Comment, Post, User, UserProfile, UserStats } from './types';
+import type { CatLeaderboardEntry, CatWithStats, Comment, Notification, Post, User, UserProfile, UserStats } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 let initDataRaw = 'mock';
@@ -98,4 +98,12 @@ export function createComment(postId: number, text: string): Promise<Comment> {
 
 export function deleteComment(id: number): Promise<{ success: boolean }> {
   return request(`/api/feed/comments/${id}`, { method: 'DELETE' });
+}
+
+export function getNotifications(): Promise<Notification[]> {
+  return request<Notification[]>('/api/notifications');
+}
+
+export function markNotificationsRead(): Promise<{ success: boolean }> {
+  return request('/api/notifications/read', { method: 'POST' });
 }

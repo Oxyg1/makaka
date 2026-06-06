@@ -88,6 +88,19 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_comments_post ON post_comments(post_id);
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    actor_id INTEGER NOT NULL REFERENCES users(id),
+    type TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id INTEGER,
+    text TEXT,
+    read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_notifs_user ON notifications(user_id);
 `);
 
 try { db.exec('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch { /* column already exists */ }

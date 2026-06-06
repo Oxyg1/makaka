@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import fs from 'fs';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
+import { createNotification, sendBotMessage } from '../notifs';
 
 const router = Router();
 
@@ -120,6 +121,13 @@ router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
     db.prepare('DELETE FROM post_likes WHERE post_id = ? AND user_id = ?').run(postId, req.userId!);
   } else {
     db.prepare('INSERT OR IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)').run(postId, req.userId!);
+    const post = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId) as { user_id: number } | undefined;
+    if (post) {
+      createNotification({ userId: post.user_id, actorId: req.userId!, type: 'like', entityType: 'post', entityId: postId });
+      const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(post.user_id) as { telegram_id: string } | undefined;
+      const liker = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
+      if (owner && liker) sendBotMessage(owner.telegram_id, `❤️ <b>${liker.first_name}</b> лайкнул ваш пост`);
+    }
   }
 
   const { likes_count } = db.prepare(
@@ -162,6 +170,13 @@ router.post('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
   `).get(postId, req.userId!, text.trim()) as Record<string, unknown>;
 
   const user = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null };
+
+  const postOwner = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId) as { user_id: number } | undefined;
+  if (postOwner) {
+    createNotification({ userId: postOwner.user_id, actorId: req.userId!, type: 'comment', entityType: 'post', entityId: postId, text: text.trim() });
+    const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(postOwner.user_id) as { telegram_id: string } | undefined;
+    if (owner) sendBotMessage(owner.telegram_id, `💬 <b>${user.first_name}</b> прокомментировал ваш пост: ${text.trim().slice(0, 100)}`);
+  }
 
   res.status(201).json({ ...comment, author_name: user.first_name, author_username: user.username });
 });

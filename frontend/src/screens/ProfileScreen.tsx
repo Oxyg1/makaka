@@ -1,24 +1,40 @@
 import { useState, useEffect } from 'react';
-import { getMyCats, getStats, getUserPosts, deleteCat, deletePost } from '../api';
+import { getMyCats, getStats, getUserPosts, deleteCat, deletePost, getNotifications, markNotificationsRead } from '../api';
 import { isHapticsEnabled, setHapticsEnabled } from '../utils/haptics';
-import type { CatWithStats, Post, User, UserStats } from '../types';
+import type { CatWithStats, Notification, Post, User, UserStats } from '../types';
 import { Avatar } from '../components/CatCardModal';
 import CatCardModal from '../components/CatCardModal';
 import EditCatSheet from '../components/EditCatSheet';
 import './ProfileScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
-type PTab = 'cats' | 'posts' | 'settings';
+type PTab = 'cats' | 'posts' | 'notifications' | 'settings';
 
-interface Props { user: User | null; onViewUser: (id: number) => void; }
+function timeAgo(s: string) {
+  const d = Math.floor((Date.now() - new Date(s).getTime()) / 1000);
+  if (d < 60) return 'только что';
+  if (d < 3600) return `${Math.floor(d/60)} мин.`;
+  if (d < 86400) return `${Math.floor(d/3600)} ч.`;
+  return `${Math.floor(d/86400)} дн.`;
+}
 
-export default function ProfileScreen({ user }: Props) {
+type TgWebApp = { requestFullscreen?: () => void; exitFullscreen?: () => void; disableVerticalSwipes?: () => void; };
+function getTg(): TgWebApp | undefined {
+  return (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp;
+}
+
+interface Props { user: User | null; onViewUser: (id: number) => void; onNotificationsRead?: () => void; }
+
+export default function ProfileScreen({ user, onNotificationsRead }: Props) {
   const [tab, setTab] = useState<PTab>('cats');
   const [cats, setCats] = useState<CatWithStats[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [haptics, setHaptics] = useState(isHapticsEnabled());
+  const [fullscreen, setFullscreen] = useState(localStorage.getItem('fullscreen_enabled') === '1');
+  const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [notifsLoaded, setNotifsLoaded] = useState(false);
   const [selectedCat, setSelectedCat] = useState<CatWithStats | null>(null);
   const [editCat, setEditCat] = useState<CatWithStats | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
@@ -30,7 +46,30 @@ export default function ProfileScreen({ user }: Props) {
       .finally(() => setLoading(false));
   }, [user]);
 
+  useEffect(() => {
+    if (tab === 'notifications' && !notifsLoaded) {
+      getNotifications().then(ns => {
+        setNotifs(ns);
+        setNotifsLoaded(true);
+        markNotificationsRead().then(() => onNotificationsRead?.()).catch(() => {});
+      }).catch(() => setNotifsLoaded(true));
+    }
+  }, [tab, notifsLoaded, onNotificationsRead]);
+
   const toggleHaptics = (v: boolean) => { setHapticsEnabled(v); setHaptics(v); };
+
+  const toggleFullscreen = (v: boolean) => {
+    setFullscreen(v);
+    const tg = getTg();
+    if (v) {
+      localStorage.setItem('fullscreen_enabled', '1');
+      tg?.requestFullscreen?.();
+      tg?.disableVerticalSwipes?.();
+    } else {
+      localStorage.removeItem('fullscreen_enabled');
+      tg?.exitFullscreen?.();
+    }
+  };
 
   const handleCatDeleted = (id: number) => {
     setCats(prev => prev.filter(c => c.id !== id));
@@ -80,9 +119,9 @@ export default function ProfileScreen({ user }: Props) {
 
       <div className="profile__tabs-wrap">
         <div className="profile__tabs">
-          {(['cats','posts','settings'] as PTab[]).map(t => (
+          {(['cats','posts','notifications','settings'] as PTab[]).map(t => (
             <button key={t} className={`profile__tab${tab === t ? ' profile__tab--active' : ''}`} onClick={() => setTab(t)}>
-              {t === 'cats' ? 'Коты' : t === 'posts' ? 'Посты' : 'Настройки'}
+              {t === 'cats' ? 'Коты' : t === 'posts' ? 'Посты' : t === 'notifications' ? 'Уведомления' : 'Настройки'}
             </button>
           ))}
         </div>
@@ -146,6 +185,37 @@ export default function ProfileScreen({ user }: Props) {
           </div>
         ))}
 
+        {tab === 'notifications' && (
+          <div className="profile__notifs">
+            {!notifsLoaded && <div className="profile__center"><div className="spinner" /></div>}
+            {notifsLoaded && notifs.length === 0 && (
+              <div className="profile__empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <p>Нет уведомлений</p>
+              </div>
+            )}
+            {notifsLoaded && notifs.map(n => (
+              <div key={n.id} className={`profile__notif${n.read ? '' : ' profile__notif--unread'}`}>
+                <div className="profile__notif-icon">
+                  {n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : '⭐'}
+                </div>
+                <div className="profile__notif-body">
+                  <span className="profile__notif-actor">{n.actor_name}</span>
+                  {' '}
+                  <span className="profile__notif-text">
+                    {n.type === 'like' ? 'лайкнул ваш пост'
+                      : n.type === 'comment' ? `написал: ${n.text}`
+                      : n.text ?? 'оценил вашего кота'}
+                  </span>
+                  <div className="profile__notif-time">{timeAgo(n.created_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {!loading && tab === 'settings' && (
           <div className="profile__settings">
             <div className="profile__settings-group">
@@ -156,6 +226,16 @@ export default function ProfileScreen({ user }: Props) {
                 </div>
                 <label className="toggle">
                   <input type="checkbox" checked={haptics} onChange={e => toggleHaptics(e.target.checked)} />
+                  <div className="toggle__track" /><div className="toggle__thumb" />
+                </label>
+              </div>
+              <div className="profile__settings-row">
+                <div>
+                  <div className="profile__settings-label">Полный экран</div>
+                  <div className="profile__settings-desc">Скрыть панель Telegram</div>
+                </div>
+                <label className="toggle">
+                  <input type="checkbox" checked={fullscreen} onChange={e => toggleFullscreen(e.target.checked)} />
                   <div className="toggle__track" /><div className="toggle__thumb" />
                 </label>
               </div>

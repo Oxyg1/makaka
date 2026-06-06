@@ -8,6 +8,7 @@ import catsRouter from './routes/cats';
 import leaderboardRouter from './routes/leaderboard';
 import feedRouter from './routes/feed';
 import usersRouter from './routes/users';
+import notificationsRouter from './routes/notifications';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -22,5 +23,6 @@ app.use('/api/cats', catsRouter);
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.listen(PORT, () => console.log(`Backend running on :${PORT}`));

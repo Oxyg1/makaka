@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { authUser, getCurrentUser } from './api';
+import { authUser, getCurrentUser, getNotifications } from './api';
 import type { User } from './types';
 import BottomNav from './components/BottomNav';
 import UserProfileModal from './components/UserProfileModal';
@@ -16,6 +16,7 @@ type TgWebApp = {
   ready?: () => void;
   expand?: () => void;
   requestFullscreen?: () => void;
+  exitFullscreen?: () => void;
   disableVerticalSwipes?: () => void;
   initDataUnsafe?: { user?: { photo_url?: string } };
 };
@@ -29,18 +30,22 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [viewUserId, setViewUserId] = useState<number | null>(null);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   useEffect(() => {
     const tg = (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp;
     const raw = tg?.initData || 'mock';
     tg?.expand?.();
-    tg?.requestFullscreen?.();
-    tg?.disableVerticalSwipes?.();
     tg?.ready?.();
+    if (localStorage.getItem('fullscreen_enabled') === '1') {
+      tg?.requestFullscreen?.();
+      tg?.disableVerticalSwipes?.();
+    }
     const tgPhotoUrl = tg?.initDataUnsafe?.user?.photo_url ?? null;
     authUser(raw).then(u => {
       setUser(tgPhotoUrl ? { ...u, photo_url: tgPhotoUrl } : u);
       setReady(true);
+      getNotifications().then(ns => setUnreadNotifs(ns.filter(n => !n.read).length)).catch(() => {});
     }).catch(() => setReady(true));
   }, []);
 
@@ -55,9 +60,9 @@ export default function App() {
         <div style={show(activeTab === 'feed')}><FeedScreen onViewUser={setViewUserId} currentUser={currentUser ?? null} /></div>
         <div style={show(activeTab === 'submit')}><SubmitCatScreen onSubmitted={() => setActiveTab('feed')} /></div>
         <div style={show(activeTab === 'leaderboard')}><LeaderboardScreen onViewUser={setViewUserId} /></div>
-        <div style={show(activeTab === 'profile')}><ProfileScreen user={currentUser} onViewUser={setViewUserId} /></div>
+        <div style={show(activeTab === 'profile')}><ProfileScreen user={currentUser} onViewUser={setViewUserId} onNotificationsRead={() => setUnreadNotifs(0)} /></div>
       </main>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} unreadNotifs={unreadNotifs} />
       {viewUserId !== null && (
         <UserProfileModal userId={viewUserId} currentUserId={currentUser?.id ?? null} onClose={() => setViewUserId(null)} />
       )}

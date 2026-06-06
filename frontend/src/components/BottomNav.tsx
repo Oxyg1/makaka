@@ -44,9 +44,9 @@ const LABELS: Record<Tab, string> = {
 
 const TABS: Tab[] = ['rate', 'feed', 'submit', 'leaderboard', 'profile'];
 
-interface Props { activeTab: Tab; onTabChange: (tab: Tab) => void; }
+interface Props { activeTab: Tab; onTabChange: (tab: Tab) => void; unreadNotifs?: number; }
 
-export default function BottomNav({ activeTab, onTabChange }: Props) {
+export default function BottomNav({ activeTab, onTabChange, unreadNotifs = 0 }: Props) {
   const activeIndex = TABS.indexOf(activeTab);
   return (
     <nav className="bottom-nav">
@@ -57,7 +57,12 @@ export default function BottomNav({ activeTab, onTabChange }: Props) {
           onClick={() => { hapticSelection(); onTabChange(tab); }}
           aria-current={activeTab === tab ? 'page' : undefined}
         >
-          <span className="bottom-nav__icon">{ICONS[tab]}</span>
+          <span className="bottom-nav__icon" style={{ position: 'relative' }}>
+            {ICONS[tab]}
+            {tab === 'profile' && unreadNotifs > 0 && (
+              <span style={{ position: 'absolute', top: -2, right: -4, width: 8, height: 8, background: '#ff453a', borderRadius: '50%', border: '1.5px solid var(--bg)' }} />
+            )}
+          </span>
           <span className="bottom-nav__label">{LABELS[tab]}</span>
         </button>
       ))}

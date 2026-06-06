@@ -40,3 +40,11 @@ export interface Comment {
   id: number; post_id: number; user_id: number; text: string;
   created_at: string; author_name: string; author_username: string | null;
 }
+
+export interface Notification {
+  id: number; user_id: number; actor_id: number;
+  type: 'like' | 'comment' | 'rating';
+  entity_type: string | null; entity_id: number | null;
+  text: string | null; read: number;
+  created_at: string; actor_name: string;
+}

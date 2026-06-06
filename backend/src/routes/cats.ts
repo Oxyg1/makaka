@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import fs from 'fs';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
+import { createNotification, sendBotMessage } from '../notifs';
 
 const router = Router();
 
@@ -129,6 +130,10 @@ router.post('/:id/rate', authMiddleware, (req: AuthRequest, res) => {
     db.prepare('INSERT INTO ratings (cat_id, rater_id, score) VALUES (?, ?, ?)').run(catId, req.userId!, score);
     db.prepare('DELETE FROM skips WHERE cat_id = ? AND user_id = ?').run(catId, req.userId);
     updateStreak(req.userId!);
+    createNotification({ userId: cat.owner_id, actorId: req.userId!, type: 'rating', entityType: 'cat', entityId: catId, text: `оценил вашего кота на ${score}/10` });
+    const owner = db.prepare('SELECT telegram_id, first_name FROM users WHERE id = ?').get(cat.owner_id) as { telegram_id: string; first_name: string } | undefined;
+    const rater = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
+    if (owner && rater) sendBotMessage(owner.telegram_id, `⭐ <b>${rater.first_name}</b> оценил вашего кота на ${score}/10`);
     res.json({ success: true });
   } catch (e: unknown) {
     if (e instanceof Error && 'code' in e && (e as NodeJS.ErrnoException).code === 'SQLITE_CONSTRAINT_UNIQUE') {
