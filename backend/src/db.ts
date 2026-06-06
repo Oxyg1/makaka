@@ -110,6 +110,25 @@ db.exec(`
     UNIQUE(cat_id, user_id)
   );
   CREATE INDEX IF NOT EXISTS idx_cat_likes_cat ON cat_likes(cat_id);
+
+  CREATE TABLE IF NOT EXISTS cat_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cat_id INTEGER NOT NULL REFERENCES cats(id) ON DELETE CASCADE,
+    photo_url TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_cat_photos_cat ON cat_photos(cat_id);
+
+  CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    telegram_payment_charge_id TEXT UNIQUE,
+    feature TEXT NOT NULL,
+    entity_id INTEGER,
+    used INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 try { db.exec('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch { /* column already exists */ }

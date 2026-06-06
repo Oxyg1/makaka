@@ -21,8 +21,27 @@
 .rs__card--left { transform: translateX(-120%) rotate(-8deg); opacity: 0; }
 
 /* Photo */
-.rs__photo-wrap { position: relative; }
+.rs__photo-wrap { position: relative; overflow: hidden; }
+.rs__photo-wrap--carousel { overflow: hidden; }
 .rs__photo { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; max-height: 55vh; }
+
+/* Carousel */
+.rs__carousel-rail {
+  display: flex;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  will-change: transform;
+}
+.rs__photo--slide { flex: 0 0 100%; width: 100%; }
+.rs__carousel-dots {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; z-index: 2;
+}
+.rs__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.35); border: none; padding: 0; cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.rs__dot--active { background: #fff; transform: scale(1.35); }
 
 .rs__overlay {
   position: absolute; top: 12px; left: 12px; right: 12px;

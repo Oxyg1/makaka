@@ -6,7 +6,51 @@ import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
 import { ageLabel } from '../components/CatCardModal';
 import './RatingScreen.css';
 
-const BASE = import.meta.env.VITE_API_URL ?? '';
+function PhotoCarousel({ photos, name, overlay }: { photos: string[]; name: string; overlay: React.ReactNode }) {
+  const [idx, setIdx] = useState(0);
+  const startX = useRef(0);
+  const railRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (railRef.current) railRef.current.style.transform = `translateX(-${idx * 100}%)`;
+  }, [idx]);
+
+  if (photos.length <= 1) {
+    return (
+      <div className="rs__photo-wrap">
+        <img className="rs__photo" src={`${import.meta.env.VITE_API_URL ?? ''}${photos[0]}`}
+          srcSet={`${import.meta.env.VITE_API_URL ?? ''}${photos[0].replace('/uploads/', '/uploads/thumb_')} 400w, ${import.meta.env.VITE_API_URL ?? ''}${photos[0]} 1200w`}
+          sizes="(max-width:600px) 400px, 1200px" alt={name} loading="eager" />
+        {overlay}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rs__photo-wrap rs__photo-wrap--carousel"
+      onTouchStart={e => { startX.current = e.touches[0].clientX; }}
+      onTouchEnd={e => {
+        const dx = startX.current - e.changedTouches[0].clientX;
+        if (Math.abs(dx) > 40) setIdx(i => dx > 0 ? Math.min(photos.length - 1, i + 1) : Math.max(0, i - 1));
+      }}
+    >
+      <div className="rs__carousel-rail" ref={railRef}>
+        {photos.map((url, i) => (
+          <img key={i} className="rs__photo rs__photo--slide"
+            src={`${import.meta.env.VITE_API_URL ?? ''}${url}`}
+            alt={`${name} ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'} />
+        ))}
+      </div>
+      <div className="rs__carousel-dots">
+        {photos.map((_, i) => (
+          <button key={i} className={`rs__dot${i === idx ? ' rs__dot--active' : ''}`} onClick={() => setIdx(i)} />
+        ))}
+      </div>
+      {overlay}
+    </div>
+  );
+}
+
 const LABELS = ['','Ужас','Плохо','Так себе','Нейтрально','Неплохо','Хорошо','Отлично','Прекрасно','Великолепно','Совершенство'];
 
 function plural(n: number, a: string, b: string, c: string) {
@@ -97,28 +141,25 @@ export default function RatingScreen() {
       <div className="rs__scroll">
         <div className={`rs__card${dir ? ` rs__card--${dir}` : ''}`}>
 
-          <div className="rs__photo-wrap">
-            <img
-              className="rs__photo"
-              src={`${BASE}${cat.photo_url}`}
-              srcSet={`${BASE}${cat.photo_url.replace('/uploads/', '/uploads/thumb_')} 400w, ${BASE}${cat.photo_url} 1200w`}
-              sizes="(max-width:600px) 400px, 1200px"
-              alt={cat.name} loading="eager"
-            />
-            <div className="rs__overlay">
-              <span className="rs__badge">#{cat.id}</span>
-              <button
-                className={`rs__like-btn${liked ? ' rs__like-btn--active' : ''}`}
-                onClick={handleLike}
-                disabled={liking || submitting}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                {likesCount > 0 && <span>{likesCount}</span>}
-              </button>
-            </div>
-          </div>
+          <PhotoCarousel
+            photos={[cat.photo_url, ...(cat.extra_photos ?? [])]}
+            name={cat.name}
+            overlay={
+              <div className="rs__overlay">
+                <span className="rs__badge">#{cat.id}</span>
+                <button
+                  className={`rs__like-btn${liked ? ' rs__like-btn--active' : ''}`}
+                  onClick={handleLike}
+                  disabled={liking || submitting}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                  {likesCount > 0 && <span>{likesCount}</span>}
+                </button>
+              </div>
+            }
+          />
 
           <div className="rs__card-body">
             <div className="rs__info">

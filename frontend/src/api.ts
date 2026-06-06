@@ -115,3 +115,18 @@ export function getNotifications(): Promise<Notification[]> {
 export function markNotificationsRead(): Promise<{ success: boolean }> {
   return request('/api/notifications/read', { method: 'POST' });
 }
+
+export function getCatPhotos(catId: number): Promise<{ id: number; photo_url: string; sort_order: number }[]> {
+  return request(`/api/cats/${catId}/photos`);
+}
+
+export function uploadCatPhoto(catId: number, formData: FormData): Promise<{ id: number; photo_url: string }> {
+  return request(`/api/cats/${catId}/photos`, { method: 'POST', body: formData });
+}
+
+export function createInvoice(feature: string, entityId: number): Promise<{ invoiceLink: string }> {
+  return request<{ invoiceLink: string }>('/api/payments/invoice', {
+    method: 'POST',
+    body: JSON.stringify({ feature, entityId }),
+  });
+}

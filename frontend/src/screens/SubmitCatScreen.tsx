@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
-import { submitCat } from '../api';
+import { submitCat, uploadCatPhoto, createInvoice } from '../api';
 import { hapticSuccess } from '../utils/haptics';
 import './SubmitCatScreen.css';
 
 interface Props { onSubmitted: () => void; }
+
+const MAX_EXTRA = 3;
 
 export default function SubmitCatScreen({ onSubmitted }: Props) {
   const [photo, setPhoto] = useState<File | null>(null);
@@ -13,9 +15,12 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
   const [age, setAge] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [submittedCatId, setSubmittedCatId] = useState<number | null>(null);
+  const [extraUrls, setExtraUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const extraInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -33,24 +38,74 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
       if (breed.trim()) fd.append('breed', breed.trim());
       if (age.trim()) fd.append('age', age.trim());
       if (description.trim()) fd.append('description', description.trim());
-      await submitCat(fd);
+      const result = await submitCat(fd);
       hapticSuccess();
-      setSuccess(true);
-      setTimeout(() => {
-        onSubmitted();
-        setSuccess(false); setPhoto(null); setPreview('');
-        setName(''); setBreed(''); setAge(''); setDescription('');
-      }, 1800);
+      setSubmittedCatId((result as unknown as { id: number }).id);
     } catch (err) { setError(err instanceof Error ? err.message : 'Ошибка'); setSubmitting(false); }
   };
 
-  if (success) return (
-    <div className="submit__success">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#49df64" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M8 12l3 3 5-6" /></svg>
-      <h3>Кот добавлен!</h3>
-      <p>Другие пользователи смогут оценить вашего питомца.</p>
-    </div>
-  );
+  const handleAddPhoto = async () => {
+    if (!submittedCatId || extraUrls.length >= MAX_EXTRA) return;
+    const tg = (window as unknown as { Telegram?: { WebApp?: { openInvoice?: (url: string, cb: (s: string) => void) => void } } }).Telegram?.WebApp;
+
+    if (tg?.openInvoice) {
+      try {
+        const { invoiceLink } = await createInvoice('photo', submittedCatId);
+        tg.openInvoice(invoiceLink, status => { if (status === 'paid') extraInputRef.current?.click(); });
+      } catch { extraInputRef.current?.click(); }
+    } else {
+      extraInputRef.current?.click();
+    }
+  };
+
+  const handleExtraSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file || !submittedCatId) return;
+    e.target.value = '';
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('photo', file);
+      const res = await uploadCatPhoto(submittedCatId, fd);
+      setExtraUrls(u => [...u, res.photo_url]);
+      hapticSuccess();
+    } catch { /* ignore */ }
+    finally { setUploading(false); }
+  };
+
+  if (submittedCatId !== null) {
+    const BASE = import.meta.env.VITE_API_URL ?? '';
+    return (
+      <div className="submit__success">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10" /><path d="M8 12l3 3 5-6" />
+        </svg>
+        <h3>Кот добавлен!</h3>
+        <p>Другие пользователи смогут оценить вашего питомца.</p>
+
+        {extraUrls.length < MAX_EXTRA && (
+          <div className="submit__extra">
+            <p className="submit__extra-title">Добавить ещё фото <span className="submit__stars">2 ⭐ за каждое</span></p>
+            <div className="submit__extra-row">
+              {extraUrls.map((url, i) => (
+                <img key={i} className="submit__extra-thumb" src={url.startsWith('/') ? `${BASE}${url}` : url} alt="" />
+              ))}
+              {Array.from({ length: MAX_EXTRA - extraUrls.length }).map((_, i) => (
+                <button key={i} className="submit__extra-add" onClick={handleAddPhoto} disabled={uploading}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+                  <span>фото</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <input ref={extraInputRef} type="file" accept="image/*" onChange={handleExtraSelected} style={{ display: 'none' }} />
+
+        <button className="btn-primary" style={{ marginTop: 8 }} onClick={onSubmitted}>
+          Перейти к оценке
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form className="submit" onSubmit={handleSubmit}>

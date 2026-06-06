@@ -7,8 +7,10 @@
   --text-muted: #6d6d71;
   --text-dim: rgba(255,255,255,0.4);
   --text-soft: rgba(255,255,255,0.7);
-  --primary: #1689ff;
-  --primary-dim: rgba(22,137,255,0.15);
+  --primary: #7c6df9;
+  --primary-dim: rgba(124,109,249,0.15);
+  --primary-2: #9b54de;
+  --primary-gradient: linear-gradient(135deg, #7c6df9 0%, #9b54de 100%);
   --accent: #49df64;
   --border: rgba(255,255,255,0.08);
   --border-strong: rgba(255,255,255,0.12);
@@ -22,7 +24,7 @@
   --tg-theme-bg-color: #141414;
   --tg-theme-text-color: #ffffff;
   --tg-theme-hint-color: #6d6d71;
-  --tg-theme-button-color: #1689ff;
+  --tg-theme-button-color: #7c6df9;
   --tg-theme-button-text-color: #ffffff;
   --tg-theme-secondary-bg-color: #1e1e1e;
 }

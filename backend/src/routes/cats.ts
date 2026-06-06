@@ -132,7 +132,8 @@ router.get('/next', authMiddleware, (req: AuthRequest, res) => {
     logger.info('next: no cat available', { userId: req.userId, totalOtherCats: total });
     res.json(null); return;
   }
-  res.json({ ...cat, liked_by_me: Boolean(cat.liked_by_me) });
+  const extraPhotos = (db.prepare('SELECT photo_url FROM cat_photos WHERE cat_id = ? ORDER BY sort_order').all(cat.id) as { photo_url: string }[]).map(r => r.photo_url);
+  res.json({ ...cat, liked_by_me: Boolean(cat.liked_by_me), extra_photos: extraPhotos });
 });
 
 // POST /api/cats/:id/rate
@@ -296,6 +297,32 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
     VALUES (?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(req.userId, name.trim(), breed?.trim() || null, ageInt, description?.trim() || null, photoUrl);
+
+  res.status(201).json(result);
+});
+
+// GET /api/cats/:id/photos
+router.get('/:id/photos', authMiddleware, (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const photos = db.prepare('SELECT id, photo_url, sort_order FROM cat_photos WHERE cat_id = ? ORDER BY sort_order').all(catId);
+  res.json(photos);
+});
+
+// POST /api/cats/:id/photos — upload extra photo
+router.post('/:id/photos', authMiddleware, upload.single('photo'), async (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const cat = db.prepare('SELECT id, owner_id FROM cats WHERE id = ?').get(catId) as { id: number; owner_id: number } | undefined;
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
+  if (!req.file) { res.status(400).json({ error: 'Photo is required' }); return; }
+
+  try { await processImage(req.file.path, req.file.filename); } catch { /* sharp optional */ }
+
+  const maxOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM cat_photos WHERE cat_id = ?').get(catId) as { m: number }).m;
+  const photoUrl = `/uploads/${req.file.filename}`;
+  const result = db.prepare(
+    'INSERT INTO cat_photos (cat_id, photo_url, sort_order) VALUES (?, ?, ?) RETURNING id, photo_url, sort_order'
+  ).get(catId, photoUrl, maxOrder + 1);
 
   res.status(201).json(result);
 });
