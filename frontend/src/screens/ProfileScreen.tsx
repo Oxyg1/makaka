@@ -61,7 +61,7 @@ export default function ProfileScreen({ user }: Props) {
           </div>
           <div className="profile__stat-divider" />
           <div className="profile__stat">
-            <span className="profile__stat-value">{stats.streak_days}🔥</span>
+            <span className="profile__stat-value">{stats.streak_days}</span>
             <span className="profile__stat-label">серия</span>
           </div>
         </div>
@@ -85,7 +85,13 @@ export default function ProfileScreen({ user }: Props) {
         {!loading && tab === 'cats' && (
           cats.length === 0 ? (
             <div className="profile__empty">
-              <div style={{ fontSize: 56 }}>🐱</div>
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" opacity="0.25">
+                <ellipse cx="9" cy="6" rx="2.2" ry="2.8" />
+                <ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+                <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" />
+                <ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+                <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+              </svg>
               <p>Вы ещё не добавили ни одного кота</p>
             </div>
           ) : (
@@ -98,7 +104,7 @@ export default function ProfileScreen({ user }: Props) {
                     {cat.breed && <div className="profile__cat-breed">{cat.breed}</div>}
                     <div className="profile__cat-score">
                       {cat.vote_count > 0
-                        ? <><span className="profile__cat-avg">⭐ {cat.avg_score}</span><span className="profile__cat-votes">{cat.vote_count} оц.</span></>
+                        ? <><span className="profile__cat-avg">★ {cat.avg_score}</span><span className="profile__cat-votes">{cat.vote_count} оц.</span></>
                         : <span className="profile__cat-votes">Нет оценок</span>
                       }
                     </div>
@@ -112,7 +118,11 @@ export default function ProfileScreen({ user }: Props) {
         {!loading && tab === 'posts' && (
           posts.length === 0 ? (
             <div className="profile__empty">
-              <div style={{ fontSize: 56 }}>📸</div>
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+                <rect x="3" y="5" width="18" height="15" rx="3" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
               <p>Вы ещё ничего не публиковали</p>
             </div>
           ) : (
@@ -120,7 +130,7 @@ export default function ProfileScreen({ user }: Props) {
               {posts.map(post => (
                 <div key={post.id} className="profile__post-thumb">
                   <img src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
-                  <div className="profile__post-likes">❤️ {post.likes_count}</div>
+                  {post.likes_count > 0 && <div className="profile__post-likes">♥ {post.likes_count}</div>}
                 </div>
               ))}
             </div>
@@ -153,7 +163,11 @@ export default function ProfileScreen({ user }: Props) {
                     <span className="settings__row-label">Cat Rater</span>
                     <span className="settings__row-desc">Оценивайте котов и соревнуйтесь!</span>
                   </div>
-                  <span style={{ fontSize: 24 }}>🐾</span>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" opacity="0.4">
+                    <ellipse cx="9" cy="6" rx="2.2" ry="2.8" /><ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+                    <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" /><ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+                    <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+                  </svg>
                 </div>
                 <div className="settings__row">
                   <span className="settings__row-label">Версия</span>
@@ -161,7 +175,7 @@ export default function ProfileScreen({ user }: Props) {
                 </div>
               </div>
             </div>
-            <div className="settings__about">Сделано с ❤️ для любителей котов</div>
+            <div className="settings__about">Сделано для любителей котов</div>
           </div>
         )}
       </div>

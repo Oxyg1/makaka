@@ -94,7 +94,11 @@ export default function FeedScreen({ onViewUser }: Props) {
 
         {!loading && posts.length === 0 && (
           <div className="feed__empty">
-            <div style={{ fontSize: 64 }}>📸</div>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+              <rect x="3" y="5" width="18" height="15" rx="3" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
+            </svg>
             <h3>Лента пуста</h3>
             <p>Будьте первым — поделитесь своим котом!</p>
           </div>
@@ -118,7 +122,10 @@ export default function FeedScreen({ onViewUser }: Props) {
                 className={`feed__like-btn${post.liked_by_me ? ' feed__like-btn--active' : ''}`}
                 onClick={() => handleLike(post)}
               >
-                {post.liked_by_me ? '❤️' : '🤍'} {post.likes_count > 0 ? post.likes_count : ''}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked_by_me ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                {post.likes_count > 0 ? post.likes_count : ''}
               </button>
               {post.caption && <p className="feed__caption">{post.caption}</p>}
             </div>
@@ -176,7 +183,11 @@ function CreatePostModal({ onClose, onPosted }: { onClose: () => void; onPosted:
             <img src={preview} className="create-post__preview" alt="" onClick={() => fileRef.current?.click()} />
           ) : (
             <button className="create-post__photo-btn" onClick={() => fileRef.current?.click()}>
-              <span style={{ fontSize: 48 }}>📷</span>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+                <rect x="3" y="5" width="18" height="15" rx="3" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
               <span>Выбрать фото</span>
             </button>
           )}

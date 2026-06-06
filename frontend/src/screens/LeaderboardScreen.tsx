@@ -14,7 +14,7 @@ const PERIOD_LABELS: Record<Period, string> = {
   monthly: 'Месяц',
 };
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+const RANK_COLORS = ['leaderboard__rank--gold', 'leaderboard__rank--silver', 'leaderboard__rank--bronze'];
 
 interface Props {
   onViewUser: (id: number) => void;
@@ -61,7 +61,13 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
 
         {!loading && entries.length === 0 && (
           <div className="leaderboard__empty">
-            <div style={{ fontSize: 48 }}>😿</div>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" opacity="0.25">
+              <ellipse cx="9" cy="6" rx="2.2" ry="2.8" />
+              <ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+              <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" />
+              <ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+              <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+            </svg>
             <p>Пока нет оценённых котов в этом периоде.</p>
             <p>Начните оценивать!</p>
           </div>
@@ -69,8 +75,8 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
 
         {!loading && entries.map((entry, index) => (
           <button key={entry.id} className="leaderboard__entry" onClick={() => setSelectedCat(entry)}>
-            <div className="leaderboard__rank">
-              {index < 3 ? MEDALS[index] : `${index + 1}`}
+            <div className={`leaderboard__rank${index < 3 ? ' ' + RANK_COLORS[index] : ''}`}>
+              {index + 1}
             </div>
             <img
               className="leaderboard__photo"
@@ -83,7 +89,7 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
               <div className="leaderboard__cat-owner">от {entry.owner_name}</div>
             </div>
             <div className="leaderboard__score">
-              <div className="leaderboard__avg">⭐ {entry.avg_score}</div>
+              <div className="leaderboard__avg">★ {entry.avg_score}</div>
               <div className="leaderboard__votes">{entry.vote_count} оценок</div>
             </div>
           </button>

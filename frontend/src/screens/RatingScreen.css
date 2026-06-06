@@ -160,9 +160,9 @@
   text-align: center;
 }
 
-.rating-screen__empty-emoji {
-  font-size: 72px;
-  line-height: 1;
+.rating-screen__empty-icon {
+  display: block;
+  margin-bottom: 8px;
 }
 
 .rating-screen__empty h3 {

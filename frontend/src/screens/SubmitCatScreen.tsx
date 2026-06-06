@@ -71,7 +71,11 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
             ? <img src={preview} alt="preview" />
             : (
               <div className="submit-screen__photo-placeholder">
-                <span>📷</span>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+                  <rect x="3" y="5" width="18" height="15" rx="3" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
+                </svg>
                 <span>Нажмите, чтобы выбрать фото</span>
               </div>
             )

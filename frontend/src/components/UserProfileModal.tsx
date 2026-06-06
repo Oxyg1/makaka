@@ -97,7 +97,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                         <div className="user-profile-modal__cat-info">
                           <span className="user-profile-modal__cat-name">{cat.name}</span>
                           {cat.vote_count > 0 && (
-                            <span className="user-profile-modal__cat-score">⭐ {cat.avg_score}</span>
+                            <span className="user-profile-modal__cat-score">★ {cat.avg_score}</span>
                           )}
                         </div>
                       </div>
@@ -115,7 +115,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                       <div key={post.id} className="user-profile-modal__post">
                         <img src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
                         {post.likes_count > 0 && (
-                          <div className="user-profile-modal__post-likes">❤️ {post.likes_count}</div>
+                          <div className="user-profile-modal__post-likes">♥ {post.likes_count}</div>
                         )}
                       </div>
                     ))}

@@ -23,10 +23,14 @@ export default function App() {
     tg?.expand?.();
     tg?.ready?.();
     if (tg?.colorScheme === 'dark') document.documentElement.classList.add('tg-dark');
-    authUser(raw).then(u => { setUser(u); setReady(true); }).catch(() => setReady(true));
+    const tgPhotoUrl: string | null = (tg as unknown as { initDataUnsafe?: { user?: { photo_url?: string } } })?.initDataUnsafe?.user?.photo_url ?? null;
+    authUser(raw).then(u => {
+      setUser(tgPhotoUrl ? { ...u, photo_url: tgPhotoUrl } : u);
+      setReady(true);
+    }).catch(() => setReady(true));
   }, []);
 
-  if (!ready) return <div className="loading-screen">🐾</div>;
+  if (!ready) return <div className="loading-screen"><div className="loading-paw" /></div>;
 
   const currentUser = user ?? getCurrentUser();
 

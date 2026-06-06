@@ -39,7 +39,7 @@ export default function CatCardModal({ cat, onClose, onViewOwner }: Props) {
             />
             {cat.avg_score > 0 && (
               <div className="cat-card-modal__score-badge" style={{ background: scoreColor }}>
-                ⭐ {cat.avg_score}
+                ★ {cat.avg_score}
               </div>
             )}
           </div>

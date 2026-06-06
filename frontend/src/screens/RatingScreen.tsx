@@ -6,7 +6,7 @@ import { hapticSuccess, hapticError } from '../utils/haptics';
 import './RatingScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
-const SCORE_LABELS = ['', '😿 Ужас', '😿 Плохо', '😕 Так себе', '😐 Нейтрально', '🙂 Неплохо', '😊 Хорошо', '😺 Отлично', '😻 Прекрасно', '🌟 Великолепно', '👑 Совершенство'];
+const SCORE_LABELS = ['', 'Ужас', 'Плохо', 'Так себе', 'Нейтрально', 'Неплохо', 'Хорошо', 'Отлично', 'Прекрасно', 'Великолепно', 'Совершенство'];
 
 type ExitDir = 'left' | 'up' | null;
 
@@ -73,7 +73,13 @@ export default function RatingScreen() {
   if (cat === null) {
     return (
       <div className="rating-screen__empty">
-        <div className="rating-screen__empty-emoji">😺</div>
+        <svg className="rating-screen__empty-icon" width="72" height="72" viewBox="0 0 24 24" fill="currentColor" opacity="0.25">
+          <ellipse cx="9" cy="6" rx="2.2" ry="2.8" />
+          <ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+          <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" />
+          <ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+          <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+        </svg>
         <h3>Все коты оценены!</h3>
         <p>Вы оценили всех доступных котов. Заходите завтра — будут новые!</p>
         {sessionCount > 0 && (
