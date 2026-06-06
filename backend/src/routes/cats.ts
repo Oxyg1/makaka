@@ -6,6 +6,7 @@ import fs from 'fs';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
 import { createNotification, sendBotMessage } from '../notifs';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -87,8 +88,9 @@ router.get('/stats', authMiddleware, (req: AuthRequest, res) => {
 
 // POST /api/cats/reset-ratings — clears user's ratings and skips so they can rate again
 router.post('/reset-ratings', authMiddleware, (req: AuthRequest, res) => {
-  db.prepare('DELETE FROM ratings WHERE rater_id = ?').run(req.userId!);
-  db.prepare('DELETE FROM skips WHERE user_id = ?').run(req.userId!);
+  const r1 = db.prepare('DELETE FROM ratings WHERE rater_id = ?').run(req.userId!);
+  const r2 = db.prepare('DELETE FROM skips WHERE user_id = ?').run(req.userId!);
+  logger.info('reset-ratings', { userId: req.userId, ratingsDeleted: r1.changes, skipsDeleted: r2.changes });
   res.json({ success: true });
 });
 
@@ -125,7 +127,11 @@ router.get('/next', authMiddleware, (req: AuthRequest, res) => {
     ORDER BY RANDOM()
     LIMIT 1
   `).get(req.userId, req.userId, req.userId, req.userId) as Record<string, unknown> | undefined;
-  if (!cat) { res.json(null); return; }
+  if (!cat) {
+    const total = (db.prepare('SELECT COUNT(*) AS n FROM cats WHERE owner_id != ?').get(req.userId) as { n: number }).n;
+    logger.info('next: no cat available', { userId: req.userId, totalOtherCats: total });
+    res.json(null); return;
+  }
   res.json({ ...cat, liked_by_me: Boolean(cat.liked_by_me) });
 });
 

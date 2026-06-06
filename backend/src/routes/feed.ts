@@ -6,6 +6,7 @@ import fs from 'fs';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
 import { createNotification, sendBotMessage } from '../notifs';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -53,7 +54,9 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
 
 // POST /api/feed
 router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest, res) => {
+  logger.info('POST /feed', { userId: req.userId, hasFile: !!req.file, contentType: req.headers['content-type'] });
   if (!req.file) {
+    logger.warn('POST /feed: no file received', { userId: req.userId, body: req.body });
     res.status(400).json({ error: 'Photo is required' });
     return;
   }
@@ -79,6 +82,7 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
   `).get(req.userId!, photoUrl, caption?.trim() || null) as Record<string, unknown>;
 
   const user = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null };
+  logger.info('POST /feed: created', { userId: req.userId, postId: (post as Record<string, unknown>).id });
   res.status(201).json({ ...post, author_name: user.first_name, author_username: user.username, likes_count: 0, liked_by_me: false, comments_count: 0 });
 });
 

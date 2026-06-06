@@ -6,4 +6,5 @@ dist/
 backend/uploads/*
 !backend/uploads/.gitkeep
 backend/logs/
+logs/
 .env

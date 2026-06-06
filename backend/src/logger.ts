@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const logsDir = path.join(__dirname, '../../logs');
+const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 
 function today(): string {
