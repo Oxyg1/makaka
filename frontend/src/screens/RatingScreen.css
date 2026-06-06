@@ -8,30 +8,40 @@
   border: 1px solid var(--border);
 }
 
-.rs__scroll { flex: 1; overflow-y: auto; padding-bottom: calc(var(--nav-height,62px) + 16px); }
+.rs__scroll {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 12px;
+  min-height: 0;
+}
 
 .rs__card {
-  margin: 12px 16px 0;
+  flex: 1;
+  min-height: 0;
   background: var(--bg-card);
   border-radius: 24px; border: 1px solid var(--border);
   box-shadow: var(--card-shadow); overflow: hidden;
+  display: flex; flex-direction: column;
   transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
 }
 .rs__card--up { transform: translateY(-120%) rotate(-3deg); opacity: 0; }
 .rs__card--left { transform: translateX(-120%) rotate(-8deg); opacity: 0; }
 
 /* Photo */
-.rs__photo-wrap { position: relative; overflow: hidden; }
-.rs__photo-wrap--carousel { overflow: hidden; }
-.rs__photo { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; max-height: 55vh; }
+.rs__photo-wrap { position: relative; overflow: hidden; flex: 1; min-height: 0; }
+.rs__photo-wrap--carousel { overflow: hidden; flex: 1; min-height: 0; }
+.rs__photo { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Carousel */
 .rs__carousel-rail {
   display: flex;
+  height: 100%;
   transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
   will-change: transform;
 }
-.rs__photo--slide { flex: 0 0 100%; width: 100%; }
+.rs__photo--slide { flex: 0 0 100%; width: 100%; height: 100%; }
 .rs__carousel-dots {
   position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 5px; z-index: 2;
@@ -67,19 +77,19 @@
 .rs__like-btn:active { transform: scale(0.94); }
 
 /* Card body */
-.rs__card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.rs__card-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 
-.rs__info { display: flex; flex-direction: column; gap: 3px; }
-.rs__name { margin: 0; font-size: 20px; font-weight: 700; }
-.rs__breed { margin: 0; font-size: 13px; color: var(--text-muted); }
-.rs__avg { margin: 0; font-size: 13px; color: var(--text-muted); }
-.rs__owner { margin: 0; font-size: 13px; color: var(--text-muted); }
+.rs__info { display: flex; flex-direction: column; gap: 2px; }
+.rs__name { margin: 0; font-size: 18px; font-weight: 700; }
+.rs__breed { margin: 0; font-size: 12px; color: var(--text-muted); }
+.rs__avg { margin: 0; font-size: 12px; color: var(--text-muted); }
+.rs__owner { margin: 0; font-size: 12px; color: var(--text-muted); }
 
-.rs__desc { margin: 0; font-size: 14px; color: var(--text-muted); line-height: 1.4; }
+.rs__desc { display: none; }
 
 /* Footer */
-.rs__footer { display: flex; flex-direction: column; gap: 10px; }
-.rs__label { margin: 0; font-size: 15px; font-weight: 600; text-align: center; color: var(--text); }
+.rs__footer { display: flex; flex-direction: column; gap: 8px; }
+.rs__label { margin: 0; font-size: 14px; font-weight: 600; text-align: center; color: var(--text); }
 
 /* Actions */
 .rs__actions { display: flex; gap: 10px; }
@@ -87,8 +97,8 @@
 .rs__skip {
   flex: 1; background: var(--bg-secondary); color: var(--text);
   border: 1px solid var(--border-strong); border-radius: 99em;
-  padding: 14px 16px; font-size: 15px; font-weight: 600;
-  cursor: pointer; height: 52px;
+  padding: 0 16px; font-size: 15px; font-weight: 600;
+  cursor: pointer; height: 46px;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.1s;
 }
@@ -97,8 +107,8 @@
 .rs__rate-btn {
   flex: 2; background: linear-gradient(135deg, #7c6df9 0%, #9b54de 100%);
   color: #fff; border: none; border-radius: 99em;
-  font-size: 16px; font-weight: 700; cursor: pointer;
-  height: 52px; display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.1s;
   box-shadow: 0 4px 20px rgba(124,109,249,0.35);
