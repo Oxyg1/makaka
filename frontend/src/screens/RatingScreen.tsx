@@ -30,12 +30,16 @@ export default function RatingScreen() {
   scoreRef.current = score;
 
   const fetchNext = useCallback(async () => {
-    const next = await getNextCat();
-    setCat(next ?? null);
-    setScore(5); setDir(null); setSubmitting(false);
-    setLiked(next?.liked_by_me ?? false);
-    setLikesCount(next?.likes_count ?? 0);
-    setLiking(false);
+    try {
+      const next = await getNextCat();
+      setCat(next ?? null);
+      setScore(5); setDir(null); setSubmitting(false);
+      setLiked(next?.liked_by_me ?? false);
+      setLikesCount(next?.likes_count ?? 0);
+      setLiking(false);
+    } catch {
+      setCat(null);
+    }
   }, []);
 
   useEffect(() => { fetchNext(); }, [fetchNext]);
