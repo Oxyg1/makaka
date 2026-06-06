@@ -10,28 +10,40 @@ const PERIOD_MAP: Record<string, string> = {
   monthly: '-30 days',
 };
 
-router.get('/', authMiddleware, (req, res) => {
-  const period = (req.query.period as string) || 'daily';
-  const offset = PERIOD_MAP[period];
+const BASE_QUERY = `
+  SELECT c.id, c.owner_id, c.name, c.breed, c.description, c.age, c.photo_url,
+    ROUND(AVG(r.score), 1) AS avg_score,
+    COUNT(r.id) AS vote_count,
+    u.first_name AS owner_name
+  FROM cats c
+  JOIN users u ON c.owner_id = u.id
+  JOIN ratings r ON r.cat_id = c.id
+`;
 
+router.get('/', authMiddleware, (req, res) => {
+  const period = (req.query.period as string) || 'all';
+
+  if (period === 'all') {
+    const entries = db.prepare(`
+      ${BASE_QUERY}
+      GROUP BY c.id HAVING COUNT(r.id) >= 1
+      ORDER BY avg_score DESC, vote_count DESC LIMIT 20
+    `).all();
+    res.json(entries);
+    return;
+  }
+
+  const offset = PERIOD_MAP[period];
   if (!offset) {
-    res.status(400).json({ error: 'period must be daily, weekly, or monthly' });
+    res.status(400).json({ error: 'period must be all, daily, weekly, or monthly' });
     return;
   }
 
   const entries = db.prepare(`
-    SELECT c.id, c.owner_id, c.name, c.breed, c.description, c.age, c.photo_url,
-      ROUND(AVG(r.score), 1) AS avg_score,
-      COUNT(r.id) AS vote_count,
-      u.first_name AS owner_name
-    FROM cats c
-    JOIN users u ON c.owner_id = u.id
-    JOIN ratings r ON r.cat_id = c.id
+    ${BASE_QUERY}
     WHERE r.created_at >= datetime('now', ?)
-    GROUP BY c.id
-    HAVING COUNT(r.id) >= 1
-    ORDER BY avg_score DESC, vote_count DESC
-    LIMIT 20
+    GROUP BY c.id HAVING COUNT(r.id) >= 1
+    ORDER BY avg_score DESC, vote_count DESC LIMIT 20
   `).all(offset);
 
   res.json(entries);

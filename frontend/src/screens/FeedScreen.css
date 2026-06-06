@@ -38,6 +38,8 @@
 
 .feed__card-footer { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 6px; }
 
+.feed__actions { display: flex; align-items: center; gap: 14px; }
+
 .feed__like {
   display: flex; align-items: center; gap: 6px;
   background: none; border: none; cursor: pointer;
@@ -47,4 +49,59 @@
 }
 .feed__like--active { color: #ff453a; }
 
+.feed__comment-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 14px; font-weight: 600;
+  padding: 4px 0; -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.feed__comment-btn:active { color: var(--text); }
+
+.feed__delete-btn {
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--text-muted); display: flex; align-items: center;
+  -webkit-tap-highlight-color: transparent; transition: color 0.15s;
+}
+.feed__delete-btn:active { color: #ff453a; }
+
 .feed__caption { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.4; }
+
+.feed__comments {
+  border-top: 1px solid var(--border);
+  padding-top: 8px; display: flex; flex-direction: column; gap: 6px;
+}
+.feed__comments-loading { display: flex; justify-content: center; padding: 8px 0; }
+.feed__comments-empty { margin: 0; font-size: 13px; color: var(--text-muted); text-align: center; padding: 4px 0; }
+
+.feed__comment {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 13px; line-height: 1.4;
+}
+.feed__comment-author { font-weight: 600; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+.feed__comment-text { color: var(--text-soft); flex: 1; word-break: break-word; }
+.feed__comment-delete {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 0 2px; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.feed__comment-delete:active { color: #ff453a; }
+
+.feed__comment-input-row {
+  display: flex; gap: 8px; align-items: center; margin-top: 2px;
+}
+.feed__comment-input {
+  flex: 1; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 99em; padding: 8px 14px; color: var(--text);
+  font-size: 13px; font-family: inherit; outline: none;
+}
+.feed__comment-input:focus { border-color: var(--primary); }
+.feed__comment-send {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary); border: none; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.feed__comment-send:disabled { opacity: 0.4; cursor: default; }
+.feed__comment-send:not(:disabled):active { opacity: 0.75; }

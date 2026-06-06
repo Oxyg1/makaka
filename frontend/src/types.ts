@@ -33,5 +33,10 @@ export interface UserStats {
 export interface Post {
   id: number; user_id: number; photo_url: string; caption: string | null;
   created_at: string; author_name: string; author_username: string | null;
-  likes_count: number; liked_by_me: boolean;
+  likes_count: number; liked_by_me: boolean; comments_count: number;
+}
+
+export interface Comment {
+  id: number; post_id: number; user_id: number; text: string;
+  created_at: string; author_name: string; author_username: string | null;
 }

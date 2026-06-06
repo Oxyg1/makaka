@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getMyCats, getStats, getUserPosts } from '../api';
+import { getMyCats, getStats, getUserPosts, deleteCat, deletePost } from '../api';
 import { isHapticsEnabled, setHapticsEnabled } from '../utils/haptics';
 import type { CatWithStats, Post, User, UserStats } from '../types';
 import { Avatar } from '../components/CatCardModal';
+import CatCardModal from '../components/CatCardModal';
+import EditCatSheet from '../components/EditCatSheet';
 import './ProfileScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -17,6 +19,9 @@ export default function ProfileScreen({ user }: Props) {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [haptics, setHaptics] = useState(isHapticsEnabled());
+  const [selectedCat, setSelectedCat] = useState<CatWithStats | null>(null);
+  const [editCat, setEditCat] = useState<CatWithStats | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -26,6 +31,24 @@ export default function ProfileScreen({ user }: Props) {
   }, [user]);
 
   const toggleHaptics = (v: boolean) => { setHapticsEnabled(v); setHaptics(v); };
+
+  const handleCatDeleted = (id: number) => {
+    setCats(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleCatSaved = (updated: CatWithStats) => {
+    setCats(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
+    setEditCat(null);
+  };
+
+  const handleDeletePost = async (id: number) => {
+    setDeletingPostId(id);
+    try {
+      await deletePost(id);
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } catch { /* ignore */ }
+    setDeletingPostId(null);
+  };
 
   return (
     <div className="profile">
@@ -80,7 +103,7 @@ export default function ProfileScreen({ user }: Props) {
         ) : (
           <div className="profile__cats">
             {cats.map(cat => (
-              <div key={cat.id} className="profile__cat">
+              <button key={cat.id} className="profile__cat" onClick={() => setSelectedCat(cat)}>
                 <img className="profile__cat-photo" src={`${BASE}${cat.photo_url}`} alt={cat.name} loading="lazy" />
                 <div className="profile__cat-info">
                   <div className="profile__cat-name">{cat.name}</div>
@@ -89,7 +112,10 @@ export default function ProfileScreen({ user }: Props) {
                     ? <div className="profile__cat-score">★ {cat.avg_score} · {cat.vote_count} оц.</div>
                     : <div className="profile__cat-score profile__cat-score--none">Нет оценок</div>}
                 </div>
-              </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0, marginRight: 12 }}>
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
             ))}
           </div>
         ))}
@@ -108,6 +134,13 @@ export default function ProfileScreen({ user }: Props) {
               <div key={post.id} className="profile__grid-item">
                 <img src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
                 {post.likes_count > 0 && <div className="profile__grid-likes">♥ {post.likes_count}</div>}
+                <button
+                  className="profile__grid-delete"
+                  onClick={() => handleDeletePost(post.id)}
+                  disabled={deletingPostId === post.id}
+                >
+                  {deletingPostId === post.id ? '...' : '×'}
+                </button>
               </div>
             ))}
           </div>
@@ -130,12 +163,30 @@ export default function ProfileScreen({ user }: Props) {
             <div className="profile__settings-group">
               <div className="profile__settings-row">
                 <div className="profile__settings-label">Cat Rater</div>
-                <span className="profile__settings-ver">1.2.0</span>
+                <span className="profile__settings-ver">2.0.0</span>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {selectedCat && (
+        <CatCardModal
+          cat={selectedCat}
+          onClose={() => setSelectedCat(null)}
+          isOwner
+          onEdit={cat => { setSelectedCat(null); setEditCat(cat as CatWithStats); }}
+          onDelete={id => { handleCatDeleted(id); deleteCat(id).catch(() => {}); }}
+        />
+      )}
+
+      {editCat && (
+        <EditCatSheet
+          cat={editCat}
+          onClose={() => setEditCat(null)}
+          onSaved={handleCatSaved}
+        />
+      )}
     </div>
   );
 }

@@ -35,11 +35,13 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
   const posts = db.prepare(`
     SELECT p.id, p.user_id, p.photo_url, p.caption, p.created_at,
       u.first_name AS author_name, u.username AS author_username,
-      COUNT(pl.id) AS likes_count,
-      MAX(CASE WHEN pl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me
+      COUNT(DISTINCT pl.id) AS likes_count,
+      MAX(CASE WHEN pl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me,
+      COUNT(DISTINCT pc.id) AS comments_count
     FROM posts p
     JOIN users u ON p.user_id = u.id
     LEFT JOIN post_likes pl ON pl.post_id = p.id
+    LEFT JOIN post_comments pc ON pc.post_id = p.id
     GROUP BY p.id
     ORDER BY p.created_at DESC
     LIMIT 20 OFFSET ?
@@ -75,7 +77,34 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
     RETURNING *
   `).get(req.userId!, photoUrl, caption?.trim() || null) as Record<string, unknown>;
 
-  res.status(201).json({ ...post, likes_count: 0, liked_by_me: false });
+  res.status(201).json({ ...post, likes_count: 0, liked_by_me: false, comments_count: 0 });
+});
+
+// DELETE /api/feed/comments/:id — must be before /:id to avoid param collision
+router.delete('/comments/:id', authMiddleware, (req: AuthRequest, res) => {
+  const commentId = parseInt(String(req.params.id), 10);
+  const comment = db.prepare('SELECT id, user_id FROM post_comments WHERE id = ?').get(commentId) as { id: number; user_id: number } | undefined;
+  if (!comment) { res.status(404).json({ error: 'Comment not found' }); return; }
+  if (comment.user_id !== req.userId) { res.status(403).json({ error: 'Not your comment' }); return; }
+  db.prepare('DELETE FROM post_comments WHERE id = ?').run(commentId);
+  res.json({ success: true });
+});
+
+// DELETE /api/feed/:id
+router.delete('/:id', authMiddleware, (req: AuthRequest, res) => {
+  const postId = parseInt(String(req.params.id), 10);
+  const post = db.prepare('SELECT id, user_id, photo_url FROM posts WHERE id = ?').get(postId) as { id: number; user_id: number; photo_url: string } | undefined;
+  if (!post) { res.status(404).json({ error: 'Post not found' }); return; }
+  if (post.user_id !== req.userId) { res.status(403).json({ error: 'Not your post' }); return; }
+
+  db.prepare('DELETE FROM post_likes WHERE post_id = ?').run(postId);
+  db.prepare('DELETE FROM post_comments WHERE post_id = ?').run(postId);
+  db.prepare('DELETE FROM posts WHERE id = ?').run(postId);
+
+  const filePath = path.join(uploadsDir, path.basename(post.photo_url));
+  try { fs.unlinkSync(filePath); } catch { /* already gone */ }
+
+  res.json({ success: true });
 });
 
 // POST /api/feed/:id/like
@@ -97,6 +126,43 @@ router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
   ).get(postId) as { likes_count: number };
 
   res.json({ liked: !existing, likes_count });
+});
+
+// GET /api/feed/:id/comments
+router.get('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
+  const postId = parseInt(String(req.params.id), 10);
+  const comments = db.prepare(`
+    SELECT pc.id, pc.post_id, pc.user_id, pc.text, pc.created_at,
+      u.first_name AS author_name, u.username AS author_username
+    FROM post_comments pc
+    JOIN users u ON pc.user_id = u.id
+    WHERE pc.post_id = ?
+    ORDER BY pc.created_at ASC
+    LIMIT 50
+  `).all(postId);
+  res.json(comments);
+});
+
+// POST /api/feed/:id/comments
+router.post('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
+  const postId = parseInt(String(req.params.id), 10);
+  const { text } = req.body as { text?: string };
+
+  if (!text?.trim()) { res.status(400).json({ error: 'Text is required' }); return; }
+  if (text.length > 500) { res.status(400).json({ error: 'Text too long' }); return; }
+
+  const post = db.prepare('SELECT id FROM posts WHERE id = ?').get(postId);
+  if (!post) { res.status(404).json({ error: 'Post not found' }); return; }
+
+  const comment = db.prepare(`
+    INSERT INTO post_comments (post_id, user_id, text)
+    VALUES (?, ?, ?)
+    RETURNING *
+  `).get(postId, req.userId!, text.trim()) as Record<string, unknown>;
+
+  const user = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null };
+
+  res.status(201).json({ ...comment, author_name: user.first_name, author_username: user.username });
 });
 
 export default router;

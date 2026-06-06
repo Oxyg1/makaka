@@ -5,13 +5,13 @@ import CatCardModal from '../components/CatCardModal';
 import './LeaderboardScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
-type Period = 'daily' | 'weekly' | 'monthly';
-const PERIOD: Record<Period, string> = { daily: 'День', weekly: 'Неделя', monthly: 'Месяц' };
+type Period = 'all' | 'daily' | 'weekly' | 'monthly';
+const PERIOD: Record<Period, string> = { all: 'Всё время', daily: 'День', weekly: 'Неделя', monthly: 'Месяц' };
 
 interface Props { onViewUser: (id: number) => void; }
 
 export default function LeaderboardScreen({ onViewUser }: Props) {
-  const [period, setPeriod] = useState<Period>('daily');
+  const [period, setPeriod] = useState<Period>('all');
   const [entries, setEntries] = useState<CatLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<CatLeaderboardEntry | null>(null);

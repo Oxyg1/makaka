@@ -23,7 +23,8 @@
 .profile__empty p { margin: 0; }
 
 .profile__cats { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; }
-.profile__cat { display: flex; gap: 12px; align-items: center; background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+.profile__cat { display: flex; gap: 12px; align-items: center; background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); width: 100%; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s; }
+.profile__cat:active { opacity: 0.75; }
 .profile__cat-photo { width: 72px; height: 72px; object-fit: cover; flex-shrink: 0; }
 .profile__cat-info { flex: 1; display: flex; flex-direction: column; gap: 3px; padding-right: 12px; min-width: 0; }
 .profile__cat-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -35,6 +36,14 @@
 .profile__grid-item { position: relative; aspect-ratio: 1; overflow: hidden; }
 .profile__grid-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .profile__grid-likes { position: absolute; bottom: 4px; left: 4px; font-size: 11px; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.profile__grid-delete {
+  position: absolute; top: 4px; right: 4px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,0.55); color: #fff;
+  border: none; font-size: 14px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
 
 .profile__settings { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .profile__settings-group { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }

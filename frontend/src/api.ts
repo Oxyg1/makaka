@@ -1,4 +1,4 @@
-import type { CatLeaderboardEntry, CatWithStats, Post, User, UserProfile, UserStats } from './types';
+import type { CatLeaderboardEntry, CatWithStats, Comment, Post, User, UserProfile, UserStats } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 let initDataRaw = 'mock';
@@ -48,7 +48,7 @@ export function getStats(): Promise<UserStats> {
   return request<UserStats>('/api/cats/stats');
 }
 
-export function getLeaderboard(period: 'daily' | 'weekly' | 'monthly'): Promise<CatLeaderboardEntry[]> {
+export function getLeaderboard(period: 'all' | 'daily' | 'weekly' | 'monthly'): Promise<CatLeaderboardEntry[]> {
   return request<CatLeaderboardEntry[]>(`/api/leaderboard?period=${period}`);
 }
 
@@ -74,4 +74,28 @@ export function getUserCats(id: number): Promise<CatWithStats[]> {
 
 export function getUserPosts(id: number): Promise<Post[]> {
   return request<Post[]>(`/api/users/${id}/posts`);
+}
+
+export function updateCat(id: number, data: { name?: string; breed?: string; age?: string; description?: string }): Promise<CatWithStats> {
+  return request<CatWithStats>(`/api/cats/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export function deleteCat(id: number): Promise<{ success: boolean }> {
+  return request(`/api/cats/${id}`, { method: 'DELETE' });
+}
+
+export function deletePost(id: number): Promise<{ success: boolean }> {
+  return request(`/api/feed/${id}`, { method: 'DELETE' });
+}
+
+export function getComments(postId: number): Promise<Comment[]> {
+  return request<Comment[]>(`/api/feed/${postId}/comments`);
+}
+
+export function createComment(postId: number, text: string): Promise<Comment> {
+  return request<Comment>(`/api/feed/${postId}/comments`, { method: 'POST', body: JSON.stringify({ text }) });
+}
+
+export function deleteComment(id: number): Promise<{ success: boolean }> {
+  return request(`/api/feed/comments/${id}`, { method: 'DELETE' });
 }

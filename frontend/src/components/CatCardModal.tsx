@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CatLeaderboardEntry } from '../types';
+import type { CatLeaderboardEntry, CatWithStats } from '../types';
 import './CatCardModal.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -19,9 +19,22 @@ export function Avatar({ name, photoUrl, size = 48 }: { name: string; photoUrl?:
   );
 }
 
-interface Props { cat: CatLeaderboardEntry; onClose: () => void; onViewOwner: (id: number) => void; }
+type CatData = CatLeaderboardEntry | CatWithStats;
 
-export default function CatCardModal({ cat, onClose, onViewOwner }: Props) {
+interface Props {
+  cat: CatData;
+  onClose: () => void;
+  onViewOwner?: (id: number) => void;
+  isOwner?: boolean;
+  onEdit?: (cat: CatData) => void;
+  onDelete?: (id: number) => void;
+}
+
+export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdit, onDelete }: Props) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const ownerId = 'owner_id' in cat ? cat.owner_id : undefined;
+
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-sheet cat-card-modal">
@@ -43,9 +56,37 @@ export default function CatCardModal({ cat, onClose, onViewOwner }: Props) {
             {cat.breed && <p className="cat-card-modal__breed">{cat.breed}{cat.age ? ` · ${cat.age} лет` : ''}</p>}
             {cat.description && <p className="cat-card-modal__desc">{cat.description}</p>}
             <div className="cat-card-modal__votes">{cat.vote_count} оценок</div>
-            <button className="cat-card-modal__owner-btn" onClick={() => { onClose(); onViewOwner(cat.owner_id); }}>
-              Профиль: {cat.owner_name}
-            </button>
+
+            {onViewOwner && ownerId !== undefined && (
+              <button className="cat-card-modal__owner-btn" onClick={() => { onClose(); onViewOwner(ownerId); }}>
+                Профиль: {cat.owner_name}
+              </button>
+            )}
+
+            {isOwner && (
+              <div className="cat-card-modal__owner-actions">
+                {!confirmDelete ? (
+                  <>
+                    <button className="cat-card-modal__edit-btn" onClick={() => { onClose(); onEdit?.(cat); }}>
+                      Редактировать
+                    </button>
+                    <button className="cat-card-modal__delete-btn" onClick={() => setConfirmDelete(true)}>
+                      Удалить
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="cat-card-modal__confirm-text">Удалить кота навсегда?</p>
+                    <button className="cat-card-modal__delete-btn" onClick={() => { onDelete?.(cat.id); onClose(); }}>
+                      Да, удалить
+                    </button>
+                    <button className="cat-card-modal__edit-btn" onClick={() => setConfirmDelete(false)}>
+                      Отмена
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getFeed, likePost, createPost } from '../api';
-import type { Post } from '../types';
+import { getFeed, likePost, createPost, getComments, createComment, deleteComment, deletePost } from '../api';
+import type { Post, Comment, User } from '../types';
 import './FeedScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -24,13 +24,14 @@ function timeAgo(s: string) {
   return `${Math.floor(d/86400)} дн.`;
 }
 
-interface Props { onViewUser: (id: number) => void; }
+interface Props { onViewUser: (id: number) => void; currentUser: User | null; }
 
-export default function FeedScreen({ onViewUser }: Props) {
+export default function FeedScreen({ onViewUser, currentUser }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -58,6 +59,29 @@ export default function FeedScreen({ onViewUser }: Props) {
     setPosts(optimistic);
     try { const r = await likePost(post.id); setPosts(pp => pp.map(p => p.id === post.id ? { ...p, liked_by_me: r.liked, likes_count: r.likes_count } : p)); }
     catch { setPosts(posts); }
+  };
+
+  const toggleComments = (postId: number) => {
+    setExpandedComments(prev => {
+      const next = new Set(prev);
+      if (next.has(postId)) next.delete(postId); else next.add(postId);
+      return next;
+    });
+  };
+
+  const handleDeletePost = async (id: number) => {
+    try {
+      await deletePost(id);
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } catch { /* ignore */ }
+  };
+
+  const handleCommentPosted = (postId: number) => {
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p));
+  };
+
+  const handleCommentDeleted = (postId: number) => {
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p));
   };
 
   return (
@@ -94,17 +118,42 @@ export default function FeedScreen({ onViewUser }: Props) {
                   {post.author_username && <span className="feed__author-un">@{post.author_username}</span>}
                 </div>
               </button>
-              <span className="feed__time">{timeAgo(post.created_at)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="feed__time">{timeAgo(post.created_at)}</span>
+                {currentUser && post.user_id === currentUser.id && (
+                  <button className="feed__delete-btn" onClick={() => handleDeletePost(post.id)} title="Удалить">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
             <img className="feed__photo" src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
             <div className="feed__card-footer">
-              <button className={`feed__like${post.liked_by_me ? ' feed__like--active' : ''}`} onClick={() => handleLike(post)}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked_by_me ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                {post.likes_count > 0 && post.likes_count}
-              </button>
+              <div className="feed__actions">
+                <button className={`feed__like${post.liked_by_me ? ' feed__like--active' : ''}`} onClick={() => handleLike(post)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked_by_me ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                  {post.likes_count > 0 && post.likes_count}
+                </button>
+                <button className="feed__comment-btn" onClick={() => toggleComments(post.id)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  {post.comments_count > 0 && post.comments_count}
+                </button>
+              </div>
               {post.caption && <p className="feed__caption">{post.caption}</p>}
+              {expandedComments.has(post.id) && (
+                <CommentsSection
+                  postId={post.id}
+                  currentUserId={currentUser?.id ?? null}
+                  onCommentPosted={() => handleCommentPosted(post.id)}
+                  onCommentDeleted={() => handleCommentDeleted(post.id)}
+                />
+              )}
             </div>
           </div>
         ))}
@@ -114,6 +163,70 @@ export default function FeedScreen({ onViewUser }: Props) {
       </div>
 
       {showCreate && <CreateModal onClose={() => setShowCreate(false)} onPosted={p => { setPosts(pp => [p, ...pp]); setShowCreate(false); }} />}
+    </div>
+  );
+}
+
+function CommentsSection({ postId, currentUserId, onCommentPosted, onCommentDeleted }: {
+  postId: number; currentUserId: number | null;
+  onCommentPosted: () => void; onCommentDeleted: () => void;
+}) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    getComments(postId).then(setComments).finally(() => setLoading(false));
+  }, [postId]);
+
+  const handleSubmit = async () => {
+    if (!text.trim() || sending) return;
+    setSending(true);
+    try {
+      const c = await createComment(postId, text.trim());
+      setComments(prev => [...prev, c]);
+      setText('');
+      onCommentPosted();
+    } catch { /* ignore */ }
+    setSending(false);
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteComment(id);
+      setComments(prev => prev.filter(c => c.id !== id));
+      onCommentDeleted();
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="feed__comments">
+      {loading && <div className="feed__comments-loading"><div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} /></div>}
+      {!loading && comments.length === 0 && <p className="feed__comments-empty">Нет комментариев</p>}
+      {comments.map(c => (
+        <div key={c.id} className="feed__comment">
+          <span className="feed__comment-author">{c.author_name}</span>
+          <span className="feed__comment-text">{c.text}</span>
+          {currentUserId === c.user_id && (
+            <button className="feed__comment-delete" onClick={() => handleDelete(c.id)}>×</button>
+          )}
+        </div>
+      ))}
+      <div className="feed__comment-input-row">
+        <input
+          className="feed__comment-input"
+          value={text} onChange={e => setText(e.target.value)}
+          placeholder="Комментарий..."
+          maxLength={500}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+        />
+        <button className="feed__comment-send" onClick={handleSubmit} disabled={!text.trim() || sending}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

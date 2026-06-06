@@ -13,6 +13,7 @@ db.exec(`
     telegram_id TEXT UNIQUE NOT NULL,
     username TEXT,
     first_name TEXT NOT NULL,
+    photo_url TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -77,4 +78,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
   CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at);
   CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+
+  CREATE TABLE IF NOT EXISTS post_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    text TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_comments_post ON post_comments(post_id);
 `);
+
+try { db.exec('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch { /* column already exists */ }

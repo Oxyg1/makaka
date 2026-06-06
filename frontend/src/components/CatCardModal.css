@@ -24,3 +24,24 @@
   transition: opacity 0.15s;
 }
 .cat-card-modal__owner-btn:active { opacity: 0.7; }
+
+.cat-card-modal__owner-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.cat-card-modal__edit-btn {
+  padding: 14px 20px; height: 50px;
+  background: var(--bg-secondary); color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 99em; font-size: 15px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s; width: 100%;
+}
+.cat-card-modal__edit-btn:active { opacity: 0.7; }
+.cat-card-modal__delete-btn {
+  padding: 14px 20px; height: 50px;
+  background: rgba(255,69,58,0.12); color: #ff453a;
+  border: 1px solid rgba(255,69,58,0.2);
+  border-radius: 99em; font-size: 15px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s; width: 100%;
+}
+.cat-card-modal__delete-btn:active { opacity: 0.7; }
+.cat-card-modal__confirm-text { margin: 0; font-size: 14px; color: var(--text-muted); text-align: center; }

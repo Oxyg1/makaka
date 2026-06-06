@@ -37,7 +37,7 @@ export default function App() {
     <div className="app">
       <main className="app__content">
         {activeTab === 'rate' && <RatingScreen />}
-        {activeTab === 'feed' && <FeedScreen onViewUser={setViewUserId} />}
+        {activeTab === 'feed' && <FeedScreen onViewUser={setViewUserId} currentUser={currentUser ?? null} />}
         {activeTab === 'submit' && <SubmitCatScreen onSubmitted={() => setActiveTab('feed')} />}
         {activeTab === 'leaderboard' && <LeaderboardScreen onViewUser={setViewUserId} />}
         {activeTab === 'profile' && <ProfileScreen user={currentUser} onViewUser={setViewUserId} />}

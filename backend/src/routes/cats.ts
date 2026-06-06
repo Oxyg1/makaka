@@ -187,6 +187,56 @@ router.get('/:id', authMiddleware, (req: AuthRequest, res) => {
   res.json(cat);
 });
 
+// PUT /api/cats/:id — update own cat metadata
+router.put('/:id', authMiddleware, (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const cat = db.prepare('SELECT id, owner_id FROM cats WHERE id = ?').get(catId) as { id: number; owner_id: number } | undefined;
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
+
+  const { name, breed, age, description } = req.body as Record<string, string>;
+  if (name !== undefined && !name.trim()) { res.status(400).json({ error: 'Cat name cannot be empty' }); return; }
+
+  const ageInt = age !== undefined ? (age ? parseInt(age, 10) : null) : undefined;
+
+  const updated = db.prepare(`
+    UPDATE cats SET
+      name = COALESCE(?, name),
+      breed = CASE WHEN ? IS NOT NULL THEN ? ELSE breed END,
+      age = CASE WHEN ? IS NOT NULL THEN ? ELSE age END,
+      description = CASE WHEN ? IS NOT NULL THEN ? ELSE description END
+    WHERE id = ?
+    RETURNING *
+  `).get(
+    name?.trim() ?? null,
+    breed !== undefined ? 1 : null, breed?.trim() || null,
+    age !== undefined ? 1 : null, ageInt ?? null,
+    description !== undefined ? 1 : null, description?.trim() || null,
+    catId
+  );
+
+  res.json(updated);
+});
+
+// DELETE /api/cats/:id — delete own cat
+router.delete('/:id', authMiddleware, (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const cat = db.prepare('SELECT id, owner_id, photo_url FROM cats WHERE id = ?').get(catId) as { id: number; owner_id: number; photo_url: string } | undefined;
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
+
+  db.prepare('DELETE FROM ratings WHERE cat_id = ?').run(catId);
+  db.prepare('DELETE FROM skips WHERE cat_id = ?').run(catId);
+  db.prepare('DELETE FROM cats WHERE id = ?').run(catId);
+
+  const filePath = path.join(uploadsDir, path.basename(cat.photo_url));
+  const thumbPath = path.join(uploadsDir, `thumb_${path.basename(cat.photo_url)}`);
+  try { fs.unlinkSync(filePath); } catch { /* already gone */ }
+  try { fs.unlinkSync(thumbPath); } catch { /* no thumb */ }
+
+  res.json({ success: true });
+});
+
 // POST /api/cats — submit a new cat
 router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest, res) => {
   if (!req.file) {
