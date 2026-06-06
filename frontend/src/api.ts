@@ -36,6 +36,10 @@ export function skipCat(id: number): Promise<{ success: boolean }> {
   return request(`/api/cats/${id}/skip`, { method: 'POST' });
 }
 
+export function resetRatings(): Promise<{ success: boolean }> {
+  return request('/api/cats/reset-ratings', { method: 'POST' });
+}
+
 export function submitCat(formData: FormData): Promise<CatWithStats> {
   return request<CatWithStats>('/api/cats', { method: 'POST', body: formData });
 }

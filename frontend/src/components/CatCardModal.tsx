@@ -7,6 +7,15 @@ const BASE = import.meta.env.VITE_API_URL ?? '';
 const AVATAR_COLORS = ['#1689ff','#49df64','#ff453a','#ff9500','#af52de','#ff2d55','#5ac8fa','#ffcc00'];
 function avatarColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]; }
 
+export function ageLabel(age: number): string {
+  const n = age % 100;
+  const n1 = age % 10;
+  if (n >= 11 && n <= 19) return `${age} лет`;
+  if (n1 === 1) return `${age} год`;
+  if (n1 >= 2 && n1 <= 4) return `${age} года`;
+  return `${age} лет`;
+}
+
 export function Avatar({ name, photoUrl, size = 48 }: { name: string; photoUrl?: string | null; size?: number }) {
   const [err, setErr] = useState(false);
   if (photoUrl && !err) {
@@ -53,7 +62,7 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
           </div>
           <div className="cat-card-modal__body">
             <h2 className="cat-card-modal__name">{cat.name}</h2>
-            {cat.breed && <p className="cat-card-modal__breed">{cat.breed}{cat.age ? ` · ${cat.age} лет` : ''}</p>}
+            {cat.breed && <p className="cat-card-modal__breed">{cat.breed}{cat.age ? ` · ${ageLabel(cat.age)}` : ''}</p>}
             {cat.description && <p className="cat-card-modal__desc">{cat.description}</p>}
             <div className="cat-card-modal__votes">{cat.vote_count} оценок</div>
 

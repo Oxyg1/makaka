@@ -41,9 +41,15 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([getMyCats(), getStats(), user ? getUserPosts(user.id) : Promise.resolve([])])
-      .then(([c, s, p]) => { setCats(c); setStats(s); setPosts(p); })
-      .finally(() => setLoading(false));
+    Promise.all([
+      getMyCats().catch(() => [] as CatWithStats[]),
+      getStats().catch(() => null),
+      user ? getUserPosts(user.id).catch(() => [] as Post[]) : Promise.resolve([] as Post[]),
+    ]).then(([c, s, p]) => {
+      setCats(c);
+      setStats(s);
+      setPosts(p);
+    }).finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => {

@@ -85,6 +85,13 @@ router.get('/stats', authMiddleware, (req: AuthRequest, res) => {
   res.json(stats ?? { total_rated: 0, total_skipped: 0, streak_days: 0, last_rated_date: null });
 });
 
+// POST /api/cats/reset-ratings — clears user's ratings and skips so they can rate again
+router.post('/reset-ratings', authMiddleware, (req: AuthRequest, res) => {
+  db.prepare('DELETE FROM ratings WHERE rater_id = ?').run(req.userId!);
+  db.prepare('DELETE FROM skips WHERE user_id = ?').run(req.userId!);
+  res.json({ success: true });
+});
+
 // GET /api/cats/next
 router.get('/next', authMiddleware, (req: AuthRequest, res) => {
   const cat = db.prepare(`

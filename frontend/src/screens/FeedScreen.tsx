@@ -131,7 +131,7 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
                 )}
               </div>
             </div>
-            <img className="feed__photo" src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
+            <img className="feed__photo" src={post.photo_url.startsWith('blob:') ? post.photo_url : `${BASE}${post.photo_url}`} alt="" loading="lazy" style={post.id < 0 ? { opacity: 0.7 } : undefined} />
             <div className="feed__card-footer">
               <div className="feed__actions">
                 <button className={`feed__like${post.liked_by_me ? ' feed__like--active' : ''}`} onClick={() => handleLike(post)}>
@@ -164,7 +164,15 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
         <div ref={endRef} />
       </div>
 
-      {showCreate && <CreateModal onClose={() => setShowCreate(false)} onPosted={p => { setPosts(pp => [p, ...pp]); setShowCreate(false); }} />}
+      {showCreate && (
+        <CreateModal
+          currentUser={currentUser}
+          onClose={() => setShowCreate(false)}
+          onOptimistic={temp => { setPosts(pp => [temp, ...pp]); setShowCreate(false); }}
+          onReplace={(tempId, real) => setPosts(pp => pp.map(p => p.id === tempId ? real : p))}
+          onRemove={tempId => setPosts(pp => pp.filter(p => p.id !== tempId))}
+        />
+      )}
     </div>
   );
 }
@@ -234,28 +242,40 @@ function CommentsSection({ postId, currentUserId, onCommentPosted, onCommentDele
   );
 }
 
-function CreateModal({ onClose, onPosted }: { onClose: () => void; onPosted: (p: Post) => void }) {
+function CreateModal({ currentUser, onClose, onOptimistic, onReplace, onRemove }: {
+  currentUser: User | null;
+  onClose: () => void;
+  onOptimistic: (p: Post) => void;
+  onReplace: (tempId: number, real: Post) => void;
+  onRemove: (tempId: number) => void;
+}) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (f: File) => { setPhoto(f); setPreview(URL.createObjectURL(f)); setError(''); };
-  const handleSubmit = async () => {
-    if (!photo || submitting) return;
-    setSubmitting(true);
-    setError('');
-    try {
-      const fd = new FormData(); fd.append('photo', photo);
-      if (caption.trim()) fd.append('caption', caption.trim());
-      hapticSuccess();
-      onPosted(await createPost(fd));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
-      setSubmitting(false);
-    }
+  const handleFile = (f: File) => { setPhoto(f); setPreview(URL.createObjectURL(f)); };
+
+  const handleSubmit = () => {
+    if (!photo || !preview) return;
+    const captionText = caption.trim();
+    const tempId = -Date.now();
+    const tempPost: Post = {
+      id: tempId,
+      user_id: currentUser?.id ?? 0,
+      photo_url: preview,
+      caption: captionText || null,
+      created_at: new Date().toISOString(),
+      author_name: currentUser?.first_name ?? 'Вы',
+      author_username: currentUser?.username ?? null,
+      likes_count: 0, liked_by_me: false, comments_count: 0,
+    };
+    hapticSuccess();
+    onOptimistic(tempPost);
+    const fd = new FormData();
+    fd.append('photo', photo);
+    if (captionText) fd.append('caption', captionText);
+    createPost(fd).then(real => onReplace(tempId, real)).catch(() => onRemove(tempId));
   };
 
   return (
@@ -265,9 +285,7 @@ function CreateModal({ onClose, onPosted }: { onClose: () => void; onPosted: (p:
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Отмена</button>
           <span className="modal-sheet__title">Новый пост</span>
-          <button className="modal-sheet__action" onClick={handleSubmit} disabled={!photo || submitting}>
-            {submitting ? '...' : 'Опубл.'}
-          </button>
+          <button className="modal-sheet__action" onClick={handleSubmit} disabled={!photo}>Опубл.</button>
         </div>
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {preview ? (
@@ -284,10 +302,7 @@ function CreateModal({ onClose, onPosted }: { onClose: () => void; onPosted: (p:
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
           <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Расскажите о коте..." maxLength={300}
             style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', color: 'var(--text)', fontSize: 15, resize: 'none', minHeight: 80, fontFamily: 'inherit' }} />
-          {error && <p style={{ margin: 0, color: '#ff453a', fontSize: 13, textAlign: 'center' }}>{error}</p>}
-          <button className="btn-primary" onClick={handleSubmit} disabled={!photo || submitting}>
-            {submitting ? 'Публикуем...' : 'Опубликовать'}
-          </button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={!photo}>Опубликовать</button>
         </div>
       </div>
     </div>
