@@ -13,7 +13,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 8px 12px 12px;
+  padding: 8px 12px calc(var(--nav-height, 62px) + 24px);
   min-height: 0;
 }
 
@@ -95,31 +95,39 @@
 .rs__actions { display: flex; gap: 10px; }
 
 .rs__skip {
-  flex: 1; background: var(--bg-secondary); color: var(--text);
-  border: 1px solid var(--border-strong); border-radius: 99em;
+  flex: 1;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 99em;
   padding: 0 16px; font-size: 15px; font-weight: 600;
   cursor: pointer; height: 46px;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.1s;
+  box-shadow: var(--glass-shadow);
 }
 .rs__skip:active { opacity: 0.7; transform: scale(0.98); }
 
 .rs__rate-btn {
-  flex: 2; background: linear-gradient(135deg, #7c6df9 0%, #9b54de 100%);
+  flex: 2; background: var(--primary-gradient, linear-gradient(135deg, #7c6df9 0%, #9b54de 100%));
   color: #fff; border: none; border-radius: 99em;
   font-size: 15px; font-weight: 700; cursor: pointer;
   height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.1s;
-  box-shadow: 0 4px 20px rgba(124,109,249,0.35);
+  box-shadow: 0 4px 20px rgba(124,109,249,0.45), var(--glass-shadow);
 }
-.rs__rate-btn:disabled { opacity: 0.5; cursor: default; }
+.rs__rate-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 .rs__rate-btn:not(:disabled):active { opacity: 0.88; transform: scale(0.98); }
 
 /* Empty/loading state */
 .rs__state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100%; gap: 10px; padding: 32px; text-align: center; background: var(--bg);
+  height: 100%; gap: 10px;
+  padding: 32px 32px calc(var(--nav-height, 62px) + 36px);
+  text-align: center; background: var(--bg);
   color: var(--text-muted);
 }
 .rs__state h3 { margin: 0; font-size: 20px; color: var(--text); }

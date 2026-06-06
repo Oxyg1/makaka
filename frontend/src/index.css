@@ -43,12 +43,13 @@ body {
 .app__content > * { flex: 1; min-height: 0; }
 
 .btn-primary {
-  background: var(--primary); color: #fff; border: none; border-radius: 99em;
-  padding: 14px 24px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
+  background: var(--primary-gradient, var(--primary)); color: #fff; border: none; border-radius: 99em;
+  padding: 0 24px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
   -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.1s;
   height: 50px; letter-spacing: -0.2px;
+  box-shadow: 0 4px 24px rgba(124,109,249,0.45), var(--glass-shadow);
 }
-.btn-primary:disabled { opacity: 0.4; cursor: default; }
+.btn-primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 .btn-primary:not(:disabled):active { opacity: 0.85; transform: scale(0.98); }
 
 .loading-screen { display: flex; align-items: center; justify-content: center; height: 100dvh; background: var(--bg); }
