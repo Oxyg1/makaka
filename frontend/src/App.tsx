@@ -18,12 +18,11 @@ export default function App() {
   const [viewUserId, setViewUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string; ready?: () => void; colorScheme?: string; expand?: () => void } } }).Telegram?.WebApp;
+    const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string; ready?: () => void; colorScheme?: string; expand?: () => void; initDataUnsafe?: { user?: { photo_url?: string } } } } }).Telegram?.WebApp;
     const raw = tg?.initData || 'mock';
     tg?.expand?.();
     tg?.ready?.();
-    if (tg?.colorScheme === 'dark') document.documentElement.classList.add('tg-dark');
-    const tgPhotoUrl: string | null = (tg as unknown as { initDataUnsafe?: { user?: { photo_url?: string } } })?.initDataUnsafe?.user?.photo_url ?? null;
+    const tgPhotoUrl = tg?.initDataUnsafe?.user?.photo_url ?? null;
     authUser(raw).then(u => {
       setUser(tgPhotoUrl ? { ...u, photo_url: tgPhotoUrl } : u);
       setReady(true);

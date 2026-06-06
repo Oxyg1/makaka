@@ -6,176 +6,95 @@ import { hapticSuccess, hapticError } from '../utils/haptics';
 import './RatingScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
-const SCORE_LABELS = ['', 'Ужас', 'Плохо', 'Так себе', 'Нейтрально', 'Неплохо', 'Хорошо', 'Отлично', 'Прекрасно', 'Великолепно', 'Совершенство'];
+const LABELS = ['','Ужас','Плохо','Так себе','Нейтрально','Неплохо','Хорошо','Отлично','Прекрасно','Великолепно','Совершенство'];
 
-type ExitDir = 'left' | 'up' | null;
+function plural(n: number, a: string, b: string, c: string) {
+  const m = Math.abs(n) % 100;
+  if (m >= 11 && m <= 19) return c;
+  switch (m % 10) { case 1: return a; case 2: case 3: case 4: return b; default: return c; }
+}
+
+type Dir = 'up' | 'left' | null;
 
 export default function RatingScreen() {
   const [cat, setCat] = useState<CatWithStats | null | undefined>(undefined);
   const [score, setScore] = useState(5);
   const [submitting, setSubmitting] = useState(false);
-  const [exitDir, setExitDir] = useState<ExitDir>(null);
-  const [sessionCount, setSessionCount] = useState(0);
+  const [dir, setDir] = useState<Dir>(null);
+  const [count, setCount] = useState(0);
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
   const fetchNext = useCallback(async () => {
     const next = await getNextCat();
-    setCat(next ?? null);
-    setScore(5);
-    setExitDir(null);
-    setSubmitting(false);
+    setCat(next ?? null); setScore(5); setDir(null); setSubmitting(false);
   }, []);
 
   useEffect(() => { fetchNext(); }, [fetchNext]);
 
-  const animateOut = (dir: ExitDir, action: () => Promise<void>) => {
+  const go = (d: Dir, action: () => Promise<void>) => {
     if (submitting) return;
-    setSubmitting(true);
-    setExitDir(dir);
+    setSubmitting(true); setDir(d);
     setTimeout(async () => {
-      try {
-        await action();
-        setSessionCount(c => c + 1);
-      } catch {
-        // ignore
-      }
-      setCat(undefined);
-      await fetchNext();
-    }, 320);
+      try { await action(); setCount(c => c + 1); } catch { /**/ }
+      setCat(undefined); await fetchNext();
+    }, 300);
   };
 
-  const handleRate = () => {
-    if (!cat || submitting) return;
-    animateOut('up', async () => {
-      await rateCat(cat.id, scoreRef.current);
-      hapticSuccess();
-    });
-  };
+  const handleRate = () => { if (!cat) return; go('up', async () => { await rateCat(cat.id, scoreRef.current); hapticSuccess(); }); };
+  const handleSkip = () => { if (!cat) return; go('left', async () => { await skipCat(cat.id); hapticError(); }); };
 
-  const handleSkip = () => {
-    if (!cat || submitting) return;
-    animateOut('left', async () => {
-      await skipCat(cat.id);
-      hapticError();
-    });
-  };
+  if (cat === undefined) return (
+    <div className="rs__state"><div className="spinner" /><p>Ищем кота...</p></div>
+  );
 
-  if (cat === undefined) {
-    return (
-      <div className="rating-screen__loading">
-        <div className="rating-screen__spinner" />
-        <p>Ищем кота...</p>
-      </div>
-    );
-  }
-
-  if (cat === null) {
-    return (
-      <div className="rating-screen__empty">
-        <svg className="rating-screen__empty-icon" width="72" height="72" viewBox="0 0 24 24" fill="currentColor" opacity="0.25">
-          <ellipse cx="9" cy="6" rx="2.2" ry="2.8" />
-          <ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
-          <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" />
-          <ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
-          <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
-        </svg>
-        <h3>Все коты оценены!</h3>
-        <p>Вы оценили всех доступных котов. Заходите завтра — будут новые!</p>
-        {sessionCount > 0 && (
-          <p className="rating-screen__session-done">За эту сессию вы оценили {sessionCount} {pluralCats(sessionCount)}</p>
-        )}
-      </div>
-    );
-  }
-
-  const thumbUrl = cat.photo_url.replace('/uploads/', '/uploads/thumb_');
+  if (cat === null) return (
+    <div className="rs__state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.2">
+        <ellipse cx="9" cy="6" rx="2.2" ry="2.8" /><ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+        <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" /><ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+        <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+      </svg>
+      <h3>Все коты оценены!</h3>
+      <p>Заходите позже — появятся новые</p>
+      {count > 0 && <p className="rs__session">За сессию: {count} {plural(count,'кот','кота','котов')}</p>}
+    </div>
+  );
 
   return (
-    <div className="rating-screen">
-      {sessionCount > 0 && (
-        <div className="rating-screen__counter">
-          Оценено: {sessionCount}
-        </div>
-      )}
-
-      <div className={`rating-screen__card${exitDir ? ` rating-screen__card--exit-${exitDir}` : ''}`}>
-        <div className="rating-screen__photo-wrap">
-          <img
-            className="rating-screen__photo"
+    <div className="rs">
+      {count > 0 && <div className="rs__counter">Оценено: {count}</div>}
+      <div className={`rs__scroll`}>
+        <div className={`rs__card${dir ? ` rs__card--${dir}` : ''}`}>
+          <img className="rs__photo"
             src={`${BASE}${cat.photo_url}`}
-            srcSet={`${BASE}${thumbUrl} 400w, ${BASE}${cat.photo_url} 1200w`}
-            sizes="(max-width: 600px) 400px, 1200px"
-            alt={cat.name}
-            loading="eager"
+            srcSet={`${BASE}${cat.photo_url.replace('/uploads/','/uploads/thumb_')} 400w, ${BASE}${cat.photo_url} 1200w`}
+            sizes="(max-width:600px) 400px, 1200px"
+            alt={cat.name} loading="eager"
           />
-          <div className="rating-screen__photo-overlay">
-            <h2 className="rating-screen__name">{cat.name}</h2>
-            {(cat.breed || cat.age) && (
-              <p className="rating-screen__breed">
-                {[cat.breed, cat.age ? `${cat.age} ${pluralYears(cat.age)}` : null].filter(Boolean).join(' · ')}
-              </p>
-            )}
-            <p className="rating-screen__meta">от {cat.owner_name}</p>
+          <div className="rs__card-body">
+            <div className="rs__info">
+              <h2 className="rs__name">{cat.name}</h2>
+              {(cat.breed || cat.age) && (
+                <p className="rs__breed">{[cat.breed, cat.age ? `${cat.age} лет` : null].filter(Boolean).join(' · ')}</p>
+              )}
+              {cat.avg_score > 0 && <p className="rs__avg">★ {cat.avg_score} · {cat.vote_count} оц.</p>}
+              <p className="rs__owner">от {cat.owner_name}</p>
+            </div>
+            {cat.description && <p className="rs__desc">{cat.description}</p>}
+            <div className="rs__footer">
+              <RatingSlider value={score} onChange={setScore} disabled={submitting} />
+              <p className="rs__label">{LABELS[score]}</p>
+              <div className="rs__actions">
+                <button className="rs__skip" onClick={handleSkip} disabled={submitting}>Пропустить</button>
+                <button className="btn-primary" onClick={handleRate} disabled={submitting} style={{ flex: 2 }}>
+                  {submitting ? '...' : `Оценить ${score}`}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {cat.description && (
-          <p className="rating-screen__desc">{cat.description}</p>
-        )}
-
-        {cat.vote_count > 0 && (
-          <p className="rating-screen__avg">
-            Средняя оценка: <strong>{cat.avg_score}</strong> ({cat.vote_count} {pluralVotes(cat.vote_count)})
-          </p>
-        )}
-      </div>
-
-      <div className="rating-screen__footer">
-        <p className="rating-screen__score-label">{SCORE_LABELS[score]}</p>
-        <RatingSlider value={score} onChange={setScore} disabled={submitting} />
-        <div className="rating-screen__actions">
-          <button
-            className="btn-skip"
-            onClick={handleSkip}
-            disabled={submitting}
-            aria-label="Пропустить"
-          >
-            Пропустить
-          </button>
-          <button
-            className="btn-primary btn-rate"
-            onClick={handleRate}
-            disabled={submitting}
-          >
-            {submitting ? '...' : `Оценить ${score}/10`}
-          </button>
         </div>
       </div>
     </div>
   );
-}
-
-function pluralCats(n: number): string {
-  const r = n % 10;
-  if (n % 100 >= 11 && n % 100 <= 14) return 'котов';
-  if (r === 1) return 'кота';
-  if (r >= 2 && r <= 4) return 'кота';
-  return 'котов';
-}
-
-function pluralYears(n: number): string {
-  const r = n % 10;
-  if (n % 100 >= 11 && n % 100 <= 14) return 'лет';
-  if (r === 1) return 'год';
-  if (r >= 2 && r <= 4) return 'года';
-  return 'лет';
-}
-
-function pluralVotes(n: number): string {
-  const r = n % 10;
-  if (n % 100 >= 11 && n % 100 <= 14) return 'оценок';
-  if (r === 1) return 'оценка';
-  if (r >= 2 && r <= 4) return 'оценки';
-  return 'оценок';
 }

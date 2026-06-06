@@ -1,11 +1,12 @@
-import type { CatLeaderboardEntry, CatWithStats, Post, User, UserProfile } from './types';
+import type { CatLeaderboardEntry, CatWithStats, Post, User, UserProfile, UserStats } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 let initDataRaw = 'mock';
 let _currentUser: User | null = null;
 
-export function setInitData(raw: string) { initDataRaw = raw; }
 export function getCurrentUser() { return _currentUser; }
+
+export function setInitData(raw: string) { initDataRaw = raw; }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -14,7 +15,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-  if (!res.ok) { const text = await res.text(); throw new Error(text || `HTTP ${res.status}`); }
+  if (!res.ok) { const t = await res.text(); throw new Error(t || `HTTP ${res.status}`); }
   return res.json() as Promise<T>;
 }
 
@@ -35,20 +36,20 @@ export function skipCat(id: number): Promise<{ success: boolean }> {
   return request(`/api/cats/${id}/skip`, { method: 'POST' });
 }
 
-export function getStats(): Promise<{ total_rated: number; total_skipped: number; streak_days: number; last_rated_date: string | null }> {
-  return request('/api/cats/stats');
-}
-
 export function submitCat(formData: FormData): Promise<CatWithStats> {
   return request<CatWithStats>('/api/cats', { method: 'POST', body: formData });
 }
 
-export function getLeaderboard(period: 'daily' | 'weekly' | 'monthly'): Promise<CatLeaderboardEntry[]> {
-  return request<CatLeaderboardEntry[]>(`/api/leaderboard?period=${period}`);
-}
-
 export function getMyCats(): Promise<CatWithStats[]> {
   return request<CatWithStats[]>('/api/cats/my');
+}
+
+export function getStats(): Promise<UserStats> {
+  return request<UserStats>('/api/cats/stats');
+}
+
+export function getLeaderboard(period: 'daily' | 'weekly' | 'monthly'): Promise<CatLeaderboardEntry[]> {
+  return request<CatLeaderboardEntry[]>(`/api/leaderboard?period=${period}`);
 }
 
 export function getFeed(offset = 0): Promise<Post[]> {

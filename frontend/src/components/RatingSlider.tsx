@@ -1,64 +1,43 @@
-import { useRef, useState } from 'react';
-import { hapticSelection } from '../utils/haptics';
+import { useState } from 'react';
 import './RatingSlider.css';
 
-interface Props {
-  value: number;
-  onChange: (score: number) => void;
-  disabled?: boolean;
-}
+const COLORS = ['','#ff453a','#ff453a','#ff6b35','#ff9500','#ffcc00','#a8cc00','#34c759','#00b140','#007aff','#af52de'];
 
-const SCORE_COLORS = ['', '#FF3B30', '#FF3B30', '#FF6B35', '#FF9500', '#FFCC00', '#A8CC00', '#34C759', '#00B140', '#007AFF', '#AF52DE'];
+interface Props { value: number; onChange: (v: number) => void; disabled?: boolean; }
 
 export default function RatingSlider({ value, onChange, disabled }: Props) {
-  const [bumping, setBumping] = useState(false);
-  const prevValue = useRef(value);
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (disabled) return;
-    const v = parseInt(e.target.value, 10);
-    if (v !== prevValue.current) {
-      hapticSelection();
-      prevValue.current = v;
-      setBumping(false);
-      requestAnimationFrame(() => setBumping(true));
-    }
-    onChange(v);
-  }
-
+  const [dragging, setDragging] = useState(false);
   const pct = ((value - 1) / 9) * 100;
-  const color = value > 0 ? SCORE_COLORS[value] : '#8E8E93';
+  const color = COLORS[value] || '#6d6d71';
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!disabled) onChange(parseInt(e.target.value));
+  };
 
   return (
     <div className="rating-slider">
-      <div className={`rating-slider__score${bumping ? ' rating-slider__score--bump' : ''}`} style={{ color }}>
-        {value > 0 ? value : '—'}
-      </div>
       <div className="rating-slider__track-wrap">
+        <div className="rating-slider__fill" style={{ width: `${value > 0 ? pct : 0}%`, background: color }} />
         <input
-          type="range"
-          min={1}
-          max={10}
-          value={value || 1}
-          onChange={handleChange}
-          disabled={disabled}
           className="rating-slider__input"
-          style={{
-            '--fill-pct': `${value > 0 ? pct : 0}%`,
-            '--fill-color': color,
-          } as React.CSSProperties}
+          type="range" min={1} max={10} step={1}
+          value={value || 1}
+          onChange={handleInput}
+          onPointerDown={() => setDragging(true)}
+          onPointerUp={() => setDragging(false)}
+          disabled={disabled}
+          style={{ '--thumb-color': color } as React.CSSProperties}
         />
-        <div className="rating-slider__labels">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-            <span
-              key={n}
-              className={`rating-slider__tick${n <= value ? ' rating-slider__tick--active' : ''}`}
-              style={n <= value ? { color } : {}}
-            >
-              {n}
-            </span>
-          ))}
-        </div>
+      </div>
+      <div className="rating-slider__ticks">
+        {Array.from({ length: 10 }, (_, i) => (
+          <span key={i} className={`rating-slider__tick${i + 1 <= value ? ' rating-slider__tick--active' : ''}`}
+            style={i + 1 <= value ? { color } : undefined}>{i + 1}</span>
+        ))}
+      </div>
+      <div className={`rating-slider__score${dragging ? ' rating-slider__score--bump' : ''}`}
+        style={{ color: value > 0 ? color : 'var(--text-muted)' }}>
+        {value > 0 ? value : '—'}
       </div>
     </div>
   );
