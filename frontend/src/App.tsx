@@ -11,6 +11,19 @@ import ProfileScreen from './screens/ProfileScreen';
 
 export type Tab = 'rate' | 'feed' | 'submit' | 'leaderboard' | 'profile';
 
+type TgWebApp = {
+  initData?: string;
+  ready?: () => void;
+  expand?: () => void;
+  requestFullscreen?: () => void;
+  disableVerticalSwipes?: () => void;
+  initDataUnsafe?: { user?: { photo_url?: string } };
+};
+
+function show(active: boolean): React.CSSProperties {
+  return active ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' } : { display: 'none' };
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('rate');
   const [ready, setReady] = useState(false);
@@ -18,9 +31,11 @@ export default function App() {
   const [viewUserId, setViewUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string; ready?: () => void; colorScheme?: string; expand?: () => void; initDataUnsafe?: { user?: { photo_url?: string } } } } }).Telegram?.WebApp;
+    const tg = (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp;
     const raw = tg?.initData || 'mock';
     tg?.expand?.();
+    tg?.requestFullscreen?.();
+    tg?.disableVerticalSwipes?.();
     tg?.ready?.();
     const tgPhotoUrl = tg?.initDataUnsafe?.user?.photo_url ?? null;
     authUser(raw).then(u => {
@@ -36,11 +51,11 @@ export default function App() {
   return (
     <div className="app">
       <main className="app__content">
-        {activeTab === 'rate' && <RatingScreen />}
-        {activeTab === 'feed' && <FeedScreen onViewUser={setViewUserId} currentUser={currentUser ?? null} />}
-        {activeTab === 'submit' && <SubmitCatScreen onSubmitted={() => setActiveTab('feed')} />}
-        {activeTab === 'leaderboard' && <LeaderboardScreen onViewUser={setViewUserId} />}
-        {activeTab === 'profile' && <ProfileScreen user={currentUser} onViewUser={setViewUserId} />}
+        <div style={show(activeTab === 'rate')}><RatingScreen /></div>
+        <div style={show(activeTab === 'feed')}><FeedScreen onViewUser={setViewUserId} currentUser={currentUser ?? null} /></div>
+        <div style={show(activeTab === 'submit')}><SubmitCatScreen onSubmitted={() => setActiveTab('feed')} /></div>
+        <div style={show(activeTab === 'leaderboard')}><LeaderboardScreen onViewUser={setViewUserId} /></div>
+        <div style={show(activeTab === 'profile')}><ProfileScreen user={currentUser} onViewUser={setViewUserId} /></div>
       </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       {viewUserId !== null && (

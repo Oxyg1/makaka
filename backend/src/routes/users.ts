@@ -53,11 +53,13 @@ router.get('/:id/posts', authMiddleware, (req: AuthRequest, res) => {
   const posts = db.prepare(`
     SELECT p.id, p.user_id, p.photo_url, p.caption, p.created_at,
       u.first_name AS author_name, u.username AS author_username,
-      COUNT(pl.id) AS likes_count,
-      MAX(CASE WHEN pl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me
+      COUNT(DISTINCT pl.id) AS likes_count,
+      MAX(CASE WHEN pl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me,
+      COUNT(DISTINCT pc.id) AS comments_count
     FROM posts p
     JOIN users u ON p.user_id = u.id
     LEFT JOIN post_likes pl ON pl.post_id = p.id
+    LEFT JOIN post_comments pc ON pc.post_id = p.id
     WHERE p.user_id = ?
     GROUP BY p.id
     ORDER BY p.created_at DESC

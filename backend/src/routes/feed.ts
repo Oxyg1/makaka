@@ -77,7 +77,8 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
     RETURNING *
   `).get(req.userId!, photoUrl, caption?.trim() || null) as Record<string, unknown>;
 
-  res.status(201).json({ ...post, likes_count: 0, liked_by_me: false, comments_count: 0 });
+  const user = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null };
+  res.status(201).json({ ...post, author_name: user.first_name, author_username: user.username, likes_count: 0, liked_by_me: false, comments_count: 0 });
 });
 
 // DELETE /api/feed/comments/:id — must be before /:id to avoid param collision

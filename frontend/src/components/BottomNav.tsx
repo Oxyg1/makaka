@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import type { Tab } from '../App';
+import { hapticSelection } from '../utils/haptics';
 import './BottomNav.css';
 
 const ICONS: Record<Tab, ReactElement> = {
@@ -53,7 +54,7 @@ export default function BottomNav({ activeTab, onTabChange }: Props) {
       {TABS.map(tab => (
         <button key={tab}
           className={`bottom-nav__tab${activeTab === tab ? ' bottom-nav__tab--active' : ''}`}
-          onClick={() => onTabChange(tab)}
+          onClick={() => { hapticSelection(); onTabChange(tab); }}
           aria-current={activeTab === tab ? 'page' : undefined}
         >
           <span className="bottom-nav__icon">{ICONS[tab]}</span>

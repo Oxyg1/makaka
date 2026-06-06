@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getFeed, likePost, createPost, getComments, createComment, deleteComment, deletePost } from '../api';
+import { hapticImpact, hapticSuccess } from '../utils/haptics';
 import type { Post, Comment, User } from '../types';
 import './FeedScreen.css';
 
@@ -55,6 +56,7 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
   }, [posts.length, loadingMore, loading]);
 
   const handleLike = async (post: Post) => {
+    hapticImpact('light');
     const optimistic = posts.map(p => p.id === post.id ? { ...p, liked_by_me: !p.liked_by_me, likes_count: p.likes_count + (p.liked_by_me ? -1 : 1) } : p);
     setPosts(optimistic);
     try { const r = await likePost(post.id); setPosts(pp => pp.map(p => p.id === post.id ? { ...p, liked_by_me: r.liked, likes_count: r.likes_count } : p)); }
@@ -187,6 +189,7 @@ function CommentsSection({ postId, currentUserId, onCommentPosted, onCommentDele
       const c = await createComment(postId, text.trim());
       setComments(prev => [...prev, c]);
       setText('');
+      hapticSuccess();
       onCommentPosted();
     } catch { /* ignore */ }
     setSending(false);
@@ -236,17 +239,23 @@ function CreateModal({ onClose, onPosted }: { onClose: () => void; onPosted: (p:
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (f: File) => { setPhoto(f); setPreview(URL.createObjectURL(f)); };
+  const handleFile = (f: File) => { setPhoto(f); setPreview(URL.createObjectURL(f)); setError(''); };
   const handleSubmit = async () => {
     if (!photo || submitting) return;
     setSubmitting(true);
+    setError('');
     try {
       const fd = new FormData(); fd.append('photo', photo);
       if (caption.trim()) fd.append('caption', caption.trim());
+      hapticSuccess();
       onPosted(await createPost(fd));
-    } catch { setSubmitting(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -275,6 +284,7 @@ function CreateModal({ onClose, onPosted }: { onClose: () => void; onPosted: (p:
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
           <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Расскажите о коте..." maxLength={300}
             style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', color: 'var(--text)', fontSize: 15, resize: 'none', minHeight: 80, fontFamily: 'inherit' }} />
+          {error && <p style={{ margin: 0, color: '#ff453a', fontSize: 13, textAlign: 'center' }}>{error}</p>}
           <button className="btn-primary" onClick={handleSubmit} disabled={!photo || submitting}>
             {submitting ? 'Публикуем...' : 'Опубликовать'}
           </button>

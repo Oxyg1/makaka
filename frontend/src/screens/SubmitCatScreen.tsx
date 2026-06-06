@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { submitCat } from '../api';
+import { hapticSuccess } from '../utils/haptics';
 import './SubmitCatScreen.css';
 
 interface Props { onSubmitted: () => void; }
@@ -32,8 +33,14 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
       if (breed.trim()) fd.append('breed', breed.trim());
       if (age.trim()) fd.append('age', age.trim());
       if (description.trim()) fd.append('description', description.trim());
-      await submitCat(fd); setSuccess(true);
-      setTimeout(onSubmitted, 1800);
+      await submitCat(fd);
+      hapticSuccess();
+      setSuccess(true);
+      setTimeout(() => {
+        onSubmitted();
+        setSuccess(false); setPhoto(null); setPreview('');
+        setName(''); setBreed(''); setAge(''); setDescription('');
+      }, 1800);
     } catch (err) { setError(err instanceof Error ? err.message : 'Ошибка'); setSubmitting(false); }
   };
 
