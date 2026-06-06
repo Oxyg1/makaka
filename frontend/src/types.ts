@@ -5,6 +5,7 @@ export interface Cat {
 
 export interface CatWithStats extends Cat {
   avg_score: number; vote_count: number;
+  likes_count: number; liked_by_me: boolean;
 }
 
 export interface CatLeaderboardEntry {

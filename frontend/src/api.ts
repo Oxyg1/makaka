@@ -40,6 +40,10 @@ export function resetRatings(): Promise<{ success: boolean }> {
   return request('/api/cats/reset-ratings', { method: 'POST' });
 }
 
+export function likeCat(id: number): Promise<{ liked: boolean; likes_count: number }> {
+  return request(`/api/cats/${id}/like`, { method: 'POST' });
+}
+
 export function submitCat(formData: FormData): Promise<CatWithStats> {
   return request<CatWithStats>('/api/cats', { method: 'POST', body: formData });
 }

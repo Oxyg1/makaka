@@ -92,25 +92,41 @@ router.post('/reset-ratings', authMiddleware, (req: AuthRequest, res) => {
   res.json({ success: true });
 });
 
+// POST /api/cats/:id/like — must be before /:id
+router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const existing = db.prepare('SELECT id FROM cat_likes WHERE cat_id = ? AND user_id = ?').get(catId, req.userId!);
+  if (existing) {
+    db.prepare('DELETE FROM cat_likes WHERE cat_id = ? AND user_id = ?').run(catId, req.userId!);
+  } else {
+    db.prepare('INSERT OR IGNORE INTO cat_likes (cat_id, user_id) VALUES (?, ?)').run(catId, req.userId!);
+  }
+  const { likes_count } = db.prepare('SELECT COUNT(*) AS likes_count FROM cat_likes WHERE cat_id = ?').get(catId) as { likes_count: number };
+  res.json({ liked: !existing, likes_count });
+});
+
 // GET /api/cats/next
 router.get('/next', authMiddleware, (req: AuthRequest, res) => {
   const cat = db.prepare(`
     SELECT c.id, c.name, c.breed, c.age, c.description, c.photo_url,
       u.first_name AS owner_name,
       ROUND(COALESCE(AVG(r.score), 0), 1) AS avg_score,
-      COUNT(r.id) AS vote_count
+      COUNT(DISTINCT r.id) AS vote_count,
+      COUNT(DISTINCT cl.id) AS likes_count,
+      MAX(CASE WHEN cl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me
     FROM cats c
     JOIN users u ON c.owner_id = u.id
     LEFT JOIN ratings r ON r.cat_id = c.id
+    LEFT JOIN cat_likes cl ON cl.cat_id = c.id
     WHERE c.owner_id != ?
       AND c.id NOT IN (SELECT cat_id FROM ratings WHERE rater_id = ?)
       AND c.id NOT IN (SELECT cat_id FROM skips WHERE user_id = ?)
     GROUP BY c.id
     ORDER BY RANDOM()
     LIMIT 1
-  `).get(req.userId, req.userId, req.userId);
-
-  res.json(cat ?? null);
+  `).get(req.userId, req.userId, req.userId, req.userId) as Record<string, unknown> | undefined;
+  if (!cat) { res.json(null); return; }
+  res.json({ ...cat, liked_by_me: Boolean(cat.liked_by_me) });
 });
 
 // POST /api/cats/:id/rate

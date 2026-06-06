@@ -101,6 +101,15 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_notifs_user ON notifications(user_id);
+
+  CREATE TABLE IF NOT EXISTS cat_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cat_id INTEGER NOT NULL REFERENCES cats(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(cat_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_cat_likes_cat ON cat_likes(cat_id);
 `);
 
 try { db.exec('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch { /* column already exists */ }
