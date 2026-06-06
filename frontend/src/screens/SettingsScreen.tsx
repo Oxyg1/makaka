@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
 import { isHapticsEnabled, setHapticsEnabled, hapticImpact } from '../utils/haptics';
 import { getStats } from '../api';
+import type { UserStats } from '../types';
 import './SettingsScreen.css';
-
-interface Stats {
-  total_rated: number;
-  total_skipped: number;
-  streak_days: number;
-  last_rated_date: string | null;
-}
 
 export default function SettingsScreen() {
   const [haptics, setHaptics] = useState(isHapticsEnabled());
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
 
   useEffect(() => {
     getStats().then(setStats).catch(() => null);
