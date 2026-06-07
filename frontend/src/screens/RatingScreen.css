@@ -2,7 +2,7 @@
 
 .rs__counter {
   position: absolute; top: 14px; left: 50%; translate: -50%; z-index: 10;
-  background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.8);
   color: var(--text-muted); font-size: 12px; font-weight: 600;
   padding: 3px 10px; border-radius: 99em;
   border: 1px solid var(--border);
@@ -20,7 +20,7 @@
 .rs__card {
   flex: 1;
   min-height: 0;
-  background: var(--bg-card);
+  background: #fff;
   border-radius: 24px; border: 1px solid var(--border);
   box-shadow: var(--card-shadow); overflow: hidden;
   display: flex; flex-direction: column;
@@ -58,6 +58,7 @@
   display: flex; justify-content: space-between; align-items: center;
 }
 
+/* Overlay badges stay dark — they sit on top of photo */
 .rs__badge {
   background: rgba(0,0,0,0.45); backdrop-filter: blur(10px);
   border-radius: 99em; padding: 5px 12px;
@@ -80,7 +81,7 @@
 .rs__card-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 
 .rs__info { display: flex; flex-direction: column; gap: 2px; }
-.rs__name { margin: 0; font-size: 18px; font-weight: 700; }
+.rs__name { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
 .rs__breed { margin: 0; font-size: 12px; color: var(--text-muted); }
 .rs__avg { margin: 0; font-size: 12px; color: var(--text-muted); }
 .rs__owner { margin: 0; font-size: 12px; color: var(--text-muted); }
@@ -113,28 +114,25 @@
 
 .rs__skip {
   flex: 1;
-  background: rgba(255,255,255,0.07);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  color: rgba(255,255,255,0.75);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: 99em;
   padding: 0 16px; font-size: 15px; font-weight: 600;
   cursor: pointer; height: 46px;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.1s;
-  box-shadow: var(--glass-shadow);
 }
 .rs__skip:active { opacity: 0.7; transform: scale(0.98); }
 
 .rs__rate-btn {
-  flex: 2; background: var(--primary-gradient, linear-gradient(135deg, #7c6df9 0%, #9b54de 100%));
+  flex: 2; background: var(--primary-gradient, linear-gradient(135deg, #7c5cff 0%, #a884ff 100%));
   color: #fff; border: none; border-radius: 99em;
   font-size: 15px; font-weight: 700; cursor: pointer;
   height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.1s;
-  box-shadow: 0 4px 20px rgba(124,109,249,0.45), var(--glass-shadow);
+  box-shadow: 0 4px 20px rgba(124,92,255,0.4);
 }
 .rs__rate-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 .rs__rate-btn:not(:disabled):active { opacity: 0.88; transform: scale(0.98); }
@@ -149,4 +147,4 @@
 }
 .rs__state h3 { margin: 0; font-size: 20px; color: var(--text); }
 .rs__state p { margin: 0; font-size: 15px; }
-.rs__session { color: #7c6df9; font-weight: 600; }
+.rs__session { color: var(--primary); font-weight: 600; }
