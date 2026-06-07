@@ -14,6 +14,8 @@ export interface CatLeaderboardEntry {
   description: string | null; photo_url: string;
   avg_score: number; vote_count: number;
   owner_name: string; owner_id: number;
+  likes_count?: number; liked_by_me?: boolean;
+  extra_photos?: string[];
 }
 
 export interface User {

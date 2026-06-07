@@ -26,18 +26,6 @@
   transition: width 0.08s, background 0.2s;
 }
 
-/* Visible thumb */
-.rating-slider__thumb {
-  position: absolute; top: 50%;
-  width: 26px; height: 26px; border-radius: 50%;
-  background: #fff;
-  box-shadow:
-    0 2px 10px rgba(0,0,0,0.35),
-    0 0 0 3px var(--rs-color, #6d6d71);
-  pointer-events: none;
-  transition: left 0.08s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
-}
-
 /* Ticks */
 .rating-slider__ticks {
   display: flex; justify-content: space-between; padding: 0 2px;

@@ -91,9 +91,9 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
               <div className="lb__glass-list">
                 {rest.map((e, i) => (
                   <button key={e.id} className="lb__row" onClick={() => setSelected(e)}>
+                    <span className="lb__rank-num">{i + 4}</span>
                     <div className="lb__avatar-wrap">
                       <img className="lb__avatar" src={`${BASE}${e.photo_url}`} alt={e.name} />
-                      <span className={rankBadgeClass(i + 3)}>{i + 4}</span>
                     </div>
                     <div className="lb__info">
                       <span className="lb__name">{e.name}</span>
