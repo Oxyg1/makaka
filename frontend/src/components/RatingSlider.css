@@ -1,37 +1,61 @@
-.rating-slider { display: flex; flex-direction: column; gap: 8px; }
+.rating-slider {
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative; /* input is absolute over this */
+}
 
+/* Transparent native input covers FULL widget — drag anywhere */
+.rating-slider__input {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; margin: 0;
+  z-index: 2;
+  -webkit-appearance: none; appearance: none;
+}
+.rating-slider--disabled .rating-slider__input { cursor: default; }
+
+/* Track */
 .rating-slider__track-wrap {
   position: relative; height: 6px;
-  background: rgba(255,255,255,0.1); border-radius: 99em; overflow: visible;
+  background: rgba(255,255,255,0.1); border-radius: 99em;
 }
 
 .rating-slider__fill {
   position: absolute; left: 0; top: 0; height: 100%;
   border-radius: 99em; pointer-events: none;
-  transition: width 0.1s, background 0.2s;
+  background: var(--rs-color, #6d6d71);
+  transition: width 0.08s, background 0.2s;
 }
 
-.rating-slider__input {
-  position: absolute; inset: -10px 0;
-  width: 100%; height: calc(100% + 20px);
-  opacity: 0; cursor: pointer; margin: 0;
+/* Visible thumb */
+.rating-slider__thumb {
+  position: absolute; top: 50%;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 2px 10px rgba(0,0,0,0.35),
+    0 0 0 3px var(--rs-color, #6d6d71);
+  pointer-events: none;
+  transition: left 0.08s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
 }
 
+/* Ticks */
 .rating-slider__ticks {
-  display: flex; justify-content: space-between;
-  padding: 0 2px;
+  display: flex; justify-content: space-between; padding: 0 2px;
 }
 
 .rating-slider__tick {
   font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.2);
   transition: color 0.15s; width: 18px; text-align: center;
 }
-.rating-slider__tick--active { color: inherit; }
+.rating-slider__tick--active { color: var(--rs-color, inherit); }
 
+/* Big score number */
 .rating-slider__score {
   text-align: center; font-size: 44px; font-weight: 800;
-  line-height: 1; letter-spacing: -2px; transition: color 0.2s;
+  line-height: 1; letter-spacing: -2px;
+  color: var(--rs-color, var(--text-muted));
+  transition: color 0.2s;
 }
 
-@keyframes bump { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-.rating-slider__score--bump { animation: bump 0.2s ease; }
+@keyframes bump { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.rating-slider__score--bump { animation: bump 0.18s ease; }
