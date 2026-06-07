@@ -1,17 +1,8 @@
 .rating-slider {
   display: flex; flex-direction: column; gap: 8px;
-  position: relative; /* input is absolute over this */
+  cursor: pointer; touch-action: none; user-select: none;
 }
-
-/* Transparent native input covers FULL widget — drag anywhere */
-.rating-slider__input {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  opacity: 0; cursor: pointer; margin: 0;
-  z-index: 2;
-  -webkit-appearance: none; appearance: none;
-}
-.rating-slider--disabled .rating-slider__input { cursor: default; }
+.rating-slider--disabled { cursor: default; }
 
 /* Track */
 .rating-slider__track-wrap {
