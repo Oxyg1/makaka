@@ -3,8 +3,11 @@ import { getNextCat, rateCat, skipCat, resetRatings, likeCat } from '../api';
 import RatingSlider from '../components/RatingSlider';
 import type { CatWithStats } from '../types';
 import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { ageLabel } from '../components/CatCardModal';
 import './RatingScreen.css';
+
+const BASE = import.meta.env.VITE_API_URL ?? '';
 
 function PhotoCarousel({ photos, name, overlay }: { photos: string[]; name: string; overlay: React.ReactNode }) {
   const [idx, setIdx] = useState(0);
@@ -18,8 +21,8 @@ function PhotoCarousel({ photos, name, overlay }: { photos: string[]; name: stri
   if (photos.length <= 1) {
     return (
       <div className="rs__photo-wrap">
-        <img className="rs__photo" src={`${import.meta.env.VITE_API_URL ?? ''}${photos[0]}`}
-          srcSet={`${import.meta.env.VITE_API_URL ?? ''}${photos[0].replace('/uploads/', '/uploads/thumb_')} 400w, ${import.meta.env.VITE_API_URL ?? ''}${photos[0]} 1200w`}
+        <img className="rs__photo" src={`${BASE}${photos[0]}`}
+          srcSet={`${BASE}${photos[0].replace('/uploads/', '/uploads/thumb_')} 400w, ${BASE}${photos[0]} 1200w`}
           sizes="(max-width:600px) 400px, 1200px" alt={name} loading="eager" />
         {overlay}
       </div>
@@ -37,7 +40,7 @@ function PhotoCarousel({ photos, name, overlay }: { photos: string[]; name: stri
       <div className="rs__carousel-rail" ref={railRef}>
         {photos.map((url, i) => (
           <img key={i} className="rs__photo rs__photo--slide"
-            src={`${import.meta.env.VITE_API_URL ?? ''}${url}`}
+            src={`${BASE}${url}`}
             alt={`${name} ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'} />
         ))}
       </div>
@@ -61,6 +64,24 @@ function plural(n: number, a: string, b: string, c: string) {
 
 type Dir = 'up' | 'left' | null;
 
+function applyCat(cat: CatWithStats | null, set: {
+  setCat: (c: CatWithStats | null) => void;
+  setScore: (n: number) => void;
+  setDir: (d: Dir) => void;
+  setSubmitting: (b: boolean) => void;
+  setLiked: (b: boolean) => void;
+  setLikesCount: (n: number) => void;
+  setLiking: (b: boolean) => void;
+}) {
+  set.setCat(cat);
+  set.setScore(5);
+  set.setDir(null);
+  set.setSubmitting(false);
+  set.setLiked(cat?.liked_by_me ?? false);
+  set.setLikesCount(cat?.likes_count ?? 0);
+  set.setLiking(false);
+}
+
 export default function RatingScreen() {
   const [cat, setCat] = useState<CatWithStats | null | undefined>(undefined);
   const [score, setScore] = useState(5);
@@ -74,28 +95,33 @@ export default function RatingScreen() {
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
-  const fetchNext = useCallback(async () => {
-    try {
-      const next = await getNextCat();
-      setCat(next ?? null);
-      setScore(5); setDir(null); setSubmitting(false);
-      setLiked(next?.liked_by_me ?? false);
-      setLikesCount(next?.likes_count ?? 0);
-      setLiking(false);
-    } catch {
-      setCat(null);
-    }
+  const setters = { setCat, setScore, setDir, setSubmitting, setLiked, setLikesCount, setLiking };
+
+  const loadNext = useCallback(async (): Promise<CatWithStats | null> => {
+    const next = await getNextCat();
+    if (next?.photo_url) new Image().src = `${BASE}${next.photo_url}`;
+    return next ?? null;
   }, []);
 
-  useEffect(() => { fetchNext(); }, [fetchNext]);
+  useEffect(() => {
+    loadNext()
+      .then(next => applyCat(next, setters))
+      .catch(() => setCat(null));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (d: Dir, action: () => Promise<void>) => {
     if (submitting) return;
     setSubmitting(true); setDir(d);
-    setTimeout(async () => {
-      try { await action(); setCount(c => c + 1); } catch { /**/ }
-      setCat(undefined); await fetchNext();
-    }, 300);
+
+    // Run action + prefetch in parallel with the exit animation
+    const pipeline = action()
+      .then(() => { setCount(c => c + 1); return loadNext(); })
+      .catch(async () => { try { return await loadNext(); } catch { return null; } });
+
+    const animDone = new Promise<void>(r => setTimeout(r, 280));
+
+    setCat(undefined); // show spinner immediately after animation starts
+    Promise.all([pipeline, animDone]).then(([next]) => applyCat(next, setters));
   };
 
   const handleRate = () => {
@@ -123,6 +149,8 @@ export default function RatingScreen() {
     finally { setLiking(false); }
   };
 
+  const descSwipe = useSheetSwipe(() => setDescOpen(false));
+
   if (cat === undefined) return (
     <div className="rs__state"><div className="spinner" /><p>Ищем кота...</p></div>
   );
@@ -131,7 +159,7 @@ export default function RatingScreen() {
     <RateAgainScreen count={count} plural={plural} onReset={async () => {
       setCat(undefined);
       try { await resetRatings(); } catch { /* continue even if reset fails */ }
-      await fetchNext();
+      loadNext().then(next => applyCat(next, setters)).catch(() => setCat(null));
     }} />
   );
 
@@ -171,12 +199,16 @@ export default function RatingScreen() {
               {cat.avg_score > 0 && <p className="rs__avg">★ {cat.avg_score} · {cat.vote_count} оц.</p>}
               <p className="rs__owner">от {cat.owner_name}</p>
             </div>
+
             {cat.description && (
-              <button className="rs__desc-btn" onClick={() => setDescOpen(true)}>
-                <span className="rs__desc">{cat.description}</span>
-                <span className="rs__desc-more">ещё ›</span>
-              </button>
+              <div className="rs__desc-wrap">
+                <p className="rs__desc">{cat.description}</p>
+                {cat.description.length > 80 && (
+                  <button className="rs__desc-more-btn" onClick={() => setDescOpen(true)}>Подробнее</button>
+                )}
+              </div>
             )}
+
             <div className="rs__footer">
               <RatingSlider value={score} onChange={setScore} disabled={submitting} />
               <p className="rs__label">{LABELS[score]}</p>
@@ -194,7 +226,12 @@ export default function RatingScreen() {
 
       {descOpen && cat.description && (
         <div className="modal-overlay" onClick={() => setDescOpen(false)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+          <div className="modal-sheet" ref={descSwipe.sheetRef}
+            onTouchStart={descSwipe.handleTouchStart}
+            onTouchMove={descSwipe.handleTouchMove}
+            onTouchEnd={descSwipe.handleTouchEnd}
+            onClick={e => e.stopPropagation()}
+          >
             <div className="modal-sheet__handle" />
             <div className="modal-sheet__header">
               <div style={{ width: 60 }} />

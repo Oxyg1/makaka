@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { likeCat } from '../api';
 import type { CatLeaderboardEntry, CatWithStats } from '../types';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import './CatCardModal.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -46,6 +47,7 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
   const [likesCount, setLikesCount] = useState(cat.likes_count ?? 0);
   const [liking, setLiking] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
+  const swipe = useSheetSwipe(onClose);
 
   const photos = [cat.photo_url, ...(cat.extra_photos ?? [])];
   const ownerId = 'owner_id' in cat ? cat.owner_id : undefined;
@@ -66,7 +68,10 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-sheet cat-card-modal">
+      <div className="modal-sheet cat-card-modal" ref={swipe.sheetRef}
+        onTouchStart={swipe.handleTouchStart}
+        onTouchMove={swipe.handleTouchMove}
+        onTouchEnd={swipe.handleTouchEnd}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close-btn" onClick={onClose}>Закрыть</button>

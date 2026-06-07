@@ -62,7 +62,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; display: flex; align-items: flex-end; backdrop-filter: blur(4px); }
-.modal-sheet { width: 100%; max-height: 92dvh; background: #1a1a1a; border-radius: 24px 24px 0 0; overflow: hidden; display: flex; flex-direction: column; animation: sheet-up 0.3s cubic-bezier(0.32,0.72,0,1); border-top: 1px solid var(--border-strong); }
+.modal-sheet { width: 100%; max-height: 92dvh; background: #1a1a1a; border-radius: 24px 24px 0 0; overflow: hidden; display: flex; flex-direction: column; animation: sheet-up 0.38s cubic-bezier(0.22,1,0.36,1); border-top: 1px solid var(--border-strong); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1); }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .modal-sheet__handle { width: 36px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
 .modal-sheet__header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
