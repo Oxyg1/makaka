@@ -10,15 +10,15 @@
   font-size: 16px; font-weight: 700;
 }
 
-.cat-card-modal__body { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
-.cat-card-modal__name { margin: 0; font-size: 22px; font-weight: 700; }
+.cat-card-modal__body { padding: 16px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+.cat-card-modal__name { margin: 0; font-size: 22px; font-weight: 700; color: var(--text); }
 .cat-card-modal__breed { margin: 0; font-size: 14px; color: var(--text-muted); }
 .cat-card-modal__desc { margin: 4px 0 0; font-size: 14px; color: var(--text-soft); line-height: 1.45; }
 .cat-card-modal__votes { font-size: 13px; color: var(--text-muted); }
 .cat-card-modal__owner-btn {
   margin-top: 8px; padding: 14px 20px; height: 50px;
   background: var(--primary-dim); color: var(--primary);
-  border: 1px solid rgba(124,109,249,0.25);
+  border: 1px solid rgba(124,92,255,0.25);
   border-radius: 99em; font-size: 15px; font-weight: 600;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;
