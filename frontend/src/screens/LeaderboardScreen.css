@@ -54,6 +54,7 @@
 /* ── Podium top-3 ─────────────────────────────── */
 .lb__podium {
   display: flex; gap: 8px; padding: 4px 0 6px;
+  align-items: flex-end;
 }
 
 .lb__podium-item {
