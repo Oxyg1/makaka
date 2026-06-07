@@ -8,7 +8,8 @@ import EditCatSheet from '../components/EditCatSheet';
 import './ProfileScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
-type PTab = 'cats' | 'posts' | 'notifications' | 'settings';
+type PTab = 'cats' | 'posts';
+type SidePanel = null | 'notifs' | 'settings';
 
 function timeAgo(s: string) {
   const d = Math.floor((Date.now() - new Date(s).getTime()) / 1000);
@@ -27,6 +28,7 @@ interface Props { user: User | null; onViewUser: (id: number) => void; onNotific
 
 export default function ProfileScreen({ user, onNotificationsRead }: Props) {
   const [tab, setTab] = useState<PTab>('cats');
+  const [panel, setPanel] = useState<SidePanel>(null);
   const [cats, setCats] = useState<CatWithStats[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -35,6 +37,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
   const [fullscreen, setFullscreen] = useState(localStorage.getItem('fullscreen_enabled') === '1');
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [notifsLoaded, setNotifsLoaded] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [selectedCat, setSelectedCat] = useState<CatWithStats | null>(null);
   const [editCat, setEditCat] = useState<CatWithStats | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
@@ -53,14 +56,21 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
   }, [user]);
 
   useEffect(() => {
-    if (tab === 'notifications' && !notifsLoaded) {
+    getNotifications().then(ns => {
+      setUnreadCount(ns.filter(n => !n.read).length);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (panel === 'notifs' && !notifsLoaded) {
       getNotifications().then(ns => {
         setNotifs(ns);
         setNotifsLoaded(true);
+        setUnreadCount(0);
         markNotificationsRead().then(() => onNotificationsRead?.()).catch(() => {});
       }).catch(() => setNotifsLoaded(true));
     }
-  }, [tab, notifsLoaded, onNotificationsRead]);
+  }, [panel, notifsLoaded, onNotificationsRead]);
 
   const toggleHaptics = (v: boolean) => { setHapticsEnabled(v); setHaptics(v); };
 
@@ -98,6 +108,22 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
   return (
     <div className="profile">
       <div className="profile__hero">
+        {/* Corner action icons */}
+        <div className="profile__hero-actions">
+          <button className={`profile__icon-btn${unreadCount > 0 ? ' profile__icon-btn--badge' : ''}`} onClick={() => setPanel('notifs')} aria-label="Уведомления">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {unreadCount > 0 && <span className="profile__icon-badge" />}
+          </button>
+          <button className="profile__icon-btn" onClick={() => setPanel('settings')} aria-label="Настройки">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
+
         <Avatar name={user?.first_name ?? 'У'} photoUrl={user?.photo_url} size={80} />
         <div className="profile__identity">
           <h2 className="profile__name">{user?.first_name ?? 'Пользователь'}</h2>
@@ -125,9 +151,9 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
 
       <div className="profile__tabs-wrap">
         <div className="profile__tabs">
-          {(['cats','posts','notifications','settings'] as PTab[]).map(t => (
+          {(['cats','posts'] as PTab[]).map(t => (
             <button key={t} className={`profile__tab${tab === t ? ' profile__tab--active' : ''}`} onClick={() => setTab(t)}>
-              {t === 'cats' ? 'Коты' : t === 'posts' ? 'Посты' : t === 'notifications' ? 'Уведомления' : 'Настройки'}
+              {t === 'cats' ? 'Мои коты' : 'Посты'}
             </button>
           ))}
         </div>
@@ -191,70 +217,93 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
           </div>
         ))}
 
-        {tab === 'notifications' && (
-          <div className="profile__notifs">
-            {!notifsLoaded && <div className="profile__center"><div className="spinner" /></div>}
-            {notifsLoaded && notifs.length === 0 && (
-              <div className="profile__empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                <p>Нет уведомлений</p>
-              </div>
-            )}
-            {notifsLoaded && notifs.map(n => (
-              <div key={n.id} className={`profile__notif${n.read ? '' : ' profile__notif--unread'}`}>
-                <div className="profile__notif-icon">
-                  {n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : '⭐'}
-                </div>
-                <div className="profile__notif-body">
-                  <span className="profile__notif-actor">{n.actor_name}</span>
-                  {' '}
-                  <span className="profile__notif-text">
-                    {n.type === 'like' ? 'лайкнул ваш пост'
-                      : n.type === 'comment' ? `написал: ${n.text}`
-                      : n.text ?? 'оценил вашего кота'}
-                  </span>
-                  <div className="profile__notif-time">{timeAgo(n.created_at)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && tab === 'settings' && (
-          <div className="profile__settings">
-            <div className="profile__settings-group">
-              <div className="profile__settings-row">
-                <div>
-                  <div className="profile__settings-label">Тактильный отклик</div>
-                  <div className="profile__settings-desc">Вибрация при оценке</div>
-                </div>
-                <label className="toggle">
-                  <input type="checkbox" checked={haptics} onChange={e => toggleHaptics(e.target.checked)} />
-                  <div className="toggle__track" /><div className="toggle__thumb" />
-                </label>
-              </div>
-              <div className="profile__settings-row">
-                <div>
-                  <div className="profile__settings-label">Полный экран</div>
-                  <div className="profile__settings-desc">Скрыть панель Telegram</div>
-                </div>
-                <label className="toggle">
-                  <input type="checkbox" checked={fullscreen} onChange={e => toggleFullscreen(e.target.checked)} />
-                  <div className="toggle__track" /><div className="toggle__thumb" />
-                </label>
-              </div>
-            </div>
-            <div className="profile__settings-group">
-              <div className="profile__settings-row">
-                <div className="profile__settings-label">Cat Rater</div>
-                <span className="profile__settings-ver">2.0.0</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Notifications panel */}
+      {panel === 'notifs' && (
+        <div className="modal-overlay" onClick={() => setPanel(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-sheet__handle" />
+            <div className="modal-sheet__header">
+              <div style={{ width: 60 }} />
+              <span className="modal-sheet__title">Уведомления</span>
+              <button className="modal-sheet__close-btn" onClick={() => setPanel(null)}>✕</button>
+            </div>
+            <div className="profile__notifs" style={{ overflowY: 'auto', flex: 1, paddingBottom: 24 }}>
+              {!notifsLoaded && <div className="profile__center"><div className="spinner" /></div>}
+              {notifsLoaded && notifs.length === 0 && (
+                <div className="profile__empty">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  <p>Нет уведомлений</p>
+                </div>
+              )}
+              {notifsLoaded && notifs.map(n => (
+                <div key={n.id} className={`profile__notif${n.read ? '' : ' profile__notif--unread'}`}>
+                  <div className="profile__notif-icon">
+                    {n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : '⭐'}
+                  </div>
+                  <div className="profile__notif-body">
+                    <span className="profile__notif-actor">{n.actor_name}</span>
+                    {' '}
+                    <span className="profile__notif-text">
+                      {n.type === 'like' ? 'лайкнул ваш пост'
+                        : n.type === 'comment' ? `написал: ${n.text}`
+                        : n.text ?? 'оценил вашего кота'}
+                    </span>
+                    <div className="profile__notif-time">{timeAgo(n.created_at)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings panel */}
+      {panel === 'settings' && (
+        <div className="modal-overlay" onClick={() => setPanel(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-sheet__handle" />
+            <div className="modal-sheet__header">
+              <div style={{ width: 60 }} />
+              <span className="modal-sheet__title">Настройки</span>
+              <button className="modal-sheet__close-btn" onClick={() => setPanel(null)}>✕</button>
+            </div>
+            <div className="profile__settings" style={{ overflowY: 'auto', flex: 1 }}>
+              <div className="profile__settings-group">
+                <div className="profile__settings-row">
+                  <div>
+                    <div className="profile__settings-label">Тактильный отклик</div>
+                    <div className="profile__settings-desc">Вибрация при оценке</div>
+                  </div>
+                  <label className="toggle">
+                    <input type="checkbox" checked={haptics} onChange={e => toggleHaptics(e.target.checked)} />
+                    <div className="toggle__track" /><div className="toggle__thumb" />
+                  </label>
+                </div>
+                <div className="profile__settings-row">
+                  <div>
+                    <div className="profile__settings-label">Полный экран</div>
+                    <div className="profile__settings-desc">Скрыть панель Telegram</div>
+                  </div>
+                  <label className="toggle">
+                    <input type="checkbox" checked={fullscreen} onChange={e => toggleFullscreen(e.target.checked)} />
+                    <div className="toggle__track" /><div className="toggle__thumb" />
+                  </label>
+                </div>
+              </div>
+              <div className="profile__settings-group">
+                <div className="profile__settings-row">
+                  <div className="profile__settings-label">Cat Rater</div>
+                  <span className="profile__settings-ver">2.0.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedCat && (
         <CatCardModal

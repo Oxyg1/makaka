@@ -86,6 +86,19 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p));
   };
 
+  const feedLive = false; // set to true when feed is ready to launch
+
+  if (!feedLive) return (
+    <div className="feed">
+      <div className="feed__wip">
+        <div className="feed__wip-icon">🚧</div>
+        <h3>Лента в разработке</h3>
+        <p>Скоро здесь появятся посты,<br />комментарии и реакции.</p>
+        <p>Следите за обновлениями!</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="feed">
       <div className="feed__header">

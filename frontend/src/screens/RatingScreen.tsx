@@ -70,6 +70,7 @@ export default function RatingScreen() {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [liking, setLiking] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
@@ -170,7 +171,12 @@ export default function RatingScreen() {
               {cat.avg_score > 0 && <p className="rs__avg">★ {cat.avg_score} · {cat.vote_count} оц.</p>}
               <p className="rs__owner">от {cat.owner_name}</p>
             </div>
-            {cat.description && <p className="rs__desc">{cat.description}</p>}
+            {cat.description && (
+              <button className="rs__desc-btn" onClick={() => setDescOpen(true)}>
+                <span className="rs__desc">{cat.description}</span>
+                <span className="rs__desc-more">ещё ›</span>
+              </button>
+            )}
             <div className="rs__footer">
               <RatingSlider value={score} onChange={setScore} disabled={submitting} />
               <p className="rs__label">{LABELS[score]}</p>
@@ -185,6 +191,22 @@ export default function RatingScreen() {
 
         </div>
       </div>
+
+      {descOpen && cat.description && (
+        <div className="modal-overlay" onClick={() => setDescOpen(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-sheet__handle" />
+            <div className="modal-sheet__header">
+              <div style={{ width: 60 }} />
+              <span className="modal-sheet__title">{cat.name}</span>
+              <button className="modal-sheet__close-btn" onClick={() => setDescOpen(false)}>✕</button>
+            </div>
+            <div style={{ padding: '12px 20px 36px', overflowY: 'auto', flex: 1 }}>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: 'var(--text)' }}>{cat.description}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

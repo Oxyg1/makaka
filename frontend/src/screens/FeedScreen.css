@@ -6,10 +6,20 @@
 }
 .feed__header h2 { margin: 0; font-size: 22px; font-weight: 700; }
 
+/* WIP placeholder */
+.feed__wip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; padding: 32px 24px calc(var(--nav-height,62px) + 48px);
+  text-align: center; color: var(--text-muted); gap: 12px;
+}
+.feed__wip-icon { font-size: 56px; line-height: 1; }
+.feed__wip h3 { margin: 0; font-size: 20px; font-weight: 700; color: var(--text); }
+.feed__wip p { margin: 0; font-size: 15px; line-height: 1.6; }
+
 .feed__new-btn {
   display: flex; align-items: center; gap: 6px;
   background: var(--primary-dim); color: var(--primary);
-  border: 1px solid rgba(22,137,255,0.2); border-radius: 99em;
+  border: 1px solid rgba(124,109,249,0.25); border-radius: 99em;
   padding: 8px 14px; font-size: 14px; font-weight: 600;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;

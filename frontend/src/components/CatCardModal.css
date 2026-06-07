@@ -18,7 +18,7 @@
 .cat-card-modal__owner-btn {
   margin-top: 8px; padding: 14px 20px; height: 50px;
   background: var(--primary-dim); color: var(--primary);
-  border: 1px solid rgba(22,137,255,0.2);
+  border: 1px solid rgba(124,109,249,0.25);
   border-radius: 99em; font-size: 15px; font-weight: 600;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;

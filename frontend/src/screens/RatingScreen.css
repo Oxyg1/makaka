@@ -85,7 +85,24 @@
 .rs__avg { margin: 0; font-size: 12px; color: var(--text-muted); }
 .rs__owner { margin: 0; font-size: 12px; color: var(--text-muted); }
 
-.rs__desc { display: none; }
+/* Expandable description */
+.rs__desc-btn {
+  display: flex; align-items: flex-end; gap: 6px; width: 100%;
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-align: left; -webkit-tap-highlight-color: transparent;
+}
+.rs__desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px; color: var(--text-muted); line-height: 1.45;
+  flex: 1;
+}
+.rs__desc-more {
+  font-size: 12px; font-weight: 700; color: var(--primary);
+  white-space: nowrap; flex-shrink: 0; padding-bottom: 1px; letter-spacing: -0.2px;
+}
 
 /* Footer */
 .rs__footer { display: flex; flex-direction: column; gap: 8px; }
