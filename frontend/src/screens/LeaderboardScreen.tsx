@@ -46,7 +46,7 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
         {!loading && loadError && (
           <div className="lb__empty">
             <p>Не удалось загрузить лидерборд</p>
-            <button className="lb__seg-btn" style={{ marginTop: 8 }} onClick={() => setPeriod(p => p)}>Повторить</button>
+            <button className="lb__seg-btn" style={{ marginTop: 8 }} onClick={() => setRetry(n => n + 1)}>Повторить</button>
           </div>
         )}
 

@@ -175,7 +175,6 @@ export default function FeedScreen({ onViewUser, currentUser }: Props) {
 
       {showCreate && (
         <CreateModal
-          currentUser={currentUser}
           onClose={() => setShowCreate(false)}
           onCreated={real => { setPosts(pp => [real, ...pp]); setShowCreate(false); }}
         />
@@ -249,8 +248,7 @@ function CommentsSection({ postId, currentUserId, onCommentPosted, onCommentDele
   );
 }
 
-function CreateModal({ currentUser, onClose, onCreated }: {
-  currentUser: User | null;
+function CreateModal({ onClose, onCreated }: {
   onClose: () => void;
   onCreated: (p: Post) => void;
 }) {
