@@ -49,22 +49,18 @@ const upload = multer({
 
 function updateStreak(userId: number): void {
   const today = new Date().toISOString().slice(0, 10);
-  const stats = db.prepare('SELECT * FROM user_stats WHERE user_id = ?').get(userId) as {
-    user_id: number; total_rated: number; total_skipped: number; streak_days: number; last_rated_date: string | null;
-  } | undefined;
-
-  if (!stats) {
-    db.prepare(`INSERT INTO user_stats (user_id, total_rated, streak_days, last_rated_date) VALUES (?, 1, 1, ?)`).run(userId, today);
-    return;
-  }
-
-  const last = stats.last_rated_date;
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const newStreak = (last === yesterday) ? stats.streak_days + 1 : (last === today ? stats.streak_days : 1);
-
   db.prepare(`
-    UPDATE user_stats SET total_rated = total_rated + 1, streak_days = ?, last_rated_date = ? WHERE user_id = ?
-  `).run(newStreak, today, userId);
+    INSERT INTO user_stats (user_id, total_rated, streak_days, last_rated_date) VALUES (?, 1, 1, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      total_rated = total_rated + 1,
+      streak_days = CASE
+        WHEN last_rated_date = ? THEN streak_days + 1
+        WHEN last_rated_date = ? THEN streak_days
+        ELSE 1
+      END,
+      last_rated_date = ?
+  `).run(userId, today, yesterday, today, today);
 }
 
 // GET /api/cats/my — must be before /:id
@@ -191,24 +187,12 @@ router.post('/:id/skip', authMiddleware, (req: AuthRequest, res) => {
     return;
   }
 
-  try {
-    db.prepare('INSERT OR IGNORE INTO skips (cat_id, user_id) VALUES (?, ?)').run(catId, req.userId);
-
-    const stats = db.prepare('SELECT user_id FROM user_stats WHERE user_id = ?').get(req.userId);
-    if (stats) {
-      db.prepare('UPDATE user_stats SET total_skipped = total_skipped + 1 WHERE user_id = ?').run(req.userId);
-    } else {
-      db.prepare('INSERT INTO user_stats (user_id, total_skipped) VALUES (?, 1)').run(req.userId);
-    }
-
-    res.json({ success: true });
-  } catch (e: unknown) {
-    if (e instanceof Error && 'code' in e && (e as NodeJS.ErrnoException).code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.json({ success: true });
-      return;
-    }
-    throw e;
-  }
+  db.prepare('INSERT OR IGNORE INTO skips (cat_id, user_id) VALUES (?, ?)').run(catId, req.userId!);
+  db.prepare(`
+    INSERT INTO user_stats (user_id, total_skipped) VALUES (?, 1)
+    ON CONFLICT(user_id) DO UPDATE SET total_skipped = total_skipped + 1
+  `).run(req.userId!);
+  res.json({ success: true });
 });
 
 // GET /api/cats/:id

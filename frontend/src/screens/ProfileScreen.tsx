@@ -262,7 +262,10 @@ export default function ProfileScreen({ user, onViewUser, onNotificationsRead }:
           onClose={() => setSelectedCat(null)}
           isOwner
           onEdit={cat => { setSelectedCat(null); setEditCat(cat as CatWithStats); }}
-          onDelete={id => { handleCatDeleted(id); deleteCat(id).catch(() => {}); }}
+          onDelete={id => {
+            handleCatDeleted(id);
+            deleteCat(id).catch(() => { getMyCats().then(setCats).catch(() => {}); });
+          }}
         />
       )}
 

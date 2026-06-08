@@ -12,7 +12,7 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
   const color = COLORS[value] || '#6d6d71';
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!disabled) { hapticImpact('light'); onChange(parseInt(e.target.value)); }
+    if (!disabled) { hapticImpact('light'); onChange(parseInt(e.target.value, 10)); }
   };
 
   return (

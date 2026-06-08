@@ -7,7 +7,7 @@ import './UserProfileModal.css';
 const BASE = import.meta.env.VITE_API_URL ?? '';
 type UTab = 'cats' | 'posts';
 
-interface Props { userId: number; currentUserId: number | null; onClose: () => void; }
+interface Props { userId: number; onClose: () => void; }
 
 export default function UserProfileModal({ userId, onClose }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -15,11 +15,13 @@ export default function UserProfileModal({ userId, onClose }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [tab, setTab] = useState<UTab>('cats');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    setLoading(true); setProfile(null); setCats([]); setPosts([]);
+    setLoading(true); setLoadError(false); setProfile(null); setCats([]); setPosts([]);
     Promise.all([getUserProfile(userId), getUserCats(userId), getUserPosts(userId)])
       .then(([p, c, po]) => { setProfile(p); setCats(c); setPosts(po); })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [userId]);
 
@@ -35,6 +37,8 @@ export default function UserProfileModal({ userId, onClose }: Props) {
         <div className="upm__scroll">
           {loading ? (
             <div className="upm__loading"><div className="spinner" /></div>
+          ) : loadError ? (
+            <div className="upm__loading"><p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Не удалось загрузить профиль</p></div>
           ) : profile && (
             <>
               <div className="upm__hero">

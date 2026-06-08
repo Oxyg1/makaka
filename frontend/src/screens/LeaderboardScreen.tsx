@@ -14,12 +14,18 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   const [period, setPeriod] = useState<Period>('daily');
   const [entries, setEntries] = useState<CatLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CatLeaderboardEntry | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    getLeaderboard(period).then(setEntries).finally(() => setLoading(false));
-  }, [period]);
+    setLoadError(false);
+    getLeaderboard(period)
+      .then(data => { setEntries(data); })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }, [period, retry]);
 
   return (
     <div className="lb">
@@ -37,7 +43,14 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
       <div className="lb__list">
         {loading && <div className="lb__center"><div className="spinner" /></div>}
 
-        {!loading && entries.length === 0 && (
+        {!loading && loadError && (
+          <div className="lb__empty">
+            <p>Не удалось загрузить лидерборд</p>
+            <button className="lb__seg-btn" style={{ marginTop: 8 }} onClick={() => setPeriod(p => p)}>Повторить</button>
+          </div>
+        )}
+
+        {!loading && !loadError && entries.length === 0 && (
           <div className="lb__empty">
             <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" opacity="0.2">
               <ellipse cx="9" cy="6" rx="2.2" ry="2.8" /><ellipse cx="15" cy="6" rx="2.2" ry="2.8" />

@@ -64,7 +64,7 @@ export default function App() {
       </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} unreadNotifs={unreadNotifs} />
       {viewUserId !== null && (
-        <UserProfileModal userId={viewUserId} currentUserId={currentUser?.id ?? null} onClose={() => setViewUserId(null)} />
+        <UserProfileModal userId={viewUserId} onClose={() => setViewUserId(null)} />
       )}
     </div>
   );

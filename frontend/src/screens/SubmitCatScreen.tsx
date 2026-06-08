@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { submitCat } from '../api';
 import { hapticSuccess } from '../utils/haptics';
 import './SubmitCatScreen.css';
@@ -8,6 +8,7 @@ interface Props { onSubmitted: () => void; }
 export default function SubmitCatScreen({ onSubmitted }: Props) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState('');
+  const previewRef = useRef('');
   const [name, setName] = useState('');
   const [breed, setBreed] = useState('');
   const [age, setAge] = useState('');
@@ -17,9 +18,15 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useLayoutEffect(() => () => { if (previewRef.current) URL.revokeObjectURL(previewRef.current); }, []);
+
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    setPhoto(file); setPreview(URL.createObjectURL(file));
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    const url = URL.createObjectURL(file);
+    previewRef.current = url;
+    setPhoto(file);
+    setPreview(url);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,7 +92,7 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
           </div>
           <div className="submit__field">
             <label>Описание</label>
-            <textarea placeholder="Расскажите о характере..." value={description} onChange={e => setDescription(e.target.value)} maxLength={300} />
+            <textarea placeholder="Расскажите о характере..." value={description} onChange={e => setDescription(e.target.value)} maxLength={500} />
           </div>
         </div>
 

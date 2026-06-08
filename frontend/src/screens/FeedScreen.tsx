@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { getFeed, likePost, createPost, getComments, createComment, deleteComment, deletePost } from '../api';
 import { hapticImpact, hapticSuccess } from '../utils/haptics';
 import type { Post, Comment, User } from '../types';
@@ -260,8 +260,17 @@ function CreateModal({ currentUser, onClose, onCreated }: {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<string | null>(null);
 
-  const handleFile = (f: File) => { setPhoto(f); setPreview(URL.createObjectURL(f)); };
+  useLayoutEffect(() => () => { if (previewRef.current) URL.revokeObjectURL(previewRef.current); }, []);
+
+  const handleFile = (f: File) => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    const url = URL.createObjectURL(f);
+    previewRef.current = url;
+    setPhoto(f);
+    setPreview(url);
+  };
 
   const handleSubmit = async () => {
     if (!photo || !preview || posting) return;
