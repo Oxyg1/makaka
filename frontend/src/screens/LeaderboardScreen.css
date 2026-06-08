@@ -68,10 +68,10 @@
 }
 .lb__podium-item:active { opacity: 0.7; }
 
-/* Heights only differ — content stays centered inside */
-.lb__podium-item--0 { order: 2; min-height: 220px; }
-.lb__podium-item--1 { order: 1; min-height: 158px; }
-.lb__podium-item--2 { order: 3; min-height: 158px; }
+/* Heights differ just enough to read as a podium, content centered */
+.lb__podium-item--0 { order: 2; min-height: 196px; }
+.lb__podium-item--1 { order: 1; min-height: 168px; }
+.lb__podium-item--2 { order: 3; min-height: 168px; }
 
 /* Photos sized to fit the card width (~116px) with breathing room */
 .lb__podium-photo-wrap {
