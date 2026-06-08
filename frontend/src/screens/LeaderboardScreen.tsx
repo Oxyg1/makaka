@@ -1,0 +1,142 @@
+import { useState, useEffect, useRef } from 'react';
+import { getLeaderboard } from '../api';
+import type { CatLeaderboardEntry } from '../types';
+import CatCardModal from '../components/CatCardModal';
+import './LeaderboardScreen.css';
+
+const BASE = import.meta.env.VITE_API_URL ?? '';
+type Period = 'daily' | 'weekly' | 'monthly' | 'all';
+const PERIOD: Record<Period, string> = { daily: 'День', weekly: 'Неделя', monthly: 'Месяц', all: 'Всё время' };
+const PERIODS = Object.keys(PERIOD) as Period[];
+
+function rankBadgeClass(i: number) {
+  if (i === 0) return 'lb__badge lb__badge--gold';
+  if (i === 1) return 'lb__badge lb__badge--silver';
+  if (i === 2) return 'lb__badge lb__badge--bronze';
+  return 'lb__badge lb__badge--num';
+}
+
+interface Props { onViewUser: (id: number) => void; }
+
+export default function LeaderboardScreen({ onViewUser }: Props) {
+  const [period, setPeriod] = useState<Period>('daily');
+  const [entries, setEntries] = useState<CatLeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<CatLeaderboardEntry | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setCollapsed(false);
+    getLeaderboard(period).then(setEntries).finally(() => setLoading(false));
+  }, [period]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => setCollapsed(el.scrollTop > 24);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [entries]);
+
+  const switchPeriod = (p: Period) => {
+    setPeriod(p);
+    setActiveIdx(PERIODS.indexOf(p));
+  };
+
+  const updateLike = (id: number, liked: boolean, count: number) => {
+    setEntries(es => es.map(e => e.id === id ? { ...e, liked_by_me: liked, likes_count: count } : e));
+    setSelected(s => s && s.id === id ? { ...s, liked_by_me: liked, likes_count: count } : s);
+  };
+
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
+
+  return (
+    <div className="lb">
+      <div className="lb__header">
+        <h2 className="lb__title">Лидерборд</h2>
+        <div className="lb__seg" style={{ '--seg-idx': activeIdx } as React.CSSProperties}>
+          <div className="lb__seg-indicator" />
+          {PERIODS.map((p) => (
+            <button key={p}
+              className={`lb__seg-btn${period === p ? ' lb__seg-btn--active' : ''}`}
+              onClick={() => switchPeriod(p)}
+            >
+              {PERIOD[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="lb__body">
+        {loading && <div className="lb__center"><div className="spinner" /></div>}
+
+        {!loading && entries.length === 0 && (
+          <div className="lb__empty">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" opacity="0.2">
+              <ellipse cx="9" cy="6" rx="2.2" ry="2.8" /><ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+              <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" /><ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+              <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+            </svg>
+            <p>Нет котов за этот период</p>
+            <p>Начните оценивать!</p>
+          </div>
+        )}
+
+        {!loading && entries.length > 0 && (
+          <>
+            {top3.length > 0 && (
+              <div className="lb__podium-wrap">
+                <div className={`lb__podium${collapsed ? ' lb__podium--collapsed' : ''}`}>
+                  {top3.map((e, i) => (
+                    <button key={e.id} className={`lb__podium-item lb__podium-item--${i}`} onClick={() => setSelected(e)}>
+                      <div className="lb__podium-photo-wrap">
+                        <img className="lb__podium-photo" src={`${BASE}${e.photo_url}`} alt={e.name} />
+                        <span className={rankBadgeClass(i)}>{i + 1}</span>
+                      </div>
+                      <span className="lb__podium-name">{e.name}</span>
+                      <span className="lb__podium-score">★ {e.avg_score}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="lb__list" ref={listRef}>
+              {rest.length > 0 && (
+                <div className="lb__glass-list">
+                  {rest.map((e, i) => (
+                    <button key={e.id} className="lb__row" onClick={() => setSelected(e)}>
+                      <span className="lb__rank-num">{i + 4}</span>
+                      <div className="lb__avatar-wrap">
+                        <img className="lb__avatar" src={`${BASE}${e.photo_url}`} alt={e.name} />
+                      </div>
+                      <div className="lb__info">
+                        <span className="lb__name">{e.name}</span>
+                        {e.breed && <span className="lb__breed">{e.breed}</span>}
+                        <span className="lb__owner">от {e.owner_name}</span>
+                      </div>
+                      <div className="lb__score">
+                        <span className="lb__avg">★ {e.avg_score}</span>
+                        <span className="lb__votes">{e.vote_count} оц.</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {selected && (
+        <CatCardModal cat={selected} onClose={() => setSelected(null)}
+          onViewOwner={id => { setSelected(null); onViewUser(id); }}
+          onLike={updateLike} />
+      )}
+    </div>
+  );
+}
