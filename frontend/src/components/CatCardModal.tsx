@@ -39,9 +39,10 @@ interface Props {
   isOwner?: boolean;
   onEdit?: (cat: CatData) => void;
   onDelete?: (id: number) => void;
+  onLike?: (id: number, liked: boolean, count: number) => void;
 }
 
-export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdit, onDelete }: Props) {
+export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdit, onDelete, onLike }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [liked, setLiked] = useState(cat.liked_by_me ?? false);
   const [likesCount, setLikesCount] = useState(cat.likes_count ?? 0);
@@ -62,6 +63,7 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
       const r = await likeCat(cat.id);
       setLiked(r.liked);
       setLikesCount(r.likes_count);
+      onLike?.(cat.id, r.liked, r.likes_count);
     } catch { /* keep optimistic */ }
     finally { setLiking(false); }
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getLeaderboard } from '../api';
 import type { CatLeaderboardEntry } from '../types';
 import CatCardModal from '../components/CatCardModal';
@@ -24,15 +24,31 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<CatLeaderboardEntry | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLoading(true);
+    setCollapsed(false);
     getLeaderboard(period).then(setEntries).finally(() => setLoading(false));
   }, [period]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => setCollapsed(el.scrollTop > 24);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [entries]);
 
   const switchPeriod = (p: Period) => {
     setPeriod(p);
     setActiveIdx(PERIODS.indexOf(p));
+  };
+
+  const updateLike = (id: number, liked: boolean, count: number) => {
+    setEntries(es => es.map(e => e.id === id ? { ...e, liked_by_me: liked, likes_count: count } : e));
+    setSelected(s => s && s.id === id ? { ...s, liked_by_me: liked, likes_count: count } : s);
   };
 
   const top3 = entries.slice(0, 3);
@@ -73,48 +89,53 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
         {!loading && entries.length > 0 && (
           <>
             {top3.length > 0 && (
-              <div className="lb__podium">
-                {top3.map((e, i) => (
-                  <button key={e.id} className={`lb__podium-item lb__podium-item--${i}`} onClick={() => setSelected(e)}>
-                    <div className="lb__podium-photo-wrap">
-                      <img className="lb__podium-photo" src={`${BASE}${e.photo_url}`} alt={e.name} />
-                      <span className={rankBadgeClass(i)}>{i + 1}</span>
-                    </div>
-                    <span className="lb__podium-name">{e.name}</span>
-                    <span className="lb__podium-score">★ {e.avg_score}</span>
-                  </button>
-                ))}
+              <div className="lb__podium-wrap">
+                <div className={`lb__podium${collapsed ? ' lb__podium--collapsed' : ''}`}>
+                  {top3.map((e, i) => (
+                    <button key={e.id} className={`lb__podium-item lb__podium-item--${i}`} onClick={() => setSelected(e)}>
+                      <div className="lb__podium-photo-wrap">
+                        <img className="lb__podium-photo" src={`${BASE}${e.photo_url}`} alt={e.name} />
+                        <span className={rankBadgeClass(i)}>{i + 1}</span>
+                      </div>
+                      <span className="lb__podium-name">{e.name}</span>
+                      <span className="lb__podium-score">★ {e.avg_score}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
-            {rest.length > 0 && (
-              <div className="lb__glass-list">
-                {rest.map((e, i) => (
-                  <button key={e.id} className="lb__row" onClick={() => setSelected(e)}>
-                    <span className="lb__rank-num">{i + 4}</span>
-                    <div className="lb__avatar-wrap">
-                      <img className="lb__avatar" src={`${BASE}${e.photo_url}`} alt={e.name} />
-                    </div>
-                    <div className="lb__info">
-                      <span className="lb__name">{e.name}</span>
-                      {e.breed && <span className="lb__breed">{e.breed}</span>}
-                      <span className="lb__owner">от {e.owner_name}</span>
-                    </div>
-                    <div className="lb__score">
-                      <span className="lb__avg">★ {e.avg_score}</span>
-                      <span className="lb__votes">{e.vote_count} оц.</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="lb__list" ref={listRef}>
+              {rest.length > 0 && (
+                <div className="lb__glass-list">
+                  {rest.map((e, i) => (
+                    <button key={e.id} className="lb__row" onClick={() => setSelected(e)}>
+                      <span className="lb__rank-num">{i + 4}</span>
+                      <div className="lb__avatar-wrap">
+                        <img className="lb__avatar" src={`${BASE}${e.photo_url}`} alt={e.name} />
+                      </div>
+                      <div className="lb__info">
+                        <span className="lb__name">{e.name}</span>
+                        {e.breed && <span className="lb__breed">{e.breed}</span>}
+                        <span className="lb__owner">от {e.owner_name}</span>
+                      </div>
+                      <div className="lb__score">
+                        <span className="lb__avg">★ {e.avg_score}</span>
+                        <span className="lb__votes">{e.vote_count} оц.</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
 
       {selected && (
         <CatCardModal cat={selected} onClose={() => setSelected(null)}
-          onViewOwner={id => { setSelected(null); onViewUser(id); }} />
+          onViewOwner={id => { setSelected(null); onViewUser(id); }}
+          onLike={updateLike} />
       )}
     </div>
   );
