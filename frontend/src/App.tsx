@@ -37,9 +37,9 @@ export default function App() {
     const raw = tg?.initData || 'mock';
     tg?.expand?.();
     tg?.ready?.();
+    tg?.disableVerticalSwipes?.();
     if (localStorage.getItem('fullscreen_enabled') === '1') {
       tg?.requestFullscreen?.();
-      tg?.disableVerticalSwipes?.();
     }
     const tgPhotoUrl = tg?.initDataUnsafe?.user?.photo_url ?? null;
     authUser(raw).then(u => {
