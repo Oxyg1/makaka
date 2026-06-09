@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { getMyCats, getStats, getUserPosts, deleteCat, deletePost, getNotifications, markNotificationsRead } from '../api';
+import { getMyCats, getStats, getUserPosts, deleteCat, getNotifications, markNotificationsRead } from '../api';
 import { isHapticsEnabled, setHapticsEnabled, hapticSelection } from '../utils/haptics';
 import type { CatWithStats, Notification, Post, User, UserStats } from '../types';
 import { Avatar } from '../components/CatCardModal';
 import CatCardModal from '../components/CatCardModal';
 import EditCatSheet from '../components/EditCatSheet';
+import PostViewerModal from '../components/PostViewerModal';
 import './ProfileScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -41,7 +42,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedCat, setSelectedCat] = useState<CatWithStats | null>(null);
   const [editCat, setEditCat] = useState<CatWithStats | null>(null);
-  const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
+  const [viewingPost, setViewingPost] = useState<Post | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -91,13 +92,12 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
     setEditCat(null);
   };
 
-  const handleDeletePost = async (id: number) => {
-    setDeletingPostId(id);
-    try {
-      await deletePost(id);
-      setPosts(prev => prev.filter(p => p.id !== id));
-    } catch { /* ignore */ }
-    setDeletingPostId(null);
+  const handlePostDeleted = (id: number) => {
+    setPosts(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handlePostChanged = (updated: Post) => {
+    setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
 
   const switchTab = (t: PTab) => { hapticSelection(); setTab(t); };
@@ -214,7 +214,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
           ) : (
             <div className="profile__grid">
               {posts.map(post => (
-                <div key={post.id} className="profile__grid-item">
+                <button key={post.id} className="profile__grid-item" onClick={() => setViewingPost(post)}>
                   <img src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
                   {post.likes_count > 0 && (
                     <div className="profile__grid-likes">
@@ -222,15 +222,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
                       {post.likes_count}
                     </div>
                   )}
-                  <button
-                    className="profile__grid-delete"
-                    onClick={() => handleDeletePost(post.id)}
-                    disabled={deletingPostId === post.id}
-                    aria-label="Удалить"
-                  >
-                    {deletingPostId === post.id ? '...' : '×'}
-                  </button>
-                </div>
+                </button>
               ))}
             </div>
           ))}
@@ -259,8 +251,17 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
               )}
               {notifsLoaded && notifs.map(n => (
                 <div key={n.id} className={`profile__notif${n.read ? '' : ' profile__notif--unread'}`}>
-                  <div className="profile__notif-icon">
-                    {n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : '⭐'}
+                  <div className="profile__notif-avatar-wrap">
+                    <Avatar name={n.actor_name} photoUrl={n.actor_photo_url} size={40} />
+                    <div className={`profile__notif-badge profile__notif-badge--${n.type}`}>
+                      {n.type === 'like' ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                      ) : n.type === 'comment' ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" /></svg>
+                      )}
+                    </div>
                   </div>
                   <div className="profile__notif-body">
                     <div>
@@ -273,6 +274,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
                     </div>
                     <div className="profile__notif-time">{timeAgo(n.created_at)}</div>
                   </div>
+                  {!n.read && <div className="profile__notif-dot" aria-hidden />}
                 </div>
               ))}
             </div>
@@ -339,6 +341,16 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
           cat={editCat}
           onClose={() => setEditCat(null)}
           onSaved={handleCatSaved}
+        />
+      )}
+
+      {viewingPost && (
+        <PostViewerModal
+          post={viewingPost}
+          currentUserId={user?.id ?? null}
+          onClose={() => setViewingPost(null)}
+          onChange={handlePostChanged}
+          onDeleted={handlePostDeleted}
         />
       )}
     </div>

@@ -8,7 +8,7 @@ const router = Router();
 router.get('/', authMiddleware, (req: AuthRequest, res) => {
   const notifs = db.prepare(`
     SELECT n.id, n.user_id, n.actor_id, n.type, n.entity_type, n.entity_id, n.text, n.read, n.created_at,
-      u.first_name AS actor_name
+      u.first_name AS actor_name, u.photo_url AS actor_photo_url
     FROM notifications n
     JOIN users u ON n.actor_id = u.id
     WHERE n.user_id = ?

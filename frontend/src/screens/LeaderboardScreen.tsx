@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getLeaderboard } from '../api';
 import type { CatLeaderboardEntry } from '../types';
 import CatCardModal from '../components/CatCardModal';
+import { syncCatLike } from '../utils/catLikes';
 import './LeaderboardScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -30,7 +31,10 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   useEffect(() => {
     setLoading(true);
     setCollapsed(false);
-    getLeaderboard(period).then(setEntries).finally(() => setLoading(false));
+    getLeaderboard(period).then(es => {
+      setEntries(es);
+      es.forEach(e => syncCatLike(e.id, e.liked_by_me ?? false, e.likes_count ?? 0));
+    }).finally(() => setLoading(false));
   }, [period]);
 
   useEffect(() => {
@@ -43,8 +47,8 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
         raf = 0;
         setCollapsed(prev => {
           const y = el.scrollTop;
-          if (!prev && y > 28) return true;
-          if (prev && y < 8) return false;
+          if (!prev && y > 6) return true;
+          if (prev && y <= 0) return false;
           return prev;
         });
       });
@@ -59,11 +63,6 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   const switchPeriod = (p: Period) => {
     setPeriod(p);
     setActiveIdx(PERIODS.indexOf(p));
-  };
-
-  const updateLike = (id: number, liked: boolean, count: number) => {
-    setEntries(es => es.map(e => e.id === id ? { ...e, liked_by_me: liked, likes_count: count } : e));
-    setSelected(s => s && s.id === id ? { ...s, liked_by_me: liked, likes_count: count } : s);
   };
 
   const top3 = entries.slice(0, 3);
@@ -153,8 +152,7 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
 
       {selected && (
         <CatCardModal cat={selected} onClose={() => setSelected(null)}
-          onViewOwner={id => { setSelected(null); onViewUser(id); }}
-          onLike={updateLike} />
+          onViewOwner={id => { setSelected(null); onViewUser(id); }} />
       )}
     </div>
   );

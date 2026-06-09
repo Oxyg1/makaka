@@ -37,12 +37,14 @@ export interface UserStats {
 export interface Post {
   id: number; user_id: number; photo_url: string; caption: string | null;
   created_at: string; author_name: string; author_username: string | null;
+  author_photo_url: string | null;
   likes_count: number; liked_by_me: boolean; comments_count: number;
 }
 
 export interface Comment {
   id: number; post_id: number; user_id: number; text: string;
   created_at: string; author_name: string; author_username: string | null;
+  author_photo_url: string | null;
 }
 
 export interface Notification {
@@ -50,5 +52,5 @@ export interface Notification {
   type: 'like' | 'comment' | 'rating';
   entity_type: string | null; entity_id: number | null;
   text: string | null; read: number;
-  created_at: string; actor_name: string;
+  created_at: string; actor_name: string; actor_photo_url: string | null;
 }

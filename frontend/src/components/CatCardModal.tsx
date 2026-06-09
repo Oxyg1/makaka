@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { likeCat } from '../api';
 import type { CatLeaderboardEntry, CatWithStats } from '../types';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
+import { useCatLike } from '../utils/catLikes';
+import { hapticImpact } from '../utils/haptics';
 import './CatCardModal.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -19,12 +20,13 @@ export function ageLabel(age: number): string {
 
 export function Avatar({ name, photoUrl, size = 48 }: { name: string; photoUrl?: string | null; size?: number }) {
   const [err, setErr] = useState(false);
-  if (photoUrl && !err) {
-    return <img src={photoUrl} onError={() => setErr(true)} width={size} height={size}
-      style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />;
+  const src = photoUrl ? (photoUrl.startsWith('http') || photoUrl.startsWith('blob:') ? photoUrl : `${BASE}${photoUrl}`) : null;
+  if (src && !err) {
+    return <img src={src} onError={() => setErr(true)} width={size} height={size}
+      style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} alt="" />;
   }
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: avatarColor(name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.38, color: '#fff', flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: avatarColor(name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.38, color: '#fff', flexShrink: 0, letterSpacing: '-0.5px' }}>
       {name[0]?.toUpperCase()}
     </div>
   );
@@ -39,33 +41,20 @@ interface Props {
   isOwner?: boolean;
   onEdit?: (cat: CatData) => void;
   onDelete?: (id: number) => void;
-  onLike?: (id: number, liked: boolean, count: number) => void;
 }
 
-export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdit, onDelete, onLike }: Props) {
+export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdit, onDelete }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [liked, setLiked] = useState(cat.liked_by_me ?? false);
-  const [likesCount, setLikesCount] = useState(cat.likes_count ?? 0);
-  const [liking, setLiking] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
   const swipe = useSheetSwipe(onClose);
+  const { liked, count: likesCount, toggle: toggleLike } = useCatLike(cat.id, cat.liked_by_me ?? false, cat.likes_count ?? 0);
 
   const photos = [cat.photo_url, ...(cat.extra_photos ?? [])];
   const ownerId = 'owner_id' in cat ? cat.owner_id : undefined;
 
-  const handleLike = async () => {
-    if (liking) return;
-    const next = !liked;
-    setLiked(next);
-    setLikesCount(n => n + (next ? 1 : -1));
-    setLiking(true);
-    try {
-      const r = await likeCat(cat.id);
-      setLiked(r.liked);
-      setLikesCount(r.likes_count);
-      onLike?.(cat.id, r.liked, r.likes_count);
-    } catch { /* keep optimistic */ }
-    finally { setLiking(false); }
+  const handleLike = () => {
+    hapticImpact('light');
+    toggleLike();
   };
 
   return (
@@ -92,7 +81,7 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
               <span className="cat-card-modal__badge">#{cat.id}</span>
               <button
                 className={`cat-card-modal__like-btn${liked ? ' cat-card-modal__like-btn--active' : ''}`}
-                onClick={handleLike} disabled={liking}
+                onClick={handleLike}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24"
                   fill={liked ? 'currentColor' : 'none'}

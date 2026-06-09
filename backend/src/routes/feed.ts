@@ -36,7 +36,7 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
 
   const posts = db.prepare(`
     SELECT p.id, p.user_id, p.photo_url, p.caption, p.created_at,
-      u.first_name AS author_name, u.username AS author_username,
+      u.first_name AS author_name, u.username AS author_username, u.photo_url AS author_photo_url,
       COUNT(DISTINCT pl.id) AS likes_count,
       MAX(CASE WHEN pl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me,
       COUNT(DISTINCT pc.id) AS comments_count
@@ -81,9 +81,9 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
     RETURNING *
   `).get(req.userId!, photoUrl, caption?.trim() || null) as Record<string, unknown>;
 
-  const user = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null };
+  const user = db.prepare('SELECT first_name, username, photo_url FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null; photo_url: string | null };
   logger.info('POST /feed: created', { userId: req.userId, postId: (post as Record<string, unknown>).id });
-  res.status(201).json({ ...post, author_name: user.first_name, author_username: user.username, likes_count: 0, liked_by_me: false, comments_count: 0 });
+  res.status(201).json({ ...post, author_name: user.first_name, author_username: user.username, author_photo_url: user.photo_url, likes_count: 0, liked_by_me: false, comments_count: 0 });
 });
 
 // DELETE /api/feed/comments/:id — must be before /:id to avoid param collision
@@ -146,7 +146,7 @@ router.get('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
   const postId = parseInt(String(req.params.id), 10);
   const comments = db.prepare(`
     SELECT pc.id, pc.post_id, pc.user_id, pc.text, pc.created_at,
-      u.first_name AS author_name, u.username AS author_username
+      u.first_name AS author_name, u.username AS author_username, u.photo_url AS author_photo_url
     FROM post_comments pc
     JOIN users u ON pc.user_id = u.id
     WHERE pc.post_id = ?
@@ -173,7 +173,7 @@ router.post('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
     RETURNING *
   `).get(postId, req.userId!, text.trim()) as Record<string, unknown>;
 
-  const user = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null };
+  const user = db.prepare('SELECT first_name, username, photo_url FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null; photo_url: string | null };
 
   const postOwner = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId) as { user_id: number } | undefined;
   if (postOwner) {
@@ -182,7 +182,7 @@ router.post('/:id/comments', authMiddleware, (req: AuthRequest, res) => {
     if (owner) sendBotMessage(owner.telegram_id, `💬 <b>${user.first_name}</b> прокомментировал ваш пост: ${text.trim().slice(0, 100)}`);
   }
 
-  res.status(201).json({ ...comment, author_name: user.first_name, author_username: user.username });
+  res.status(201).json({ ...comment, author_name: user.first_name, author_username: user.username, author_photo_url: user.photo_url });
 });
 
 export default router;

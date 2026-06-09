@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getNextCat, rateCat, skipCat, resetRatings, likeCat } from '../api';
+import { getNextCat, rateCat, skipCat, resetRatings } from '../api';
 import RatingSlider from '../components/RatingSlider';
 import type { CatWithStats } from '../types';
 import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { ageLabel } from '../components/CatCardModal';
+import { useCatLike, syncCatLike } from '../utils/catLikes';
 import './RatingScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -56,6 +57,22 @@ function PhotoCarousel({ photos, name, overlay }: { photos: string[]; name: stri
 
 const LABELS = ['','Ужас','Плохо','Так себе','Нейтрально','Неплохо','Хорошо','Отлично','Прекрасно','Великолепно','Совершенство'];
 
+function LikeOverlayButton({ catId, seedLiked, seedCount, disabled }: { catId: number; seedLiked: boolean; seedCount: number; disabled?: boolean }) {
+  const { liked, count, toggle } = useCatLike(catId, seedLiked, seedCount);
+  return (
+    <button
+      className={`rs__like-btn${liked ? ' rs__like-btn--active' : ''}`}
+      onClick={() => { hapticImpact('light'); toggle(); }}
+      disabled={disabled}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+      {count > 0 && <span>{count}</span>}
+    </button>
+  );
+}
+
 function plural(n: number, a: string, b: string, c: string) {
   const m = Math.abs(n) % 100;
   if (m >= 11 && m <= 19) return c;
@@ -69,17 +86,12 @@ function applyCat(cat: CatWithStats | null, set: {
   setScore: (n: number) => void;
   setDir: (d: Dir) => void;
   setSubmitting: (b: boolean) => void;
-  setLiked: (b: boolean) => void;
-  setLikesCount: (n: number) => void;
-  setLiking: (b: boolean) => void;
 }) {
   set.setCat(cat);
   set.setScore(5);
   set.setDir(null);
   set.setSubmitting(false);
-  set.setLiked(cat?.liked_by_me ?? false);
-  set.setLikesCount(cat?.likes_count ?? 0);
-  set.setLiking(false);
+  if (cat) syncCatLike(cat.id, cat.liked_by_me ?? false, cat.likes_count ?? 0);
 }
 
 export default function RatingScreen() {
@@ -88,14 +100,11 @@ export default function RatingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [dir, setDir] = useState<Dir>(null);
   const [count, setCount] = useState(0);
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
-  const [liking, setLiking] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
-  const setters = { setCat, setScore, setDir, setSubmitting, setLiked, setLikesCount, setLiking };
+  const setters = { setCat, setScore, setDir, setSubmitting };
 
   const loadNext = useCallback(async (): Promise<CatWithStats | null> => {
     const next = await getNextCat();
@@ -134,21 +143,6 @@ export default function RatingScreen() {
     go('left', async () => { await skipCat(cat.id); hapticError(); });
   };
 
-  const handleLike = async () => {
-    if (!cat || liking) return;
-    hapticImpact('light');
-    const next = !liked;
-    setLiked(next);
-    setLikesCount(n => n + (next ? 1 : -1));
-    setLiking(true);
-    try {
-      const r = await likeCat(cat.id);
-      setLiked(r.liked);
-      setLikesCount(r.likes_count);
-    } catch { /* keep optimistic state */ }
-    finally { setLiking(false); }
-  };
-
   const descSwipe = useSheetSwipe(() => setDescOpen(false));
 
   if (cat === undefined) return (
@@ -176,16 +170,7 @@ export default function RatingScreen() {
             overlay={
               <div className="rs__overlay">
                 <span className="rs__badge">#{cat.id}</span>
-                <button
-                  className={`rs__like-btn${liked ? ' rs__like-btn--active' : ''}`}
-                  onClick={handleLike}
-                  disabled={liking || submitting}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                  </svg>
-                  {likesCount > 0 && <span>{likesCount}</span>}
-                </button>
+                <LikeOverlayButton catId={cat.id} seedLiked={cat.liked_by_me ?? false} seedCount={cat.likes_count ?? 0} disabled={submitting} />
               </div>
             }
           />
