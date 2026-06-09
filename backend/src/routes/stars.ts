@@ -19,6 +19,13 @@ export const ADMIN_TG_ID = '1031503708';
 const COMMISSION_RATE = 0.3;
 const MIN_WITHDRAWAL = 100;
 
+/** Split a donation amount into net + commission with 1-decimal precision. */
+function splitDonation(amount: number): { net: number; commission: number } {
+  const net = Math.round(amount * (1 - COMMISSION_RATE) * 10) / 10;
+  const commission = Math.round((amount - net) * 10) / 10;
+  return { net, commission };
+}
+
 export function getOrCreateBalance(userId: number): { balance: number; total_received: number; total_spent: number } {
   let row = db.prepare('SELECT balance, total_received, total_spent FROM user_balance WHERE user_id = ?').get(userId) as
     { balance: number; total_received: number; total_spent: number } | undefined;
@@ -51,11 +58,11 @@ router.post('/topup', authMiddleware, async (req: AuthRequest, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: `${amount} ⭐ Cat Rater`,
+        title: `${amount} Stars · Cat Rater`,
         description: `Пополнение баланса на ${amount} звёзд`,
         payload: JSON.stringify({ feature: 'stars_topup', amount, userId: req.userId }),
         currency: 'XTR',
-        prices: [{ label: `${amount} ⭐`, amount }],
+        prices: [{ label: `${amount} Stars`, amount }],
       }),
     });
     const data = await tgRes.json() as { ok: boolean; result?: string; description?: string };
@@ -92,8 +99,7 @@ router.post('/donate', authMiddleware, (req: AuthRequest, res) => {
     return;
   }
 
-  const netAmount = Math.floor(amount * (1 - COMMISSION_RATE));
-  const commission = amount - netAmount;
+  const { net: netAmount, commission } = splitDonation(amount);
 
   const tx = db.transaction(() => {
     db.prepare('UPDATE user_balance SET balance = balance - ?, total_spent = total_spent + ? WHERE user_id = ?')
@@ -112,7 +118,7 @@ router.post('/donate', authMiddleware, (req: AuthRequest, res) => {
 
   const sender = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
   if (sender && recipient.telegram_id !== '1') {
-    sendBotMessage(recipient.telegram_id, `⭐ <b>${sender.first_name}</b> отправил вам ${netAmount} звёзд!`);
+    sendBotMessage(recipient.telegram_id, `<b>${sender.first_name}</b> отправил вам ${netAmount} звёзд!`);
   }
 
   res.json({ ok: true, sent: amount, received: netAmount, commission, newBalance: senderBalance.balance - amount });
@@ -143,7 +149,7 @@ router.post('/withdraw', authMiddleware, (req: AuthRequest, res) => {
     { first_name: string; username: string | null; telegram_id: string } | undefined;
   if (user) {
     const handle = user.username ? `@${user.username}` : '—';
-    const msg = `💸 <b>Новый запрос на вывод #${result.id}</b>\n\n👤 ${user.first_name} (${handle})\n🆔 TG ID: <code>${user.telegram_id}</code>\n⭐ Сумма: <b>${amount}</b>\n\n/approve_${result.id} — одобрить\n/reject_${result.id} — отклонить`;
+    const msg = `<b>Новый запрос на вывод #${result.id}</b>\n\nПользователь: ${user.first_name} (${handle})\nTG ID: <code>${user.telegram_id}</code>\nСумма: <b>${amount}</b> звёзд\n\n/approve_${result.id} — одобрить\n/reject_${result.id} — отклонить`;
     sendBotMessage(ADMIN_TG_ID, msg);
   }
 

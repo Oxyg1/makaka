@@ -27,12 +27,20 @@ export function useSheetSwipe(onClose: () => void) {
     const dy = y - startY.current;
     lastY.current = y;
     lastT.current = performance.now();
-    if (dy >= 0) {
+    if (dy > 0) {
       sheetRef.current.style.transform = `translateY(${dy}px)`;
     } else {
-      // rubber-band when pulling up past top
-      const eased = -Math.pow(-dy, 0.7);
-      sheetRef.current.style.transform = `translateY(${eased}px)`;
+      // Pulling up should not move the sheet — avoids "flies up" bug
+      // when a gesture is interrupted before touchend fires.
+      sheetRef.current.style.transform = '';
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    startY.current = null;
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = '';
+      sheetRef.current.style.transform = '';
     }
   }, []);
 
@@ -44,7 +52,7 @@ export function useSheetSwipe(onClose: () => void) {
     const velocity = (endY - lastY.current) / dt;
     startY.current = null;
     if (!sheetRef.current) return;
-    if (dy > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
+    if (dy > DISMISS_THRESHOLD || (dy > 0 && velocity > VELOCITY_THRESHOLD)) {
       onClose();
     } else {
       sheetRef.current.style.transition = '';
@@ -52,5 +60,5 @@ export function useSheetSwipe(onClose: () => void) {
     }
   }, [onClose]);
 
-  return { sheetRef, handleTouchStart, handleTouchMove, handleTouchEnd };
+  return { sheetRef, handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel: reset };
 }

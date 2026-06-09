@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { topupStars, withdrawStars } from '../api';
-import { useBalance, refreshBalance, openStarInvoice } from '../utils/balance';
+import { useBalance, refreshBalance, openStarInvoice, formatStars } from '../utils/balance';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import StarIcon from './StarIcon';
@@ -24,7 +24,7 @@ export default function StarsModal({ onClose }: Props) {
   useEffect(() => { refreshBalance(); }, []);
 
   const setPreset = (n: number) => { hapticImpact('light'); setAmount(String(n)); setError(null); setSuccess(null); };
-  const switchTab = (t: Tab) => { setTab(t); setError(null); setSuccess(null); setAmount(t === 'topup' ? '100' : '100'); };
+  const switchTab = (t: Tab) => { setTab(t); setError(null); setSuccess(null); setAmount('100'); };
 
   const handleTopup = async () => {
     const n = parseInt(amount, 10);
@@ -35,7 +35,7 @@ export default function StarsModal({ onClose }: Props) {
       openStarInvoice(invoiceLink, status => {
         if (status === 'paid') {
           hapticSuccess();
-          setSuccess(`Баланс пополнен на ${n} ⭐`);
+          setSuccess(`Баланс пополнен на ${n}`);
           refreshBalance();
         } else if (status === 'cancelled') {
           setError('Платёж отменён');
@@ -52,7 +52,7 @@ export default function StarsModal({ onClose }: Props) {
 
   const handleWithdraw = async () => {
     const n = parseInt(amount, 10);
-    if (!n || n < 100) { setError('Минимум 100 ⭐'); return; }
+    if (!n || n < 100) { setError('Минимум 100 звёзд'); return; }
     if (balance && balance.balance < n) { setError('Недостаточно баланса'); return; }
     setLoading(true); setError(null); setSuccess(null);
     try {
@@ -70,12 +70,15 @@ export default function StarsModal({ onClose }: Props) {
     setLoading(false);
   };
 
+  const numAmount = parseInt(amount, 10) || 0;
+
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-sheet stars-modal" ref={swipe.sheetRef}
         onTouchStart={swipe.handleTouchStart}
         onTouchMove={swipe.handleTouchMove}
-        onTouchEnd={swipe.handleTouchEnd}>
+        onTouchEnd={swipe.handleTouchEnd}
+        onTouchCancel={swipe.handleTouchCancel}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close-btn" onClick={onClose}>Закрыть</button>
@@ -84,22 +87,20 @@ export default function StarsModal({ onClose }: Props) {
         </div>
 
         <div className="stars-modal__body">
-          {/* Balance card */}
           <div className="stars-balance-card">
             <div className="stars-balance-card__label">Ваш баланс</div>
             <div className="stars-balance-card__value">
-              <StarIcon size={28} />
-              <span>{balance?.balance ?? 0}</span>
+              <StarIcon size={32} />
+              <span>{formatStars(balance?.balance ?? 0)}</span>
             </div>
             {balance && (balance.total_received > 0 || balance.total_spent > 0) && (
               <div className="stars-balance-card__meta">
-                <span>Получено: <b>{balance.total_received}</b> ⭐</span>
-                <span>Потрачено: <b>{balance.total_spent}</b> ⭐</span>
+                <span>Получено: <b>{formatStars(balance.total_received)}</b></span>
+                <span>Потрачено: <b>{formatStars(balance.total_spent)}</b></span>
               </div>
             )}
           </div>
 
-          {/* Tabs */}
           <div className="stars-modal__seg">
             <button className={`stars-modal__seg-btn${tab === 'topup' ? ' stars-modal__seg-btn--active' : ''}`} onClick={() => switchTab('topup')}>Пополнить</button>
             <button className={`stars-modal__seg-btn${tab === 'withdraw' ? ' stars-modal__seg-btn--active' : ''}`} onClick={() => switchTab('withdraw')}>Вывести</button>
@@ -110,7 +111,7 @@ export default function StarsModal({ onClose }: Props) {
               <div className="stars-modal__presets">
                 {PACKAGES.map(n => (
                   <button key={n}
-                    className={`stars-preset${parseInt(amount, 10) === n ? ' stars-preset--active' : ''}`}
+                    className={`stars-preset${numAmount === n ? ' stars-preset--active' : ''}`}
                     onClick={() => setPreset(n)}>
                     <StarIcon size={14} />
                     <span>{n}</span>
@@ -132,9 +133,11 @@ export default function StarsModal({ onClose }: Props) {
               {error && <p className="stars-modal__error">{error}</p>}
               {success && <p className="stars-modal__success">{success}</p>}
               <button className="stars-modal__primary" onClick={handleTopup} disabled={loading || !amount}>
-                {loading ? '...' : `Пополнить на ${amount || 0} ⭐`}
+                <span className="stars-modal__primary-content">
+                  {loading ? '...' : <>Пополнить на <b>{numAmount || 0}</b><StarIcon size={15} /></>}
+                </span>
               </button>
-              <p className="stars-modal__hint">1 ⭐ = 1 единица баланса. Оплата происходит реальными Telegram Stars.</p>
+              <p className="stars-modal__hint">1 звезда = 1 единица баланса. Оплата происходит реальными Telegram Stars.</p>
             </>
           )}
 
@@ -152,7 +155,7 @@ export default function StarsModal({ onClose }: Props) {
                   />
                 </div>
               </label>
-              <p className="stars-modal__hint">Минимум 100 ⭐. После подтверждения админом звёзды поступят в ваш аккаунт Telegram.</p>
+              <p className="stars-modal__hint">Минимум 100 звёзд. После подтверждения админом звёзды поступят в ваш аккаунт Telegram.</p>
               {error && <p className="stars-modal__error">{error}</p>}
               {success && <p className="stars-modal__success">{success}</p>}
               <button className="stars-modal__primary stars-modal__primary--withdraw" onClick={handleWithdraw} disabled={loading || !amount}>

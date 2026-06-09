@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { getBalance, type Balance } from '../api';
 
+/** Format a star amount: integer as-is, fractional with up to 1 decimal. */
+export function formatStars(n: number | null | undefined): string {
+  if (n == null) return '0';
+  if (Number.isInteger(n)) return n.toString();
+  return (Math.round(n * 10) / 10).toFixed(1);
+}
+
 let current: Balance | null = null;
 const subs = new Set<() => void>();
 let inFlight: Promise<Balance> | null = null;

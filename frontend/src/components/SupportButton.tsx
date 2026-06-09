@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { donateStars } from '../api';
-import { useBalance, refreshBalance } from '../utils/balance';
+import { useBalance, refreshBalance, formatStars } from '../utils/balance';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import StarIcon from './StarIcon';
@@ -14,7 +14,6 @@ interface Props {
   recipientName: string;
   context?: 'cat' | 'post';
   className?: string;
-  /** Optional click intercept (e.g. to stop propagation on overlay buttons). */
   onActivate?: () => void;
 }
 
@@ -46,6 +45,11 @@ export default function SupportButton({ recipientUserId, recipientName, context 
   );
 }
 
+function splitDonation(amount: number) {
+  const net = Math.round(amount * 0.7 * 10) / 10;
+  return { net, commission: Math.round((amount - net) * 10) / 10 };
+}
+
 function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
   recipientUserId: number; recipientName: string; context: 'cat' | 'post'; onClose: () => void;
 }) {
@@ -58,8 +62,7 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
   const swipe = useSheetSwipe(onClose);
 
   const n = parseInt(amount, 10) || 0;
-  const recipientGets = Math.floor(n * 0.7);
-  const commission = n - recipientGets;
+  const { net: recipientGets, commission } = splitDonation(n);
   const insufficient = balance != null && balance.balance < n;
 
   const handleDonate = async () => {
@@ -69,7 +72,7 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
     try {
       const r = await donateStars(recipientUserId, n, `support ${context}`);
       hapticSuccess();
-      setSuccess(`${recipientName} получит ${r.received} ⭐`);
+      setSuccess(`${recipientName} получит ${formatStars(r.received)}`);
       refreshBalance();
       setTimeout(onClose, 1400);
     } catch (e) {
@@ -91,7 +94,8 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
       <div className="modal-sheet donate-sheet" ref={swipe.sheetRef}
         onTouchStart={swipe.handleTouchStart}
         onTouchMove={swipe.handleTouchMove}
-        onTouchEnd={swipe.handleTouchEnd}>
+        onTouchEnd={swipe.handleTouchEnd}
+        onTouchCancel={swipe.handleTouchCancel}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close-btn" onClick={onClose}>Отмена</button>
@@ -132,19 +136,19 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
           <div className="donate-sheet__breakdown">
             <div className="donate-sheet__break-row">
               <span>Получит {recipientName}</span>
-              <b>{recipientGets} ⭐</b>
+              <b className="donate-sheet__break-amount">{formatStars(recipientGets)} <StarIcon size={12} /></b>
             </div>
             <div className="donate-sheet__break-row donate-sheet__break-row--muted">
               <span>Комиссия платформы (30%)</span>
-              <span>{commission} ⭐</span>
+              <span className="donate-sheet__break-amount">{formatStars(commission)} <StarIcon size={11} /></span>
             </div>
             <div className="donate-sheet__break-row donate-sheet__break-row--total">
               <span>Спишется с баланса</span>
-              <b>{n} ⭐</b>
+              <b className="donate-sheet__break-amount">{n} <StarIcon size={13} /></b>
             </div>
             <div className="donate-sheet__balance">
-              <span>Ваш баланс: <b>{balance?.balance ?? 0} ⭐</b></span>
-              {insufficient && <span className="donate-sheet__balance-warn">не хватает {n - (balance?.balance ?? 0)} ⭐</span>}
+              <span>Ваш баланс: <b>{formatStars(balance?.balance ?? 0)}</b></span>
+              {insufficient && <span className="donate-sheet__balance-warn">не хватает {formatStars(n - (balance?.balance ?? 0))}</span>}
             </div>
           </div>
 
@@ -152,7 +156,9 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
           {success && <p className="stars-modal__success">{success}</p>}
 
           <button className="stars-modal__primary" onClick={handleDonate} disabled={loading || !amount}>
-            {loading ? '...' : insufficient ? 'Пополнить и отправить' : `Отправить ${n} ⭐`}
+            <span className="stars-modal__primary-content">
+              {loading ? '...' : insufficient ? 'Пополнить и отправить' : <>Отправить <b>{n}</b><StarIcon size={15} /></>}
+            </span>
           </button>
         </div>
       </div>

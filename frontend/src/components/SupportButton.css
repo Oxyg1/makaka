@@ -1,17 +1,18 @@
 .support-btn {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 7px 12px 7px 10px;
-  background: linear-gradient(135deg, #FFE486 0%, #FFB800 55%, #F08000 100%);
+  padding: 7px 13px 7px 11px;
+  background: linear-gradient(135deg, rgba(48,36,18,0.92) 0%, rgba(28,20,8,0.95) 100%);
   border: none;
   border-radius: 99em;
-  color: #2a1a00;
+  color: #ffd95c;
   font-size: 12px; font-weight: 800;
   letter-spacing: -0.2px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.4),
-    0 4px 14px rgba(255,184,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 0 0 0.5px rgba(255,200,80,0.5),
+    0 4px 14px rgba(0,0,0,0.4),
     0 0 18px rgba(255,184,0,0.28);
   transition: transform 0.1s;
 }
@@ -39,13 +40,16 @@
   position: relative;
 }
 .donate-sheet__hero-icon {
-  width: 64px; height: 64px;
+  width: 72px; height: 72px;
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle at 30% 25%, rgba(255,228,134,0.4), transparent 60%),
-              linear-gradient(135deg, rgba(255,184,0,0.18), rgba(240,128,0,0.1));
-  border: 0.5px solid rgba(255,184,0,0.35);
+  background: radial-gradient(circle at 30% 25%, rgba(255,228,134,0.35), transparent 65%),
+              linear-gradient(135deg, rgba(28,20,8,0.95), rgba(48,36,18,0.92));
+  border: 0.5px solid rgba(255,200,80,0.45);
   border-radius: 50%;
-  box-shadow: 0 6px 24px rgba(255,184,0,0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    0 8px 28px rgba(0,0,0,0.45),
+    0 0 32px rgba(255,184,0,0.3);
   margin-bottom: 6px;
 }
 .donate-sheet__title {
@@ -82,9 +86,14 @@
 }
 .donate-sheet__break-row {
   display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
   color: var(--text);
 }
 .donate-sheet__break-row b { font-variant-numeric: tabular-nums; }
+.donate-sheet__break-amount {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
 .donate-sheet__break-row--muted {
   color: var(--text-muted);
   font-size: 12px;
@@ -93,7 +102,7 @@
   padding-top: 8px;
   border-top: 0.5px solid var(--border);
   font-weight: 600;
-  color: #ffd55a;
+  color: #ffd95c;
 }
 .donate-sheet__balance {
   display: flex; align-items: center; justify-content: space-between;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useBalance } from '../utils/balance';
+import { useBalance, formatStars } from '../utils/balance';
 import { hapticSelection } from '../utils/haptics';
 import StarIcon from './StarIcon';
 import StarsModal from './StarsModal';
@@ -15,7 +15,7 @@ export default function StarBalanceButton() {
     <>
       <button className="stars-btn" onClick={handleClick} aria-label="Баланс звёзд">
         <StarIcon size={16} />
-        <span className="stars-btn__amount">{balance?.balance ?? 0}</span>
+        <span className="stars-btn__amount">{formatStars(balance?.balance ?? 0)}</span>
         <span className="stars-btn__plus" aria-hidden>+</span>
       </button>
       {open && <StarsModal onClose={() => setOpen(false)} />}

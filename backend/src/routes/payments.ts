@@ -84,7 +84,7 @@ router.post('/webhook', async (req, res) => {
             db.prepare(`INSERT INTO star_transactions (user_id, type, amount, telegram_charge_id, note) VALUES (?, 'topup', ?, ?, ?)`)
               .run(user.id, amount, sp.telegram_payment_charge_id, null);
             logger.info('stars topup credited', { userId: user.id, amount });
-            sendBotMessage(String(fromId), `✅ Баланс пополнен на <b>${amount} ⭐</b>`);
+            sendBotMessage(String(fromId), `Баланс пополнен на <b>${amount}</b> звёзд`);
           }
         }
       } catch (e) {
@@ -104,7 +104,7 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
   const isAdmin = fromId === ADMIN_TG_ID;
 
   if (text === '/start') {
-    sendBotMessage(fromId, `👋 Привет, ${from.first_name ?? 'друг'}!\n\nДобро пожаловать в <b>Cat Rater</b> — рейтинг самых пушистых котов в Telegram.\n\nОткройте Mini App кнопкой ниже, оценивайте котов, делитесь своими и поддерживайте любимцев звёздами ⭐`);
+    sendBotMessage(fromId, `Привет, ${from.first_name ?? 'друг'}!\n\nДобро пожаловать в <b>Cat Rater</b> — рейтинг самых пушистых котов в Telegram.\n\nОткройте Mini App кнопкой ниже, оценивайте котов, делитесь своими и поддерживайте любимцев звёздами.`);
     return;
   }
 
@@ -121,15 +121,15 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
     const users = (db.prepare(`SELECT COUNT(*) AS n FROM users`).get() as { n: number }).n;
     const activeBalances = (db.prepare(`SELECT COALESCE(SUM(balance), 0) AS n FROM user_balance`).get() as { n: number }).n;
     sendBotMessage(fromId,
-`📊 <b>Cat Rater Admin</b>
+`<b>Cat Rater Admin</b>
 
-👥 Пользователей: <b>${users}</b>
-💰 Куплено звёзд: <b>${totalTopup} ⭐</b>
-🎁 Передано донатов: <b>${totalDonations} ⭐</b>
-💎 Комиссия (ваша): <b>${totalCommission} ⭐</b>
-🏦 Активный баланс юзеров: <b>${activeBalances} ⭐</b>
+Пользователей: <b>${users}</b>
+Куплено звёзд: <b>${totalTopup}</b>
+Передано донатов: <b>${totalDonations}</b>
+Комиссия (ваша): <b>${totalCommission}</b>
+Активный баланс юзеров: <b>${activeBalances}</b>
 
-📤 Заявок на вывод: <b>${pendingW}</b> на сумму <b>${pendingWSum} ⭐</b>
+Заявок на вывод: <b>${pendingW}</b> на сумму <b>${pendingWSum}</b>
 
 /withdrawals — список заявок
 /users — статистика юзеров
@@ -145,12 +145,12 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
       WHERE w.status = 'pending'
       ORDER BY w.created_at ASC LIMIT 20
     `).all() as Array<{ id: number; amount: number; created_at: string; first_name: string; username: string | null; telegram_id: string }>;
-    if (rows.length === 0) { sendBotMessage(fromId, '✅ Нет заявок на вывод.'); return; }
+    if (rows.length === 0) { sendBotMessage(fromId, 'Нет заявок на вывод.'); return; }
     const body = rows.map(r => {
       const u = r.username ? `@${r.username}` : '—';
-      return `<b>#${r.id}</b> · ${r.first_name} (${u}) · TG <code>${r.telegram_id}</code> · <b>${r.amount} ⭐</b>\n/approve_${r.id}  /reject_${r.id}`;
+      return `<b>#${r.id}</b> · ${r.first_name} (${u}) · TG <code>${r.telegram_id}</code> · <b>${r.amount}</b> звёзд\n/approve_${r.id}  /reject_${r.id}`;
     }).join('\n\n');
-    sendBotMessage(fromId, `📤 <b>Заявки на вывод:</b>\n\n${body}`);
+    sendBotMessage(fromId, `<b>Заявки на вывод:</b>\n\n${body}`);
     return;
   }
 
@@ -170,13 +170,13 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
       const u = r.username ? `@${r.username}` : '—';
       return `${i + 1}. ${r.first_name} (${u})\n   баланс ${r.balance} · получил ${r.total_received} · потратил ${r.total_spent}`;
     }).join('\n');
-    sendBotMessage(fromId, `🏆 <b>Топ-10 по активности:</b>\n\n${body}`);
+    sendBotMessage(fromId, `<b>Топ-10 по активности:</b>\n\n${body}`);
     return;
   }
 
   if (text === '/help') {
     sendBotMessage(fromId,
-`🛠 <b>Админ-команды:</b>
+`<b>Админ-команды:</b>
 
 /admin — общая статистика
 /withdrawals — список заявок на вывод
@@ -200,15 +200,15 @@ function processWithdrawal(id: number, approve: boolean, adminTgId: string): voi
     db.prepare(`UPDATE withdrawal_requests SET status = 'approved', processed_at = datetime('now') WHERE id = ?`).run(id);
     db.prepare(`INSERT INTO star_transactions (user_id, type, amount, note) VALUES (?, 'withdrawal_done', ?, ?)`)
       .run(req.user_id, req.amount, `request #${id} approved`);
-    sendBotMessage(adminTgId, `✅ Заявка #${id} одобрена. Не забудьте отправить ${req.amount} ⭐ юзеру ${req.first_name} (TG <code>${req.telegram_id}</code>).`);
-    sendBotMessage(req.telegram_id, `✅ Ваш запрос на вывод <b>${req.amount} ⭐</b> одобрен! Звёзды поступят в ближайшее время.`);
+    sendBotMessage(adminTgId, `Заявка #${id} одобрена. Не забудьте отправить ${req.amount} звёзд юзеру ${req.first_name} (TG <code>${req.telegram_id}</code>).`);
+    sendBotMessage(req.telegram_id, `Ваш запрос на вывод <b>${req.amount}</b> звёзд одобрен. Звёзды поступят в ближайшее время.`);
   } else {
     db.prepare(`UPDATE withdrawal_requests SET status = 'rejected', processed_at = datetime('now') WHERE id = ?`).run(id);
     db.prepare('UPDATE user_balance SET balance = balance + ? WHERE user_id = ?').run(req.amount, req.user_id);
     db.prepare(`INSERT INTO star_transactions (user_id, type, amount, note) VALUES (?, 'withdrawal_rejected', ?, ?)`)
       .run(req.user_id, req.amount, `request #${id} rejected — balance returned`);
-    sendBotMessage(adminTgId, `❌ Заявка #${id} отклонена. ${req.amount} ⭐ возвращены на баланс ${req.first_name}.`);
-    sendBotMessage(req.telegram_id, `❌ Ваш запрос на вывод <b>${req.amount} ⭐</b> отклонён. Звёзды возвращены на баланс.`);
+    sendBotMessage(adminTgId, `Заявка #${id} отклонена. ${req.amount} звёзд возвращены на баланс ${req.first_name}.`);
+    sendBotMessage(req.telegram_id, `Ваш запрос на вывод <b>${req.amount}</b> звёзд отклонён. Звёзды возвращены на баланс.`);
   }
 }
 
