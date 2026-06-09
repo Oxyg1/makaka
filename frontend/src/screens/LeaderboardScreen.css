@@ -21,8 +21,9 @@
   border-radius: 99em;
   background: rgba(0,0,0,0.5);
   box-shadow: var(--glass-shadow-indicator);
-  transition: translate 0.3s cubic-bezier(1,0,0.4,1);
+  transition: translate var(--ios-dur) var(--ios-ease);
   translate: calc(var(--seg-idx, 0) * 100%) 0;
+  will-change: translate;
   z-index: 0;
 }
 .lb__seg-btn {
@@ -70,15 +71,18 @@
 }
 
 .lb__podium-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px;
   background: rgba(30,30,30,0.55);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
   border-radius: 18px; padding: 14px 6px;
   border: none; cursor: pointer; color: var(--text);
   -webkit-tap-highlight-color: transparent;
-  transition: height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.15s;
+  transition: height var(--ios-dur) var(--ios-ease),
+              padding var(--ios-dur) var(--ios-ease),
+              opacity 0.15s linear;
   overflow: hidden;
+  will-change: height;
 }
 .lb__podium-item:active { opacity: 0.7; }
 
@@ -89,32 +93,49 @@
 /* Collapsed: all same height, content hides via overflow */
 .lb__podium--collapsed .lb__podium-item--0,
 .lb__podium--collapsed .lb__podium-item--1,
-.lb__podium--collapsed .lb__podium-item--2 { height: 96px; }
+.lb__podium--collapsed .lb__podium-item--2 {
+  height: 76px; padding: 12px 6px;
+}
 
-/* Photos sized to fit the card width (~116px) with breathing room */
+/* Photos: animate via transform (GPU) so the circle never breaks */
 .lb__podium-photo-wrap {
   position: relative; flex-shrink: 0;
   width: 70px; height: 70px;
-  transition: width 0.38s cubic-bezier(0.4,0,0.2,1), height 0.38s;
+  transform-origin: 50% 50%;
+  transform: scale(1);
+  transition: transform var(--ios-dur) var(--ios-ease);
+  will-change: transform;
 }
 .lb__podium-item--0 .lb__podium-photo-wrap { width: 92px; height: 92px; }
 
-.lb__podium--collapsed .lb__podium-photo-wrap,
-.lb__podium--collapsed .lb__podium-item--0 .lb__podium-photo-wrap { width: 52px; height: 52px; }
+/* 52 / 70 ≈ 0.743 ; 52 / 92 ≈ 0.565 — same final pixel size */
+.lb__podium--collapsed .lb__podium-photo-wrap { transform: scale(0.743); }
+.lb__podium--collapsed .lb__podium-item--0 .lb__podium-photo-wrap { transform: scale(0.565); }
 
-.lb__podium-photo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.lb__podium-photo {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover; display: block;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
 
 .lb__podium-item--0 .lb__podium-photo { box-shadow: 0 0 0 3px #f1aa05, 0 0 16px rgba(241,170,5,0.4); }
 .lb__podium-item--1 .lb__podium-photo { box-shadow: 0 0 0 2.5px #b0b0b0; }
 .lb__podium-item--2 .lb__podium-photo { box-shadow: 0 0 0 2.5px #c86c2a; }
 
-/* Name + score fade out when collapsed */
+/* Name + score fade out when collapsed — opacity only, no layout shift */
 .lb__podium-name, .lb__podium-score {
-  transition: opacity 0.2s, max-height 0.3s;
-  max-height: 24px; overflow: hidden;
+  transition: opacity var(--ios-dur) var(--ios-ease),
+              transform var(--ios-dur) var(--ios-ease);
+  opacity: 1; transform: translateY(0);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lb__podium--collapsed .lb__podium-name,
-.lb__podium--collapsed .lb__podium-score { opacity: 0; max-height: 0; }
+.lb__podium--collapsed .lb__podium-score {
+  opacity: 0; transform: translateY(-4px);
+  pointer-events: none;
+}
 
 .lb__podium-name {
   font-size: 12px; font-weight: 700;

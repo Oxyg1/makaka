@@ -25,6 +25,9 @@
     inset 0 0 0 0.5px rgba(255,255,255,0.12),
     0 2px 8px rgba(0,0,0,0.2);
   --card-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ios-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ios-dur: 0.45s;
   --tg-theme-bg-color: #141414;
   --tg-theme-text-color: #ffffff;
   --tg-theme-hint-color: #6d6d71;
