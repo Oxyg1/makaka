@@ -36,9 +36,24 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const onScroll = () => setCollapsed(el.scrollTop > 24);
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setCollapsed(prev => {
+          const y = el.scrollTop;
+          if (!prev && y > 28) return true;
+          if (prev && y < 8) return false;
+          return prev;
+        });
+      });
+    };
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [entries]);
 
   const switchPeriod = (p: Period) => {
@@ -97,8 +112,12 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
                         <img className="lb__podium-photo" src={`${BASE}${e.photo_url}`} alt={e.name} />
                         <span className={rankBadgeClass(i)}>{i + 1}</span>
                       </div>
-                      <span className="lb__podium-name">{e.name}</span>
-                      <span className="lb__podium-score">★ {e.avg_score}</span>
+                      <div className="lb__podium-text">
+                        <div className="lb__podium-text-inner">
+                          <span className="lb__podium-name">{e.name}</span>
+                          <span className="lb__podium-score">★ {e.avg_score}</span>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>

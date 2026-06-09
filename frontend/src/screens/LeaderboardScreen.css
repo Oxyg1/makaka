@@ -31,8 +31,7 @@
   background: none; border: none;
   padding: 8px 4px; border-radius: 99em;
   font-size: 12px; font-weight: 700; cursor: pointer;
-  color: rgba(255,255,255,.38);
-  transition: color 0.2s;
+  color: rgba(255,255,255,.42);
   -webkit-tap-highlight-color: transparent;
 }
 .lb__seg-btn--active { color: #fff; }
@@ -53,6 +52,8 @@
 .lb__list {
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 0 12px calc(var(--nav-height,62px) + 24px);
+  contain: layout paint;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lb__center { display: flex; align-items: center; justify-content: center; flex: 1; }
@@ -71,18 +72,24 @@
 }
 
 .lb__podium-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
   background: rgba(30,30,30,0.55);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
-  border-radius: 18px; padding: 14px 6px;
+  border-radius: 18px;
+  padding: 14px 6px;
   border: none; cursor: pointer; color: var(--text);
   -webkit-tap-highlight-color: transparent;
   transition: height var(--ios-dur) var(--ios-ease),
               padding var(--ios-dur) var(--ios-ease),
+              gap var(--ios-dur) var(--ios-ease),
               opacity 0.15s linear;
   overflow: hidden;
   will-change: height;
+  contain: layout style;
 }
 .lb__podium-item:active { opacity: 0.7; }
 
@@ -90,11 +97,13 @@
 .lb__podium-item--1 { order: 1; height: 168px; }
 .lb__podium-item--2 { order: 3; height: 168px; }
 
-/* Collapsed: all same height, content hides via overflow */
+/* Collapsed: all same height; photo stays centered, text collapses cleanly */
 .lb__podium--collapsed .lb__podium-item--0,
 .lb__podium--collapsed .lb__podium-item--1,
 .lb__podium--collapsed .lb__podium-item--2 {
-  height: 76px; padding: 12px 6px;
+  height: 76px;
+  padding: 12px 6px;
+  gap: 0;
 }
 
 /* Photos: animate via transform (GPU) so the circle never breaks */
@@ -124,17 +133,32 @@
 .lb__podium-item--1 .lb__podium-photo { box-shadow: 0 0 0 2.5px #b0b0b0; }
 .lb__podium-item--2 .lb__podium-photo { box-shadow: 0 0 0 2.5px #c86c2a; }
 
-/* Name + score fade out when collapsed — opacity only, no layout shift */
-.lb__podium-name, .lb__podium-score {
-  transition: opacity var(--ios-dur) var(--ios-ease),
-              transform var(--ios-dur) var(--ios-ease);
-  opacity: 1; transform: translateY(0);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* Text wrap collapses to 0 height smoothly with grid-template-rows trick */
+.lb__podium-text {
+  display: grid;
+  grid-template-rows: 1fr;
+  width: 100%;
+  transition: grid-template-rows var(--ios-dur) var(--ios-ease),
+              opacity var(--ios-dur) var(--ios-ease);
+  opacity: 1;
 }
-.lb__podium--collapsed .lb__podium-name,
-.lb__podium--collapsed .lb__podium-score {
-  opacity: 0; transform: translateY(-4px);
+.lb__podium-text-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+.lb__podium--collapsed .lb__podium-text {
+  grid-template-rows: 0fr;
+  opacity: 0;
   pointer-events: none;
+}
+
+.lb__podium-name, .lb__podium-score {
+  display: block;
+  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .lb__podium-name {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMyCats, getStats, getUserPosts, deleteCat, deletePost, getNotifications, markNotificationsRead } from '../api';
-import { isHapticsEnabled, setHapticsEnabled } from '../utils/haptics';
+import { isHapticsEnabled, setHapticsEnabled, hapticSelection } from '../utils/haptics';
 import type { CatWithStats, Notification, Post, User, UserStats } from '../types';
 import { Avatar } from '../components/CatCardModal';
 import CatCardModal from '../components/CatCardModal';
@@ -10,6 +10,7 @@ import './ProfileScreen.css';
 const BASE = import.meta.env.VITE_API_URL ?? '';
 type PTab = 'cats' | 'posts';
 type SidePanel = null | 'notifs' | 'settings';
+const TABS: PTab[] = ['cats', 'posts'];
 
 function timeAgo(s: string) {
   const d = Math.floor((Date.now() - new Date(s).getTime()) / 1000);
@@ -49,16 +50,12 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
       getStats().catch(() => null),
       user ? getUserPosts(user.id).catch(() => [] as Post[]) : Promise.resolve([] as Post[]),
     ]).then(([c, s, p]) => {
-      setCats(c);
-      setStats(s);
-      setPosts(p);
+      setCats(c); setStats(s); setPosts(p);
     }).finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => {
-    getNotifications().then(ns => {
-      setUnreadCount(ns.filter(n => !n.read).length);
-    }).catch(() => {});
+    getNotifications().then(ns => setUnreadCount(ns.filter(n => !n.read).length)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -87,9 +84,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
     }
   };
 
-  const handleCatDeleted = (id: number) => {
-    setCats(prev => prev.filter(c => c.id !== id));
-  };
+  const handleCatDeleted = (id: number) => setCats(prev => prev.filter(c => c.id !== id));
 
   const handleCatSaved = (updated: CatWithStats) => {
     setCats(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
@@ -105,121 +100,144 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
     setDeletingPostId(null);
   };
 
+  const switchTab = (t: PTab) => { hapticSelection(); setTab(t); };
+
+  const activeIdx = TABS.indexOf(tab);
+
   return (
     <div className="profile">
-      <div className="profile__hero">
-        {/* Corner action icons */}
-        <div className="profile__hero-actions">
-          <button className={`profile__icon-btn${unreadCount > 0 ? ' profile__icon-btn--badge' : ''}`} onClick={() => setPanel('notifs')} aria-label="Уведомления">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            {unreadCount > 0 && <span className="profile__icon-badge" />}
-          </button>
-          <button className="profile__icon-btn" onClick={() => setPanel('settings')} aria-label="Настройки">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
-        </div>
-
-        <Avatar name={user?.first_name ?? 'У'} photoUrl={user?.photo_url} size={80} />
-        <div className="profile__identity">
-          <h2 className="profile__name">{user?.first_name ?? 'Пользователь'}</h2>
-          {user?.username && <p className="profile__username">@{user.username}</p>}
-        </div>
-        {stats && (
-          <div className="profile__stats">
-            <div className="profile__stat">
-              <span className="profile__stat-val">{cats.length}</span>
-              <span className="profile__stat-lbl">котов</span>
-            </div>
-            <div className="profile__sep" />
-            <div className="profile__stat">
-              <span className="profile__stat-val">{stats.total_rated}</span>
-              <span className="profile__stat-lbl">оценено</span>
-            </div>
-            <div className="profile__sep" />
-            <div className="profile__stat">
-              <span className="profile__stat-val">{stats.streak_days}</span>
-              <span className="profile__stat-lbl">серия</span>
-            </div>
-          </div>
-        )}
+      {/* Sticky top bar with action chips */}
+      <div className="profile__topbar">
+        <button className="profile__chip" onClick={() => setPanel('notifs')} aria-label="Уведомления">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          {unreadCount > 0 && <span className="profile__chip-dot" />}
+        </button>
+        <span className="profile__topbar-title">Профиль</span>
+        <button className="profile__chip" onClick={() => setPanel('settings')} aria-label="Настройки">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
       </div>
 
-      <div className="profile__tabs-wrap">
-        <div className="profile__tabs">
-          {(['cats','posts'] as PTab[]).map(t => (
-            <button key={t} className={`profile__tab${tab === t ? ' profile__tab--active' : ''}`} onClick={() => setTab(t)}>
-              {t === 'cats' ? 'Мои коты' : 'Посты'}
+      <div className="profile__scroll">
+        {/* Hero */}
+        <div className="profile__hero">
+          <div className="profile__avatar-wrap">
+            <Avatar name={user?.first_name ?? 'У'} photoUrl={user?.photo_url} size={96} />
+          </div>
+          <h1 className="profile__name">{user?.first_name ?? 'Пользователь'}</h1>
+          {user?.username && <p className="profile__username">@{user.username}</p>}
+          {stats && stats.streak_days > 0 && (
+            <div className="profile__streak-chip">
+              <span className="profile__streak-emoji">🔥</span>
+              {stats.streak_days} {stats.streak_days === 1 ? 'день' : 'дн.'} подряд
+            </div>
+          )}
+        </div>
+
+        {/* Stats card */}
+        <div className="profile__stats">
+          <div className="profile__stat">
+            <span className="profile__stat-val">{cats.length}</span>
+            <span className="profile__stat-lbl">{cats.length === 1 ? 'кот' : 'котов'}</span>
+          </div>
+          <div className="profile__sep" />
+          <div className="profile__stat">
+            <span className="profile__stat-val">{stats?.total_rated ?? 0}</span>
+            <span className="profile__stat-lbl">оценено</span>
+          </div>
+          <div className="profile__sep" />
+          <div className="profile__stat">
+            <span className="profile__stat-val">{posts.length}</span>
+            <span className="profile__stat-lbl">{posts.length === 1 ? 'пост' : 'постов'}</span>
+          </div>
+        </div>
+
+        {/* Segmented tabs */}
+        <div className="profile__seg" style={{ '--seg-idx': activeIdx } as React.CSSProperties}>
+          <div className="profile__seg-indicator" />
+          {TABS.map(t => (
+            <button key={t}
+              className={`profile__seg-btn${tab === t ? ' profile__seg-btn--active' : ''}`}
+              onClick={() => switchTab(t)}
+            >
+              {t === 'cats' ? `Коты ${cats.length > 0 ? `· ${cats.length}` : ''}` : `Посты ${posts.length > 0 ? `· ${posts.length}` : ''}`}
             </button>
+          ))}
+        </div>
+
+        <div className="profile__content">
+          {loading && <div className="profile__center"><div className="spinner" /></div>}
+
+          {!loading && tab === 'cats' && (cats.length === 0 ? (
+            <div className="profile__empty">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" opacity="0.18">
+                <ellipse cx="9" cy="6" rx="2.2" ry="2.8" /><ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
+                <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" /><ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
+                <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
+              </svg>
+              <p>У вас пока нет котов</p>
+              <p className="profile__empty-hint">Добавьте на вкладке «Добавить»</p>
+            </div>
+          ) : (
+            <div className="profile__cats">
+              {cats.map(cat => (
+                <button key={cat.id} className="profile__cat" onClick={() => setSelectedCat(cat)}>
+                  <img className="profile__cat-photo" src={`${BASE}${cat.photo_url}`} alt={cat.name} loading="lazy" />
+                  <div className="profile__cat-overlay">
+                    <div className="profile__cat-name">{cat.name}</div>
+                    <div className="profile__cat-meta">
+                      {cat.vote_count > 0
+                        ? <span className="profile__cat-score">★ {cat.avg_score}</span>
+                        : <span className="profile__cat-score profile__cat-score--none">Без оценок</span>}
+                      {cat.breed && <span className="profile__cat-breed">· {cat.breed}</span>}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ))}
+
+          {!loading && tab === 'posts' && (posts.length === 0 ? (
+            <div className="profile__empty">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+                <rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+              <p>Нет постов</p>
+              <p className="profile__empty-hint">Поделитесь фото на вкладке «Лента»</p>
+            </div>
+          ) : (
+            <div className="profile__grid">
+              {posts.map(post => (
+                <div key={post.id} className="profile__grid-item">
+                  <img src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
+                  {post.likes_count > 0 && (
+                    <div className="profile__grid-likes">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                      {post.likes_count}
+                    </div>
+                  )}
+                  <button
+                    className="profile__grid-delete"
+                    onClick={() => handleDeletePost(post.id)}
+                    disabled={deletingPostId === post.id}
+                    aria-label="Удалить"
+                  >
+                    {deletingPostId === post.id ? '...' : '×'}
+                  </button>
+                </div>
+              ))}
+            </div>
           ))}
         </div>
       </div>
 
-      <div className="profile__body">
-        {loading && <div className="profile__center"><div className="spinner" /></div>}
-
-        {!loading && tab === 'cats' && (cats.length === 0 ? (
-          <div className="profile__empty">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" opacity="0.2">
-              <ellipse cx="9" cy="6" rx="2.2" ry="2.8" /><ellipse cx="15" cy="6" rx="2.2" ry="2.8" />
-              <ellipse cx="5.5" cy="10.5" rx="1.8" ry="2.4" /><ellipse cx="18.5" cy="10.5" rx="1.8" ry="2.4" />
-              <path d="M12 10c-3.5 0-6 2-6 5 0 2.5 1.5 4 6 4s6-1.5 6-4c0-3-2.5-5-6-5z" />
-            </svg>
-            <p>Нет котов</p>
-          </div>
-        ) : (
-          <div className="profile__cats">
-            {cats.map(cat => (
-              <button key={cat.id} className="profile__cat" onClick={() => setSelectedCat(cat)}>
-                <img className="profile__cat-photo" src={`${BASE}${cat.photo_url}`} alt={cat.name} loading="lazy" />
-                <div className="profile__cat-info">
-                  <div className="profile__cat-name">{cat.name}</div>
-                  {cat.breed && <div className="profile__cat-breed">{cat.breed}</div>}
-                  {cat.vote_count > 0
-                    ? <div className="profile__cat-score">★ {cat.avg_score} · {cat.vote_count} оц.</div>
-                    : <div className="profile__cat-score profile__cat-score--none">Нет оценок</div>}
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0, marginRight: 12 }}>
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            ))}
-          </div>
-        ))}
-
-        {!loading && tab === 'posts' && (posts.length === 0 ? (
-          <div className="profile__empty">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
-              <rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12" r="4" />
-              <circle cx="17.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
-            </svg>
-            <p>Нет постов</p>
-          </div>
-        ) : (
-          <div className="profile__grid">
-            {posts.map(post => (
-              <div key={post.id} className="profile__grid-item">
-                <img src={`${BASE}${post.photo_url}`} alt="" loading="lazy" />
-                {post.likes_count > 0 && <div className="profile__grid-likes">♥ {post.likes_count}</div>}
-                <button
-                  className="profile__grid-delete"
-                  onClick={() => handleDeletePost(post.id)}
-                  disabled={deletingPostId === post.id}
-                >
-                  {deletingPostId === post.id ? '...' : '×'}
-                </button>
-              </div>
-            ))}
-          </div>
-        ))}
-
-      </div>
-
-      {/* Notifications panel */}
+      {/* Notifications sheet */}
       {panel === 'notifs' && (
         <div className="modal-overlay" onClick={() => setPanel(null)}>
           <div className="modal-sheet" onClick={e => e.stopPropagation()}>
@@ -227,9 +245,9 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
             <div className="modal-sheet__header">
               <div style={{ width: 60 }} />
               <span className="modal-sheet__title">Уведомления</span>
-              <button className="modal-sheet__close-btn" onClick={() => setPanel(null)}>✕</button>
+              <button className="modal-sheet__close-btn" onClick={() => setPanel(null)}>Готово</button>
             </div>
-            <div className="profile__notifs" style={{ overflowY: 'auto', flex: 1, paddingBottom: 24 }}>
+            <div className="profile__notifs">
               {!notifsLoaded && <div className="profile__center"><div className="spinner" /></div>}
               {notifsLoaded && notifs.length === 0 && (
                 <div className="profile__empty">
@@ -245,13 +263,14 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
                     {n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : '⭐'}
                   </div>
                   <div className="profile__notif-body">
-                    <span className="profile__notif-actor">{n.actor_name}</span>
-                    {' '}
-                    <span className="profile__notif-text">
-                      {n.type === 'like' ? 'лайкнул ваш пост'
-                        : n.type === 'comment' ? `написал: ${n.text}`
-                        : n.text ?? 'оценил вашего кота'}
-                    </span>
+                    <div>
+                      <span className="profile__notif-actor">{n.actor_name}</span>{' '}
+                      <span className="profile__notif-text">
+                        {n.type === 'like' ? 'лайкнул(а) ваш пост'
+                          : n.type === 'comment' ? `написал(а): ${n.text}`
+                          : n.text ?? 'оценил(а) вашего кота'}
+                      </span>
+                    </div>
                     <div className="profile__notif-time">{timeAgo(n.created_at)}</div>
                   </div>
                 </div>
@@ -261,7 +280,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
         </div>
       )}
 
-      {/* Settings panel */}
+      {/* Settings sheet */}
       {panel === 'settings' && (
         <div className="modal-overlay" onClick={() => setPanel(null)}>
           <div className="modal-sheet" onClick={e => e.stopPropagation()}>
@@ -269,14 +288,14 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
             <div className="modal-sheet__header">
               <div style={{ width: 60 }} />
               <span className="modal-sheet__title">Настройки</span>
-              <button className="modal-sheet__close-btn" onClick={() => setPanel(null)}>✕</button>
+              <button className="modal-sheet__close-btn" onClick={() => setPanel(null)}>Готово</button>
             </div>
-            <div className="profile__settings" style={{ overflowY: 'auto', flex: 1 }}>
+            <div className="profile__settings">
               <div className="profile__settings-group">
                 <div className="profile__settings-row">
                   <div>
                     <div className="profile__settings-label">Тактильный отклик</div>
-                    <div className="profile__settings-desc">Вибрация при оценке</div>
+                    <div className="profile__settings-desc">Вибрация при действиях</div>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" checked={haptics} onChange={e => toggleHaptics(e.target.checked)} />
@@ -297,7 +316,7 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
               <div className="profile__settings-group">
                 <div className="profile__settings-row">
                   <div className="profile__settings-label">Cat Rater</div>
-                  <span className="profile__settings-ver">2.0.0</span>
+                  <span className="profile__settings-ver">2.1.0</span>
                 </div>
               </div>
             </div>
