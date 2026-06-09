@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { Post } from '../types';
 import { Avatar } from './CatCardModal';
+import SupportButton from './SupportButton';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -80,6 +81,14 @@ export default function PostCard({ post, isOwner, onViewUser, onLike, onComments
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </div>
+        )}
+        {!isOwner && (
+          <SupportButton
+            recipientUserId={post.user_id}
+            recipientName={post.author_name}
+            context="post"
+            className="support-btn--floating"
+          />
         )}
       </div>
 

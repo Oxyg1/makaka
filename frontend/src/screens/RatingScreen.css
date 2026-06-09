@@ -1,11 +1,16 @@
 .rs { display: flex; flex-direction: column; height: 100%; background: var(--bg); position: relative; }
 
+.rs__topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px 4px;
+  flex-shrink: 0;
+  gap: 8px;
+}
 .rs__counter {
-  position: absolute; top: 14px; left: 50%; translate: -50%; z-index: 10;
   background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
   color: var(--text-muted); font-size: 12px; font-weight: 600;
-  padding: 3px 10px; border-radius: 99em;
-  border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 99em;
+  border: 0.5px solid var(--border);
 }
 
 .rs__scroll {

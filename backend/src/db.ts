@@ -132,3 +132,36 @@ db.exec(`
 `);
 
 try { db.exec('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch { /* column already exists */ }
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_balance (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    balance INTEGER NOT NULL DEFAULT 0,
+    total_received INTEGER NOT NULL DEFAULT 0,
+    total_spent INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS star_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    type TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    related_user_id INTEGER REFERENCES users(id),
+    telegram_charge_id TEXT,
+    note TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_star_tx_user ON star_transactions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_star_tx_type ON star_transactions(type);
+
+  CREATE TABLE IF NOT EXISTS withdrawal_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    amount INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now')),
+    processed_at TEXT,
+    admin_note TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_withdraw_status ON withdrawal_requests(status);
+`);

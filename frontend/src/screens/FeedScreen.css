@@ -20,6 +20,9 @@
   font-size: 22px; font-weight: 700;
   letter-spacing: -0.4px;
 }
+.feed__topbar-actions {
+  display: flex; align-items: center; gap: 8px;
+}
 .feed__new-btn {
   width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;

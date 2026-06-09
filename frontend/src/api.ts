@@ -130,3 +130,22 @@ export function createInvoice(feature: string, entityId: number): Promise<{ invo
     body: JSON.stringify({ feature, entityId }),
   });
 }
+
+/* ─── Stars ─── */
+export interface Balance { balance: number; total_received: number; total_spent: number; }
+export interface StarTx {
+  id: number; type: 'topup' | 'donation_out' | 'donation_in' | 'commission' | 'withdrawal_request' | 'withdrawal_done' | 'withdrawal_rejected';
+  amount: number; related_user_id: number | null; related_name: string | null; related_username: string | null;
+  note: string | null; created_at: string;
+}
+export function getBalance(): Promise<Balance> { return request<Balance>('/api/stars/balance'); }
+export function topupStars(amount: number): Promise<{ invoiceLink: string }> {
+  return request<{ invoiceLink: string }>('/api/stars/topup', { method: 'POST', body: JSON.stringify({ amount }) });
+}
+export function donateStars(recipientUserId: number, amount: number, note?: string): Promise<{ ok: boolean; sent: number; received: number; commission: number; newBalance: number }> {
+  return request('/api/stars/donate', { method: 'POST', body: JSON.stringify({ recipientUserId, amount, note }) });
+}
+export function withdrawStars(amount: number): Promise<{ ok: boolean; requestId: number; newBalance: number }> {
+  return request('/api/stars/withdraw', { method: 'POST', body: JSON.stringify({ amount }) });
+}
+export function getStarTransactions(): Promise<StarTx[]> { return request<StarTx[]>('/api/stars/transactions'); }

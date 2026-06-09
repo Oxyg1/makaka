@@ -14,10 +14,16 @@
   border-bottom: 0.5px solid rgba(255,255,255,0.04);
   z-index: 2;
   flex-shrink: 0;
+  position: relative;
+}
+.profile__topbar-left {
+  display: flex; align-items: center; gap: 6px;
 }
 .profile__topbar-title {
   font-size: 17px; font-weight: 600;
   letter-spacing: -0.3px;
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
 }
 .profile__chip {
   position: relative;

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { getLeaderboard } from '../api';
 import type { CatLeaderboardEntry } from '../types';
 import CatCardModal from '../components/CatCardModal';
+import StarBalanceButton from '../components/StarBalanceButton';
 import { syncCatLike } from '../utils/catLikes';
 import './LeaderboardScreen.css';
 
@@ -25,40 +26,14 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<CatLeaderboardEntry | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [collapsed, setCollapsed] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLoading(true);
-    setCollapsed(false);
     getLeaderboard(period).then(es => {
       setEntries(es);
       es.forEach(e => syncCatLike(e.id, e.liked_by_me ?? false, e.likes_count ?? 0));
     }).finally(() => setLoading(false));
   }, [period]);
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    let raf = 0;
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        setCollapsed(prev => {
-          const y = el.scrollTop;
-          if (!prev && y > 6) return true;
-          if (prev && y <= 0) return false;
-          return prev;
-        });
-      });
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      el.removeEventListener('scroll', onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [entries]);
 
   const switchPeriod = (p: Period) => {
     setPeriod(p);
@@ -71,7 +46,10 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
   return (
     <div className="lb">
       <div className="lb__header">
-        <h2 className="lb__title">Лидерборд</h2>
+        <div className="lb__title-row">
+          <h2 className="lb__title">Лидерборд</h2>
+          <StarBalanceButton />
+        </div>
         <div className="lb__seg" style={{ '--seg-idx': activeIdx } as React.CSSProperties}>
           <div className="lb__seg-indicator" />
           {PERIODS.map((p) => (
@@ -101,10 +79,10 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
         )}
 
         {!loading && entries.length > 0 && (
-          <>
+          <div className="lb__scroll">
             {top3.length > 0 && (
               <div className="lb__podium-wrap">
-                <div className={`lb__podium${collapsed ? ' lb__podium--collapsed' : ''}`}>
+                <div className="lb__podium">
                   {top3.map((e, i) => (
                     <button key={e.id} className={`lb__podium-item lb__podium-item--${i}`} onClick={() => setSelected(e)}>
                       <div className="lb__podium-photo-wrap">
@@ -123,8 +101,8 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
               </div>
             )}
 
-            <div className="lb__list" ref={listRef}>
-              {rest.length > 0 && (
+            {rest.length > 0 && (
+              <div className="lb__list">
                 <div className="lb__glass-list">
                   {rest.map((e, i) => (
                     <button key={e.id} className="lb__row" onClick={() => setSelected(e)}>
@@ -144,9 +122,9 @@ export default function LeaderboardScreen({ onViewUser }: Props) {
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-          </>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

@@ -110,7 +110,7 @@ router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
 // GET /api/cats/next
 router.get('/next', authMiddleware, (req: AuthRequest, res) => {
   const cat = db.prepare(`
-    SELECT c.id, c.name, c.breed, c.age, c.description, c.photo_url,
+    SELECT c.id, c.name, c.breed, c.age, c.description, c.photo_url, c.owner_id,
       u.first_name AS owner_name,
       ROUND(COALESCE(AVG(r.score), 0), 1) AS avg_score,
       COUNT(DISTINCT r.id) AS vote_count,

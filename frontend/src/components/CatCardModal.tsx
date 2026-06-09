@@ -3,6 +3,7 @@ import type { CatLeaderboardEntry, CatWithStats } from '../types';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { useCatLike } from '../utils/catLikes';
 import { hapticImpact } from '../utils/haptics';
+import SupportButton from './SupportButton';
 import './CatCardModal.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -106,6 +107,15 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
                     onClick={() => setPhotoIdx(i)} />
                 ))}
               </div>
+            )}
+
+            {!isOwner && ownerId !== undefined && (
+              <SupportButton
+                recipientUserId={ownerId}
+                recipientName={cat.owner_name}
+                context="cat"
+                className="support-btn--floating"
+              />
             )}
           </div>
 

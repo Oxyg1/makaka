@@ -6,6 +6,8 @@ import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { ageLabel } from '../components/CatCardModal';
 import { useCatLike, syncCatLike } from '../utils/catLikes';
+import StarBalanceButton from '../components/StarBalanceButton';
+import SupportButton from '../components/SupportButton';
 import './RatingScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -159,7 +161,10 @@ export default function RatingScreen() {
 
   return (
     <div className="rs">
-      {count > 0 && <div className="rs__counter">Оценено: {count}</div>}
+      <div className="rs__topbar">
+        {count > 0 ? <div className="rs__counter">Оценено: {count}</div> : <div />}
+        <StarBalanceButton />
+      </div>
 
       <div className="rs__scroll">
         <div className={`rs__card${dir ? ` rs__card--${dir}` : ''}`}>
@@ -168,10 +173,20 @@ export default function RatingScreen() {
             photos={[cat.photo_url, ...(cat.extra_photos ?? [])]}
             name={cat.name}
             overlay={
-              <div className="rs__overlay">
-                <span className="rs__badge">#{cat.id}</span>
-                <LikeOverlayButton catId={cat.id} seedLiked={cat.liked_by_me ?? false} seedCount={cat.likes_count ?? 0} disabled={submitting} />
-              </div>
+              <>
+                <div className="rs__overlay">
+                  <span className="rs__badge">#{cat.id}</span>
+                  <LikeOverlayButton catId={cat.id} seedLiked={cat.liked_by_me ?? false} seedCount={cat.likes_count ?? 0} disabled={submitting} />
+                </div>
+                {cat.owner_id != null && (
+                  <SupportButton
+                    recipientUserId={cat.owner_id}
+                    recipientName={cat.owner_name}
+                    context="cat"
+                    className="support-btn--floating"
+                  />
+                )}
+              </>
             }
           />
 

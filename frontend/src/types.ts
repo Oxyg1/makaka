@@ -1,6 +1,7 @@
 export interface Cat {
   id: number; name: string; breed: string | null; age: number | null;
   description: string | null; photo_url: string; owner_name: string;
+  owner_id?: number;
 }
 
 export interface CatWithStats extends Cat {

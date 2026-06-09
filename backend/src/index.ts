@@ -11,6 +11,7 @@ import feedRouter from './routes/feed';
 import usersRouter from './routes/users';
 import notificationsRouter from './routes/notifications';
 import paymentsRouter from './routes/payments';
+import starsRouter from './routes/stars';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -41,6 +42,7 @@ app.use('/api/feed', feedRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/stars', starsRouter);
 
 // Global error handler — catches any thrown error from routes
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
