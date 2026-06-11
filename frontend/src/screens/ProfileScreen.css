@@ -19,6 +19,9 @@
 .profile__topbar-left {
   display: flex; align-items: center; gap: 6px;
 }
+.profile__topbar-right {
+  display: flex; align-items: center; gap: 8px;
+}
 .profile__topbar-title {
   font-size: 17px; font-weight: 600;
   letter-spacing: -0.3px;
@@ -70,7 +73,7 @@
   top: -40px; left: 50%;
   transform: translateX(-50%);
   width: 280px; height: 280px;
-  background: radial-gradient(circle, rgba(124,109,249,0.15) 0%, transparent 60%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--avatar-glow, #7c6df9) 30%, transparent) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }

@@ -1,22 +1,28 @@
 .share-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  gap: 7px;
-  height: 44px;
-  padding: 0 18px;
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  border: 0.5px solid var(--border-strong);
-  border-radius: 14px;
-  font-size: 14px; font-weight: 600;
-  letter-spacing: -0.2px;
+  width: 32px; height: 32px;
+  background: rgba(20,20,22,0.55);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 0.5px solid rgba(255,255,255,0.14);
+  border-radius: 50%;
+  color: #fff;
   cursor: pointer;
+  padding: 0;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, transform 0.1s;
   font-family: inherit;
+  flex-shrink: 0;
 }
 .share-btn:active {
-  background: rgba(255,255,255,0.1);
-  transform: scale(0.97);
+  background: rgba(255,255,255,0.14);
+  transform: scale(0.92);
 }
-.share-btn--full { width: 100%; }
-.share-btn--compact { height: 36px; padding: 0 14px; font-size: 13px; }
+
+/* Floating top-right corner inside a photo */
+.share-btn--corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+}

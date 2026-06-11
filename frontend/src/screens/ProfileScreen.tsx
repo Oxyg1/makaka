@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getMyCats, getStats, getUserPosts, deleteCat, getNotifications, markNotificationsRead } from '../api';
 import { isHapticsEnabled, setHapticsEnabled, hapticSelection } from '../utils/haptics';
 import type { CatWithStats, Notification, Post, User, UserStats } from '../types';
-import { Avatar } from '../components/CatCardModal';
+import { Avatar, avatarColor } from '../components/CatCardModal';
 import CatCardModal from '../components/CatCardModal';
 import EditCatSheet from '../components/EditCatSheet';
 import PostViewerModal from '../components/PostViewerModal';
@@ -125,12 +125,15 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
           </button>
         </div>
         <span className="profile__topbar-title">Профиль</span>
-        <StarBalanceButton />
+        <div className="profile__topbar-right">
+          {user && <ShareButton kind="profile" entityId={user.id} title={user.first_name} />}
+          <StarBalanceButton />
+        </div>
       </div>
 
       <div className="profile__scroll">
         {/* Hero */}
-        <div className="profile__hero">
+        <div className="profile__hero" style={{ '--avatar-glow': avatarColor(user?.first_name ?? 'У') } as React.CSSProperties}>
           <div className="profile__avatar-wrap">
             <Avatar name={user?.first_name ?? 'У'} photoUrl={user?.photo_url} size={96} />
           </div>
@@ -140,11 +143,6 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
             <div className="profile__streak-chip">
               <span className="profile__streak-emoji">🔥</span>
               {stats.streak_days} {stats.streak_days === 1 ? 'день' : 'дн.'} подряд
-            </div>
-          )}
-          {user && (
-            <div className="profile__share-row">
-              <ShareButton kind="profile" entityId={user.id} title={user.first_name} className="share-btn--full" />
             </div>
           )}
         </div>

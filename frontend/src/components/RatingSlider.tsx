@@ -9,14 +9,12 @@ interface Props { value: number; onChange: (v: number) => void; disabled?: boole
 
 export default function RatingSlider({ value, onChange, disabled }: Props) {
   const [dragging, setDragging] = useState(false);
-  const [dragPct, setDragPct] = useState<number | null>(null);
   const [showHint, setShowHint] = useState<boolean>(() => localStorage.getItem(HINT_KEY) !== '1');
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Discrete (snapped) position derived from value, used when the user isn't dragging.
-  const snappedPct = value > 0 ? ((value - 1) / 9) * 100 : 0;
-  // Continuous position is used during drag — follows the finger smoothly.
-  const visualPct = dragPct ?? snappedPct;
+  // Thumb always sits on a discrete tick. The CSS transition does the smooth
+  // glide between ticks when the finger crosses a threshold during a drag.
+  const pct = value > 0 ? ((value - 1) / 9) * 100 : 0;
   const color = COLORS[value] || '#6d6d71';
 
   useEffect(() => {
@@ -26,12 +24,11 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
     }
   }, [dragging, showHint]);
 
-  const handlePointer = useCallback((clientX: number) => {
+  const updateFromX = useCallback((clientX: number) => {
     const track = trackRef.current;
     if (!track) return;
     const rect = track.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    setDragPct(ratio * 100);
     const v = Math.round(ratio * 9) + 1;
     if (v !== value) { hapticImpact('light'); onChange(v); }
   }, [value, onChange]);
@@ -40,23 +37,19 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
     if (disabled) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragging(true);
-    handlePointer(e.clientX);
+    updateFromX(e.clientX);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragging || disabled) return;
-    handlePointer(e.clientX);
+    updateFromX(e.clientX);
   };
 
-  const handlePointerUp = () => {
-    setDragging(false);
-    // Let the thumb snap back to the discrete position with the standard transition.
-    setDragPct(null);
-  };
+  const handlePointerUp = () => setDragging(false);
 
   return (
     <div
-      className={`rating-slider${disabled ? ' rating-slider--disabled' : ''}${showHint ? ' rating-slider--hint' : ''}${dragging ? ' rating-slider--dragging' : ''}`}
+      className={`rating-slider${disabled ? ' rating-slider--disabled' : ''}${showHint ? ' rating-slider--hint' : ''}`}
       style={{ '--rs-color': color } as React.CSSProperties}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -64,8 +57,8 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
       onPointerCancel={handlePointerUp}
     >
       <div className="rating-slider__track-wrap" ref={trackRef}>
-        <div className="rating-slider__fill" style={{ width: `${visualPct}%` }} />
-        <div className="rating-slider__thumb" style={{ left: `${visualPct}%` }} />
+        <div className="rating-slider__fill" style={{ width: `${pct}%` }} />
+        <div className="rating-slider__thumb" style={{ left: `${pct}%` }} />
       </div>
 
       <div className="rating-slider__ticks">

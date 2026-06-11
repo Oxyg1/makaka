@@ -155,6 +155,7 @@ export interface StarTx {
   note: string | null; created_at: string;
 }
 export function getBalance(): Promise<Balance> { return request<Balance>('/api/stars/balance'); }
+export const EXTRA_PHOTO_COST = 2;
 export function topupStars(amount: number): Promise<{ invoiceLink: string }> {
   return request<{ invoiceLink: string }>('/api/stars/topup', { method: 'POST', body: JSON.stringify({ amount }) });
 }

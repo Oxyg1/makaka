@@ -89,10 +89,8 @@ export default function PostViewerModal({ post, currentUserId, onClose, onViewUs
               onLike={handleLike}
               onComments={() => setShowComments(true)}
               onAskDelete={() => setConfirmDelete(true)}
+              shareSlot={<ShareButton kind="post" entityId={local.id} />}
             />
-            <div className="post-viewer__share">
-              <ShareButton kind="post" entityId={local.id} className="share-btn--full" />
-            </div>
           </div>
         </div>
       </div>

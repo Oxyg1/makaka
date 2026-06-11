@@ -34,11 +34,8 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
-/* During an active drag we want the thumb to follow the finger immediately. */
-.rating-slider--dragging .rating-slider__thumb,
-.rating-slider--dragging .rating-slider__fill {
-  transition: background 0.2s;
-}
+/* Transition stays on during drag too — the thumb snaps from tick to tick
+ * smoothly as the finger crosses each threshold. */
 
 .rating-slider__hint {
   display: inline-flex; align-self: center; align-items: center;

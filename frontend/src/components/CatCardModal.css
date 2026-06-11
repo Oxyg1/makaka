@@ -30,6 +30,7 @@
   z-index: 2;
 }
 .cat-card-modal__overlay > * { pointer-events: auto; }
+.cat-card-modal__overlay-right { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
 
 .cat-card-modal__badge {
   background: rgba(20,20,22,0.55);

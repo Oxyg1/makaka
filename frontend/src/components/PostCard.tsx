@@ -23,9 +23,11 @@ interface PostCardProps {
   onComments: () => void;
   onAskDelete: () => void;
   hideHeaderUser?: boolean;
+  /** Optional element placed in the header next to the menu (e.g. a ShareButton). */
+  shareSlot?: React.ReactNode;
 }
 
-export default function PostCard({ post, isOwner, onViewUser, onLike, onComments, onAskDelete, hideHeaderUser }: PostCardProps) {
+export default function PostCard({ post, isOwner, onViewUser, onLike, onComments, onAskDelete, hideHeaderUser, shareSlot }: PostCardProps) {
   const [popKey, setPopKey] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
   const lastTapRef = useRef<number>(0);
@@ -64,6 +66,7 @@ export default function PostCard({ post, isOwner, onViewUser, onLike, onComments
           </button>
           <div className="feed__card-meta">
             <span className="feed__time">{timeAgo(post.created_at)}</span>
+            {shareSlot}
             <button className="feed__menu-btn" onClick={isOwner ? onAskDelete : () => setReportOpen(true)} aria-label={isOwner ? 'Удалить' : 'Пожаловаться'}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />

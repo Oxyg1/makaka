@@ -175,6 +175,15 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
     return;
   }
 
+  // /give <user> <amount> — credit stars to a user's balance.
+  // <user> = telegram id (digits), @username or numeric internal user id (#42).
+  const giveMatch = text.match(/^\/give\s+(\S+)\s+(\d+)$/);
+  if (giveMatch) { giveStars(giveMatch[1], parseInt(giveMatch[2], 10), fromId); return; }
+  if (text === '/give') {
+    sendBotMessage(fromId, 'Использование: <code>/give &lt;tg_id|@username|#user_id&gt; &lt;amount&gt;</code>\nПример: <code>/give @vasya 100</code>');
+    return;
+  }
+
   if (text === '/reports') {
     const rows = db.prepare(`
       SELECT r.id, r.type, r.entity_id, r.reason, r.created_at,
@@ -219,6 +228,7 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
 /delete_cat_N — удалить кота
 /delete_post_N — удалить пост
 /ignore_N — отклонить жалобу
+/give &lt;tg_id|@user|#id&gt; &lt;amount&gt; — выдать звёзды
 /users — топ юзеров по активности`);
     return;
   }
@@ -268,6 +278,40 @@ function deletePostByAdmin(postId: number, adminTgId: string): void {
   const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(post.user_id) as { telegram_id: string } | undefined;
   if (owner) sendBotMessage(owner.telegram_id, `Ваш пост был удалён модератором за нарушение правил.`);
   sendBotMessage(adminTgId, `Пост #${postId} удалён.`);
+}
+
+function giveStars(target: string, amount: number, adminTgId: string): void {
+  if (!Number.isInteger(amount) || amount < 1 || amount > 1_000_000) {
+    sendBotMessage(adminTgId, 'Сумма должна быть целым числом от 1 до 1 000 000.');
+    return;
+  }
+  let user: { id: number; telegram_id: string; first_name: string; username: string | null } | undefined;
+  if (target.startsWith('@')) {
+    user = db.prepare('SELECT id, telegram_id, first_name, username FROM users WHERE username = ?')
+      .get(target.slice(1)) as typeof user;
+  } else if (target.startsWith('#')) {
+    user = db.prepare('SELECT id, telegram_id, first_name, username FROM users WHERE id = ?')
+      .get(parseInt(target.slice(1), 10)) as typeof user;
+  } else if (/^\d+$/.test(target)) {
+    user = db.prepare('SELECT id, telegram_id, first_name, username FROM users WHERE telegram_id = ?')
+      .get(target) as typeof user;
+  }
+  if (!user) {
+    sendBotMessage(adminTgId, `Юзер «${target}» не найден.`);
+    return;
+  }
+  // Reuse the balance bootstrap from stars.ts via direct DB op.
+  db.prepare(`INSERT OR IGNORE INTO user_balance (user_id) VALUES (?)`).run(user.id);
+  db.prepare('UPDATE user_balance SET balance = balance + ?, total_received = total_received + ? WHERE user_id = ?')
+    .run(amount, amount, user.id);
+  db.prepare(`INSERT INTO star_transactions (user_id, type, amount, note) VALUES (?, 'admin_grant', ?, ?)`)
+    .run(user.id, amount, `granted by admin`);
+
+  const handle = user.username ? `@${user.username}` : user.first_name;
+  sendBotMessage(adminTgId, `Выдано <b>${amount}</b> звёзд юзеру ${handle} (TG <code>${user.telegram_id}</code>).`);
+  if (user.telegram_id !== '1' && user.telegram_id !== 'mock') {
+    sendBotMessage(user.telegram_id, `Вам начислено <b>${amount}</b> звёзд от администрации Cat Rater.`);
+  }
 }
 
 function processWithdrawal(id: number, approve: boolean, adminTgId: string): void {
