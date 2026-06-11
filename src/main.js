@@ -43,11 +43,9 @@ async function boot() {
   UI.renderMenu();
 
   // 6. Pick first screen: resume or main menu.
-  if (state.run.active && state.run.board) {
-    enterGame(true);
-  } else {
-    UI.showScreen('screen-menu');
-  }
+  // Always boot into the main menu — it is the player's anchor point and
+  // shows progress, daily streak and collection counters.
+  UI.showScreen('screen-menu');
 
   // 7. Prevent context menu on long-press for cleaner mobile feel.
   document.addEventListener('contextmenu', (e) => {
@@ -84,7 +82,7 @@ function runLoadingAnimation() {
 ============================================================ */
 function wireButtons() {
   // Menu
-  $('#btn-play').addEventListener('click', () => { enterGame(false); });
+  $('#btn-play').addEventListener('click', () => { enterGame(); });
   $('#btn-collection').addEventListener('click', () => { UI.renderCollection(); UI.showScreen('screen-collection'); });
   $('#btn-daily').addEventListener('click', () => { UI.renderDaily(); UI.showScreen('screen-daily'); });
   $('#btn-sound').addEventListener('click', () => UI.toggleSound());
@@ -121,16 +119,21 @@ function wireButtons() {
 
   // Pause modal
   $('#btn-resume').addEventListener('click', () => UI.showScreen('screen-game'));
-  $('#btn-restart').addEventListener('click', () => { Game.startRun(); UI.showScreen('screen-game'); UI.renderBoard(); UI.renderHUD(); UI.renderMissions(); UI.renderDiscoverBar(); });
-  $('#btn-to-menu').addEventListener('click', () => { Ads.gameplayStop(); Ads.showFullscreen(); Game.endRun('menu'); UI.showScreen('screen-menu'); UI.renderMenu(); });
+  $('#btn-restart').addEventListener('click', () => { enterGame(false, true); });
+  // "Back to menu" from pause: keep the run alive so the player can resume
+  // later. Endgame happens only via restart or natural game-over.
+  $('#btn-to-menu').addEventListener('click', async () => {
+    Ads.gameplayStop();
+    UI.showScreen('screen-menu');
+    UI.renderMenu();
+    Ads.showFullscreen();
+  });
 
   // Game over modal
   $('#btn-continue-ad').addEventListener('click', async () => {
     const { rewarded } = await Ads.showRewarded();
     if (rewarded) {
       Game.rescue(5);
-      Storage.get().run.active = true;
-      Storage.save();
       UI.renderBoard();
       UI.renderHUD();
       UI.showScreen('screen-game');
@@ -141,10 +144,7 @@ function wireButtons() {
   $('#btn-play-again').addEventListener('click', async () => {
     // Fullscreen ad between runs, then a fresh start.
     await Ads.showFullscreen();
-    Game.startRun();
-    UI.renderBoard(); UI.renderHUD(); UI.renderMissions(); UI.renderDiscoverBar();
-    UI.showScreen('screen-game');
-    Ads.gameplayStart();
+    enterGame(false, true);
   });
   $('#btn-gameover-menu').addEventListener('click', async () => { await Ads.showFullscreen(); UI.showScreen('screen-menu'); UI.renderMenu(); });
 
@@ -191,14 +191,20 @@ function hookGameEvents() {
 /* ============================================================
    Game entry
 ============================================================ */
-function enterGame(resume) {
+/**
+ * Enter the game screen.
+ *  - If there is an active run from a previous session, resume it (no progress lost).
+ *  - Otherwise start a fresh run.
+ * `forceNew` is set by the explicit "Restart" / "Play again" buttons.
+ */
+function enterGame(_resumeHint, forceNew = false) {
   Ads.gameplayStart();
-  if (resume && Game.resumeRun()) {
-    UI.renderBoard(); UI.renderHUD(); UI.renderMissions(); UI.renderDiscoverBar();
+  if (!forceNew && Game.resumeRun()) {
+    // resumeRun returns true only if there is an active board to restore.
   } else {
     Game.startRun();
-    UI.renderBoard(); UI.renderHUD(); UI.renderMissions(); UI.renderDiscoverBar();
   }
+  UI.renderBoard(); UI.renderHUD(); UI.renderMissions(); UI.renderDiscoverBar();
   UI.showScreen('screen-game');
   UI.maybeShowTutorial();
 }

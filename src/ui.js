@@ -218,31 +218,53 @@ function floatingText(text, x, y, color = '#6be39a') {
    Input: drag / drop merge
 ============================================================ */
 function onPointerDown(e) {
+  // Ignore non-primary buttons (right-click etc.) and secondary touches.
+  if (e.button !== undefined && e.button !== 0) return;
+  if (drag) return;
   const frog = e.target.closest('.frog');
   if (!frog) return;
   e.preventDefault();
   const cell = frog.parentElement;
+  if (!cell || !cell.classList.contains('cell')) return;
+
   const r = +cell.dataset.r;
   const c = +cell.dataset.c;
+
+  // IMPORTANT: capture size BEFORE detaching the frog from its cell.
+  // The .frog CSS uses `inset: 4px` for layout, which is resolved against
+  // the nearest positioned ancestor. As soon as we re-parent it to the
+  // board container, those `inset` values would stretch the frog across
+  // the whole board (the original bug: "frog opens fullscreen and can't be
+  // dismissed"). Locking width/height inline before re-parenting prevents
+  // that flash entirely.
   const rect = frog.getBoundingClientRect();
 
   drag = {
     pointerId: e.pointerId,
     fromR: r, fromC: c,
     el: frog,
-    startX: e.clientX, startY: e.clientY,
+    width: rect.width,
+    height: rect.height,
     offsetX: e.clientX - (rect.left + rect.width / 2),
     offsetY: e.clientY - (rect.top + rect.height / 2),
-    parent: cell
+    parent: cell,
+    moved: false
   };
 
+  // Lock geometry first so the re-parent below cannot resize the element.
+  frog.style.width    = `${rect.width}px`;
+  frog.style.height   = `${rect.height}px`;
+  frog.style.position = 'absolute';
+  frog.style.inset    = 'auto';
+  frog.style.left     = `${rect.left - boardEl.getBoundingClientRect().left}px`;
+  frog.style.top      = `${rect.top  - boardEl.getBoundingClientRect().top}px`;
   frog.classList.add('is-dragging');
-  // Detach from cell so transforms stay clean.
-  const overlayHost = boardEl;
-  overlayHost.appendChild(frog);
+
+  // Re-parent to the board so it can fly over other cells without clipping.
+  boardEl.appendChild(frog);
   positionDraggedFrog(e.clientX, e.clientY);
 
-  boardEl.setPointerCapture?.(e.pointerId);
+  try { boardEl.setPointerCapture?.(e.pointerId); } catch (_) {}
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
@@ -250,16 +272,11 @@ function onPointerDown(e) {
 }
 
 function positionDraggedFrog(clientX, clientY) {
+  if (!drag) return;
   const bRect = boardEl.getBoundingClientRect();
   const f = drag.el;
-  const w = f.offsetWidth;
-  const h = f.offsetHeight;
-  f.style.position = 'absolute';
-  f.style.left = `${clientX - bRect.left - drag.offsetX - w / 2}px`;
-  f.style.top  = `${clientY - bRect.top  - drag.offsetY - h / 2}px`;
-  f.style.inset = 'auto';
-  f.style.width = `${w}px`;
-  f.style.height = `${h}px`;
+  f.style.left = `${clientX - bRect.left - drag.offsetX - drag.width / 2}px`;
+  f.style.top  = `${clientY - bRect.top  - drag.offsetY - drag.height / 2}px`;
 }
 
 function hoverCell(clientX, clientY) {
@@ -276,58 +293,62 @@ function hoverCell(clientX, clientY) {
 }
 
 function onPointerMove(e) {
-  if (!drag) return;
+  if (!drag || e.pointerId !== drag.pointerId) return;
   positionDraggedFrog(e.clientX, e.clientY);
   // Hover highlight
   $$('.cell--hover, .cell--match').forEach((el) => el.classList.remove('cell--hover', 'cell--match'));
   const h = hoverCell(e.clientX, e.clientY);
-  if (h) {
+  if (h && !(h.r === drag.fromR && h.c === drag.fromC)) {
     const cell = cellEl(h.r, h.c);
     const dst = getState().run.board[h.r][h.c];
-    const src = { level: +drag.el.dataset.level };
-    if (dst && dst.level === src.level && dst.level < Frogs.MAX_LEVEL) {
+    const srcLevel = +drag.el.dataset.level;
+    if (dst && dst.level === srcLevel && dst.level < Frogs.MAX_LEVEL) {
       cell.classList.add('cell--match');
-    } else {
+    } else if (!dst) {
       cell.classList.add('cell--hover');
     }
   }
 }
 
 function onPointerUp(e) {
-  if (!drag) return;
+  if (!drag || (e.pointerId !== undefined && e.pointerId !== drag.pointerId)) return;
   window.removeEventListener('pointermove', onPointerMove);
   window.removeEventListener('pointerup', onPointerUp);
   window.removeEventListener('pointercancel', onPointerUp);
-
   $$('.cell--hover, .cell--match').forEach((el) => el.classList.remove('cell--hover', 'cell--match'));
-
-  const target = hoverCell(e.clientX, e.clientY);
-  const f = drag.el;
-  f.classList.remove('is-dragging');
-  f.style.left = f.style.top = f.style.width = f.style.height = '';
-  f.style.position = '';
-  f.style.inset = '';
 
   const start = drag;
   drag = null;
+  try { boardEl.releasePointerCapture?.(start.pointerId); } catch (_) {}
 
-  if (!target) { renderBoard(); return; }
+  // Always remove the floating drag node — renderBoard rebuilds frogs
+  // from canonical state. Skipping this would leave an orphaned absolutely
+  // positioned node inside the board (the "ghost frog" bug).
+  start.el.remove();
+
+  const target = hoverCell(e.clientX, e.clientY);
+  const sameCell = target && target.r === start.fromR && target.c === start.fromC;
+
+  // Tap-only / drop-on-self → just put the board back together.
+  if (!target || sameCell) {
+    renderBoard();
+    return;
+  }
 
   const result = Game.moveOrMerge(start.fromR, start.fromC, target.r, target.c);
   if (!result) {
     renderBoard();
     return;
   }
-  // The board rerender handles DOM placement. Effects + sounds layered on top:
+
   if (result.type === 'merge') {
     sfx.merge();
     const cellRect = cellRects[target.r][target.c];
     const cx = cellRect.left + cellRect.width / 2;
-    const cy = cellRect.top + cellRect.height / 2;
+    const cy = cellRect.top  + cellRect.height / 2;
     emitParticles(cx, cy, Frogs.getFrogGlow(result.level), 18);
     floatingText(`+${result.reward}`, cx, cy - 4);
     renderBoard();
-    // Pop animation on freshly merged cell.
     requestAnimationFrame(() => {
       const node = cellEl(target.r, target.c).querySelector('.frog');
       if (node) { node.classList.remove('spawn-pop'); node.classList.add('merge-pop'); }

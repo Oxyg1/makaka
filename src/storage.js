@@ -95,8 +95,11 @@ export function resetRun() {
 }
 
 /**
- * Returns current "day number" (UTC, days since epoch). Stable across sessions.
+ * Returns current "day number" in the player's local timezone. Using local
+ * time so the daily reward rolls over at local midnight, which matches the
+ * player's expectation. Stable across sessions on the same device.
  */
 export function todayNumber() {
-  return Math.floor(Date.now() / 86_400_000);
+  const now = new Date();
+  return Math.floor((now.getTime() - now.getTimezoneOffset() * 60_000) / 86_400_000);
 }
