@@ -120,8 +120,12 @@ export function getCatPhotos(catId: number): Promise<{ id: number; photo_url: st
   return request(`/api/cats/${catId}/photos`);
 }
 
-export function uploadCatPhoto(catId: number, formData: FormData): Promise<{ id: number; photo_url: string }> {
+export function uploadCatPhoto(catId: number, formData: FormData): Promise<{ id: number; photo_url: string; sort_order: number; newBalance: number }> {
   return request(`/api/cats/${catId}/photos`, { method: 'POST', body: formData });
+}
+
+export function deleteCatPhoto(catId: number, photoId: number): Promise<{ success: boolean }> {
+  return request(`/api/cats/${catId}/photos/${photoId}`, { method: 'DELETE' });
 }
 
 export function createInvoice(feature: string, entityId: number): Promise<{ invoiceLink: string }> {

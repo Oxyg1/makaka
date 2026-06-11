@@ -46,7 +46,7 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
 
   return (
     <div
-      className={`rating-slider${disabled ? ' rating-slider--disabled' : ''}${showHint ? ' rating-slider--hint' : ''}`}
+      className={`rating-slider${disabled ? ' rating-slider--disabled' : ''}${showHint ? ' rating-slider--hint' : ''}${dragging ? ' rating-slider--dragging' : ''}`}
       style={{ '--rs-color': color } as React.CSSProperties}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

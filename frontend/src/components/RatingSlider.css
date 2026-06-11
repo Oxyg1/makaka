@@ -16,7 +16,8 @@
   position: absolute; left: 0; top: 0; height: 100%;
   border-radius: 99em; pointer-events: none;
   background: var(--rs-color, #6d6d71);
-  transition: width 0.08s, background 0.2s;
+  transition: width 0.22s cubic-bezier(0.32, 0.72, 0, 1), background 0.2s;
+  will-change: width;
 }
 
 /* Small thumb in slider color */
@@ -27,9 +28,16 @@
   background: var(--rs-color, #6d6d71);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: left 0.08s, background 0.2s;
+  transition: left 0.22s cubic-bezier(0.32, 0.72, 0, 1), background 0.2s;
+  will-change: left;
   pointer-events: none;
   box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* During an active drag we want the thumb to follow the finger immediately. */
+.rating-slider--dragging .rating-slider__thumb,
+.rating-slider--dragging .rating-slider__fill {
+  transition: background 0.2s;
 }
 
 .rating-slider__hint {

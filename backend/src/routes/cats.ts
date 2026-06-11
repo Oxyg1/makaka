@@ -7,6 +7,10 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
 import { createNotification, sendBotMessage } from '../notifs';
 import { logger } from '../logger';
+import { getOrCreateBalance } from './stars';
+
+const EXTRA_PHOTO_COST = 2;
+const MAX_EXTRA_PHOTOS = 5;
 
 const router = Router();
 
@@ -308,7 +312,7 @@ router.get('/:id/photos', authMiddleware, (req: AuthRequest, res) => {
   res.json(photos);
 });
 
-// POST /api/cats/:id/photos — upload extra photo
+// POST /api/cats/:id/photos — upload extra photo, charges EXTRA_PHOTO_COST from stars balance
 router.post('/:id/photos', authMiddleware, upload.single('photo'), async (req: AuthRequest, res) => {
   const catId = parseInt(String(req.params.id), 10);
   const cat = db.prepare('SELECT id, owner_id FROM cats WHERE id = ?').get(catId) as { id: number; owner_id: number } | undefined;
@@ -316,15 +320,58 @@ router.post('/:id/photos', authMiddleware, upload.single('photo'), async (req: A
   if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
   if (!req.file) { res.status(400).json({ error: 'Photo is required' }); return; }
 
+  const existingCount = (db.prepare('SELECT COUNT(*) AS n FROM cat_photos WHERE cat_id = ?').get(catId) as { n: number }).n;
+  if (existingCount >= MAX_EXTRA_PHOTOS) {
+    try { fs.unlinkSync(req.file.path); } catch { /* gone */ }
+    res.status(400).json({ error: `Максимум ${MAX_EXTRA_PHOTOS} дополнительных фото` });
+    return;
+  }
+
+  const bal = getOrCreateBalance(req.userId!);
+  if (bal.balance < EXTRA_PHOTO_COST) {
+    try { fs.unlinkSync(req.file.path); } catch { /* gone */ }
+    res.status(402).json({ error: 'Недостаточно звёзд', balance: bal.balance, cost: EXTRA_PHOTO_COST });
+    return;
+  }
+
   try { await processImage(req.file.path, req.file.filename); } catch { /* sharp optional */ }
 
-  const maxOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM cat_photos WHERE cat_id = ?').get(catId) as { m: number }).m;
   const photoUrl = `/uploads/${req.file.filename}`;
-  const result = db.prepare(
-    'INSERT INTO cat_photos (cat_id, photo_url, sort_order) VALUES (?, ?, ?) RETURNING id, photo_url, sort_order'
-  ).get(catId, photoUrl, maxOrder + 1);
 
-  res.status(201).json(result);
+  const result = db.transaction(() => {
+    const maxOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM cat_photos WHERE cat_id = ?').get(catId) as { m: number }).m;
+    const row = db.prepare(
+      'INSERT INTO cat_photos (cat_id, photo_url, sort_order) VALUES (?, ?, ?) RETURNING id, photo_url, sort_order'
+    ).get(catId, photoUrl, maxOrder + 1) as { id: number; photo_url: string; sort_order: number };
+    db.prepare('UPDATE user_balance SET balance = balance - ?, total_spent = total_spent + ? WHERE user_id = ?')
+      .run(EXTRA_PHOTO_COST, EXTRA_PHOTO_COST, req.userId!);
+    db.prepare(`INSERT INTO star_transactions (user_id, type, amount, note) VALUES (?, 'photo_upload', ?, ?)`)
+      .run(req.userId!, EXTRA_PHOTO_COST, `cat #${catId} photo #${row.id}`);
+    return row;
+  })();
+
+  const newBal = getOrCreateBalance(req.userId!);
+  res.status(201).json({ ...result, newBalance: newBal.balance });
+});
+
+// DELETE /api/cats/:catId/photos/:photoId — owner only, no refund
+router.delete('/:catId/photos/:photoId', authMiddleware, (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.catId), 10);
+  const photoId = parseInt(String(req.params.photoId), 10);
+  const cat = db.prepare('SELECT id, owner_id FROM cats WHERE id = ?').get(catId) as { id: number; owner_id: number } | undefined;
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
+
+  const photo = db.prepare('SELECT photo_url FROM cat_photos WHERE id = ? AND cat_id = ?').get(photoId, catId) as { photo_url: string } | undefined;
+  if (!photo) { res.status(404).json({ error: 'Photo not found' }); return; }
+
+  db.prepare('DELETE FROM cat_photos WHERE id = ?').run(photoId);
+  const filePath = path.join(uploadsDir, path.basename(photo.photo_url));
+  const thumbPath = path.join(uploadsDir, `thumb_${path.basename(photo.photo_url)}`);
+  try { fs.unlinkSync(filePath); } catch { /* gone */ }
+  try { fs.unlinkSync(thumbPath); } catch { /* no thumb */ }
+
+  res.json({ success: true });
 });
 
 export default router;
