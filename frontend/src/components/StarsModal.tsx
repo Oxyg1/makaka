@@ -16,7 +16,7 @@ interface Props { onClose: () => void; }
 export default function StarsModal({ onClose }: Props) {
   const { balance } = useBalance();
   const [tab, setTab] = useState<Tab>('topup');
-  const [amount, setAmount] = useState<string>('100');
+  const [amount, setAmount] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export default function StarsModal({ onClose }: Props) {
   useEffect(() => { refreshBalance(); }, []);
 
   const setPreset = (n: number) => { hapticImpact('light'); setAmount(String(n)); setError(null); setSuccess(null); };
-  const switchTab = (t: Tab) => { setTab(t); setError(null); setSuccess(null); setAmount('100'); };
+  const switchTab = (t: Tab) => { setTab(t); setError(null); setSuccess(null); setAmount(''); };
 
   const handleTopup = async () => {
     const n = parseInt(amount, 10);
@@ -121,12 +121,13 @@ export default function StarsModal({ onClose }: Props) {
                 ))}
               </div>
               <label className="stars-modal__field">
-                <span>Своя сумма</span>
+                <span>Выберите пакет или введите свою сумму</span>
                 <div className="stars-modal__input-wrap">
                   <StarIcon size={16} />
                   <input
                     inputMode="numeric"
                     value={amount}
+                    placeholder="Например, 250"
                     onChange={e => { setAmount(e.target.value.replace(/\D/g, '')); setError(null); setSuccess(null); }}
                     maxLength={6}
                   />
@@ -136,7 +137,7 @@ export default function StarsModal({ onClose }: Props) {
               {success && <p className="stars-modal__success">{success}</p>}
               <button className="stars-modal__primary" onClick={handleTopup} disabled={loading || !amount}>
                 <span className="stars-modal__primary-content">
-                  {loading ? '...' : <>Пополнить на <b>{numAmount || 0}</b><StarIcon size={15} /></>}
+                  {loading ? '...' : numAmount > 0 ? <>Пополнить на <b>{numAmount}</b><StarIcon size={15} /></> : 'Пополнить'}
                 </span>
               </button>
               <p className="stars-modal__hint">1 звезда = 1 единица баланса. Оплата происходит реальными Telegram Stars.</p>

@@ -128,6 +128,18 @@ export function deleteCatPhoto(catId: number, photoId: number): Promise<{ succes
   return request(`/api/cats/${catId}/photos/${photoId}`, { method: 'DELETE' });
 }
 
+export function rotateCatPhoto(catId: number, photoId: number): Promise<{ success: boolean }> {
+  return request(`/api/cats/${catId}/photos/${photoId}/rotate`, { method: 'POST' });
+}
+
+export function rotateCatMainPhoto(catId: number): Promise<{ success: boolean }> {
+  return request(`/api/cats/${catId}/rotate`, { method: 'POST' });
+}
+
+export function rotatePostPhoto(postId: number): Promise<{ success: boolean }> {
+  return request(`/api/feed/${postId}/rotate`, { method: 'POST' });
+}
+
 export function createInvoice(feature: string, entityId: number): Promise<{ invoiceLink: string }> {
   return request<{ invoiceLink: string }>('/api/payments/invoice', {
     method: 'POST',
@@ -146,8 +158,8 @@ export function getBalance(): Promise<Balance> { return request<Balance>('/api/s
 export function topupStars(amount: number): Promise<{ invoiceLink: string }> {
   return request<{ invoiceLink: string }>('/api/stars/topup', { method: 'POST', body: JSON.stringify({ amount }) });
 }
-export function donateStars(recipientUserId: number, amount: number, note?: string): Promise<{ ok: boolean; sent: number; received: number; commission: number; newBalance: number }> {
-  return request('/api/stars/donate', { method: 'POST', body: JSON.stringify({ recipientUserId, amount, note }) });
+export function donateStars(recipientUserId: number, amount: number, opts?: { note?: string; catId?: number; postId?: number }): Promise<{ ok: boolean; sent: number; received: number; commission: number; newBalance: number }> {
+  return request('/api/stars/donate', { method: 'POST', body: JSON.stringify({ recipientUserId, amount, ...opts }) });
 }
 export function withdrawStars(amount: number): Promise<{ ok: boolean; requestId: number; newBalance: number }> {
   return request('/api/stars/withdraw', { method: 'POST', body: JSON.stringify({ amount }) });

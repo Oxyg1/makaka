@@ -5,9 +5,9 @@ import sharp from 'sharp';
 import fs from 'fs';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
-import { createNotification, sendBotMessage } from '../notifs';
+import { createNotification, sendBotMessage, sendBotPhoto } from '../notifs';
 import { logger } from '../logger';
-import { getOrCreateBalance } from './stars';
+import { getOrCreateBalance, ADMIN_TG_ID } from './stars';
 
 const EXTRA_PHOTO_COST = 2;
 const MAX_EXTRA_PHOTOS = 5;
@@ -19,11 +19,15 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 async function processImage(filePath: string, filename: string): Promise<void> {
   const thumbPath = path.join(uploadsDir, `thumb_${filename}`);
+  // .rotate() with no args reads EXIF Orientation tag and rotates pixels
+  // accordingly, then strips the tag — fixes phone uploads that show sideways.
   await sharp(filePath)
+    .rotate()
     .resize(400, 400, { fit: 'cover' })
     .jpeg({ quality: 80 })
     .toFile(thumbPath);
   await sharp(filePath)
+    .rotate()
     .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
     .jpeg({ quality: 85 })
     .toFile(filePath + '.opt');
@@ -168,10 +172,12 @@ router.post('/:id/rate', authMiddleware, (req: AuthRequest, res) => {
   db.prepare('DELETE FROM skips WHERE cat_id = ? AND user_id = ?').run(catId, req.userId);
   updateStreak(req.userId!);
   if (isNew) {
-    createNotification({ userId: cat.owner_id, actorId: req.userId!, type: 'rating', entityType: 'cat', entityId: catId, text: `оценил вашего кота на ${score}/10` });
-    const owner = db.prepare('SELECT telegram_id, first_name FROM users WHERE id = ?').get(cat.owner_id) as { telegram_id: string; first_name: string } | undefined;
-    const rater = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
-    if (owner && rater) sendBotMessage(owner.telegram_id, `⭐ <b>${rater.first_name}</b> оценил вашего кота на ${score}/10`);
+    const fresh = createNotification({ userId: cat.owner_id, actorId: req.userId!, type: 'rating', entityType: 'cat', entityId: catId, text: `оценил вашего кота на ${score}/10` });
+    if (fresh) {
+      const owner = db.prepare('SELECT telegram_id, first_name FROM users WHERE id = ?').get(cat.owner_id) as { telegram_id: string; first_name: string } | undefined;
+      const rater = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
+      if (owner && rater) sendBotMessage(owner.telegram_id, `<b>${rater.first_name}</b> оценил вашего кота на ${score}/10`);
+    }
   }
   res.json({ success: true });
 });
@@ -300,7 +306,16 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
     INSERT INTO cats (owner_id, name, breed, age, description, photo_url)
     VALUES (?, ?, ?, ?, ?, ?)
     RETURNING *
-  `).get(req.userId, name.trim(), breed?.trim() || null, ageInt, description?.trim() || null, photoUrl);
+  `).get(req.userId, name.trim(), breed?.trim() || null, ageInt, description?.trim() || null, photoUrl) as Record<string, unknown>;
+
+  const owner = db.prepare('SELECT first_name, username, telegram_id FROM users WHERE id = ?').get(req.userId!) as
+    { first_name: string; username: string | null; telegram_id: string } | undefined;
+  if (owner && owner.telegram_id !== ADMIN_TG_ID) {
+    const handle = owner.username ? `@${owner.username}` : '—';
+    const breedLine = breed?.trim() ? `\nПорода: ${breed.trim().replace(/[<>]/g, '')}` : '';
+    sendBotPhoto(ADMIN_TG_ID, req.file.path,
+      `Новый кот #${result.id as number} — «${name.trim().replace(/[<>]/g, '')}»\nВладелец: ${owner.first_name} (${handle})${breedLine}\n\n/delete_cat_${result.id as number} — удалить`);
+  }
 
   res.status(201).json(result);
 });
@@ -353,6 +368,44 @@ router.post('/:id/photos', authMiddleware, upload.single('photo'), async (req: A
   const newBal = getOrCreateBalance(req.userId!);
   res.status(201).json({ ...result, newBalance: newBal.balance });
 });
+
+// POST /api/cats/:id/rotate — rotate main cat photo 90° CW (fix wrong-EXIF uploads)
+router.post('/:id/rotate', authMiddleware, async (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.id), 10);
+  const cat = db.prepare('SELECT id, owner_id, photo_url FROM cats WHERE id = ?').get(catId) as
+    { id: number; owner_id: number; photo_url: string } | undefined;
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
+  const filename = path.basename(cat.photo_url);
+  await rotateFile(path.join(uploadsDir, filename));
+  await rotateFile(path.join(uploadsDir, `thumb_${filename}`));
+  res.json({ success: true });
+});
+
+// POST /api/cats/:catId/photos/:photoId/rotate — rotate an extra photo
+router.post('/:catId/photos/:photoId/rotate', authMiddleware, async (req: AuthRequest, res) => {
+  const catId = parseInt(String(req.params.catId), 10);
+  const photoId = parseInt(String(req.params.photoId), 10);
+  const cat = db.prepare('SELECT id, owner_id FROM cats WHERE id = ?').get(catId) as { id: number; owner_id: number } | undefined;
+  if (!cat) { res.status(404).json({ error: 'Cat not found' }); return; }
+  if (cat.owner_id !== req.userId) { res.status(403).json({ error: 'Not your cat' }); return; }
+  const photo = db.prepare('SELECT photo_url FROM cat_photos WHERE id = ? AND cat_id = ?').get(photoId, catId) as { photo_url: string } | undefined;
+  if (!photo) { res.status(404).json({ error: 'Photo not found' }); return; }
+  const filename = path.basename(photo.photo_url);
+  await rotateFile(path.join(uploadsDir, filename));
+  await rotateFile(path.join(uploadsDir, `thumb_${filename}`));
+  res.json({ success: true });
+});
+
+async function rotateFile(filePath: string): Promise<void> {
+  try {
+    if (!fs.existsSync(filePath)) return;
+    await sharp(filePath).rotate(90).jpeg({ quality: 85 }).toFile(filePath + '.rot');
+    fs.renameSync(filePath + '.rot', filePath);
+  } catch (e) {
+    logger.warn('rotateFile failed', { filePath, error: String(e) });
+  }
+}
 
 // DELETE /api/cats/:catId/photos/:photoId — owner only, no refund
 router.delete('/:catId/photos/:photoId', authMiddleware, (req: AuthRequest, res) => {

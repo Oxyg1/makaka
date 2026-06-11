@@ -14,11 +14,13 @@ interface Props {
   recipientUserId: number;
   recipientName: string;
   context?: 'cat' | 'post';
+  /** Optional entity id to credit the donation against (cat or post). */
+  entityId?: number;
   className?: string;
   onActivate?: () => void;
 }
 
-export default function SupportButton({ recipientUserId, recipientName, context = 'cat', className, onActivate }: Props) {
+export default function SupportButton({ recipientUserId, recipientName, context = 'cat', entityId, className, onActivate }: Props) {
   const [open, setOpen] = useState(false);
 
   const handle = (e: React.MouseEvent | React.TouchEvent) => {
@@ -39,6 +41,7 @@ export default function SupportButton({ recipientUserId, recipientName, context 
           recipientUserId={recipientUserId}
           recipientName={recipientName}
           context={context}
+          entityId={entityId}
           onClose={() => setOpen(false)}
         />
       )}
@@ -51,8 +54,8 @@ function splitDonation(amount: number) {
   return { net, commission: Math.round((amount - net) * 10) / 10 };
 }
 
-function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
-  recipientUserId: number; recipientName: string; context: 'cat' | 'post'; onClose: () => void;
+function DonateSheet({ recipientUserId, recipientName, context, entityId, onClose }: {
+  recipientUserId: number; recipientName: string; context: 'cat' | 'post'; entityId?: number; onClose: () => void;
 }) {
   const { balance } = useBalance();
   const [amount, setAmount] = useState<string>('50');
@@ -71,7 +74,10 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
     if (insufficient) { setNeedTopup(true); return; }
     setLoading(true); setError(null); setSuccess(null);
     try {
-      const r = await donateStars(recipientUserId, n, `support ${context}`);
+      const opts: { note?: string; catId?: number; postId?: number } = { note: `support ${context}` };
+      if (context === 'cat' && entityId != null) opts.catId = entityId;
+      if (context === 'post' && entityId != null) opts.postId = entityId;
+      const r = await donateStars(recipientUserId, n, opts);
       hapticSuccess();
       setSuccess(`${recipientName} получит ${formatStars(r.received)}`);
       refreshBalance();

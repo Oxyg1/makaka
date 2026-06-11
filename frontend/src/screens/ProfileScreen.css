@@ -119,6 +119,16 @@
     0 4px 18px rgba(255,149,0,0.4);
 }
 .profile__streak-emoji { font-size: 14px; line-height: 1; }
+.profile__share-row {
+  width: 100%;
+  padding: 12px 16px 0;
+  display: flex; justify-content: center;
+  z-index: 1;
+}
+.profile__share-row .share-btn {
+  max-width: 280px;
+  width: 100%;
+}
 
 /* ── Stats card ──────────────────────────────── */
 .profile__stats {

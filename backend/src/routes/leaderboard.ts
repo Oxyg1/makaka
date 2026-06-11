@@ -16,6 +16,8 @@ const BASE_QUERY = `
     COUNT(DISTINCT r.id) AS vote_count,
     COUNT(DISTINCT cl.id) AS likes_count,
     MAX(CASE WHEN cl.user_id = ? THEN 1 ELSE 0 END) AS liked_by_me,
+    COALESCE((SELECT SUM(amount) FROM star_transactions
+              WHERE type = 'donation_out' AND target_cat_id = c.id), 0) AS donations_total,
     u.first_name AS owner_name
   FROM cats c
   JOIN users u ON c.owner_id = u.id
@@ -32,7 +34,7 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
     const entries = db.prepare(`
       ${BASE_QUERY}
       GROUP BY c.id HAVING COUNT(DISTINCT r.id) >= 1
-      ORDER BY avg_score DESC, vote_count DESC LIMIT 20
+      ORDER BY avg_score DESC, donations_total DESC, vote_count DESC LIMIT 20
     `).all(req.userId!) as Array<Record<string, unknown>>;
     res.json(entries.map(mapRow));
     return;

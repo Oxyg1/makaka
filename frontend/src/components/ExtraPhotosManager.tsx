@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { uploadCatPhoto, deleteCatPhoto, getCatPhotos } from '../api';
+import { uploadCatPhoto, deleteCatPhoto, getCatPhotos, rotateCatPhoto } from '../api';
 import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
 import { useBalance, refreshBalance, setBalance } from '../utils/balance';
 import StarIcon from './StarIcon';
@@ -84,6 +84,19 @@ export default function ExtraPhotosManager({ catId, initialPhotos, onChange }: P
     }
   };
 
+  const handleRotate = async (photoId: number) => {
+    hapticImpact('light');
+    try {
+      await rotateCatPhoto(catId, photoId);
+      // Force browsers to refetch the image by appending a cache-buster.
+      setPhotos(p => p.map(x => x.id === photoId
+        ? { ...x, photo_url: x.photo_url.split('?')[0] + `?v=${Date.now()}` }
+        : x));
+    } catch {
+      hapticError();
+    }
+  };
+
   if (loading) {
     return <div className="epm__loading"><div className="spinner" /></div>;
   }
@@ -99,6 +112,13 @@ export default function ExtraPhotosManager({ catId, initialPhotos, onChange }: P
         {photos.map(p => (
           <div key={p.id} className="epm__tile">
             <img src={p.photo_url.startsWith('/') ? `${BASE}${p.photo_url}` : p.photo_url} alt="" />
+            <button className="epm__tile-rot" onClick={() => handleRotate(p.id)} aria-label="Повернуть">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="21 8 21 3 16 3" />
+                <path d="M21 3l-6.5 6.5" />
+                <path d="M3 16a9 9 0 0 0 16.5 5" />
+              </svg>
+            </button>
             <button className="epm__tile-del" onClick={() => setConfirmDeleteId(p.id)} aria-label="Удалить">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                 <line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" />

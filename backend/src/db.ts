@@ -132,6 +132,9 @@ db.exec(`
 `);
 
 try { db.exec('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch { /* column already exists */ }
+try { db.exec('ALTER TABLE star_transactions ADD COLUMN target_cat_id INTEGER'); } catch { /* exists */ }
+try { db.exec('ALTER TABLE star_transactions ADD COLUMN target_post_id INTEGER'); } catch { /* exists */ }
+try { db.exec('ALTER TABLE user_stats ADD COLUMN last_reminded_date TEXT'); } catch { /* exists */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS user_balance (

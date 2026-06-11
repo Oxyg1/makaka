@@ -7,6 +7,7 @@ import CatCardModal from '../components/CatCardModal';
 import EditCatSheet from '../components/EditCatSheet';
 import PostViewerModal from '../components/PostViewerModal';
 import StarBalanceButton from '../components/StarBalanceButton';
+import ShareButton from '../components/ShareButton';
 import './ProfileScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -139,6 +140,11 @@ export default function ProfileScreen({ user, onNotificationsRead }: Props) {
             <div className="profile__streak-chip">
               <span className="profile__streak-emoji">🔥</span>
               {stats.streak_days} {stats.streak_days === 1 ? 'день' : 'дн.'} подряд
+            </div>
+          )}
+          {user && (
+            <div className="profile__share-row">
+              <ShareButton kind="profile" entityId={user.id} title={user.first_name} className="share-btn--full" />
             </div>
           )}
         </div>

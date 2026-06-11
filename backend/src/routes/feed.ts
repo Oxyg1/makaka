@@ -5,7 +5,8 @@ import sharp from 'sharp';
 import fs from 'fs';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
-import { createNotification, sendBotMessage } from '../notifs';
+import { createNotification, sendBotMessage, sendBotPhoto } from '../notifs';
+import { ADMIN_TG_ID } from './stars';
 import { logger } from '../logger';
 
 const router = Router();
@@ -65,6 +66,7 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
 
   try {
     await sharp(req.file.path)
+      .rotate()
       .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 85 })
       .toFile(req.file.path + '.opt');
@@ -82,8 +84,37 @@ router.post('/', authMiddleware, upload.single('photo'), async (req: AuthRequest
   `).get(req.userId!, photoUrl, caption?.trim() || null) as Record<string, unknown>;
 
   const user = db.prepare('SELECT first_name, username, photo_url FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null; photo_url: string | null };
-  logger.info('POST /feed: created', { userId: req.userId, postId: (post as Record<string, unknown>).id });
+  const postId = (post as Record<string, unknown>).id as number;
+  logger.info('POST /feed: created', { userId: req.userId, postId });
+
+  // Notify admin about new content
+  if (String(req.userId) !== ADMIN_TG_ID) {
+    const handle = user.username ? `@${user.username}` : '—';
+    const cap = (caption?.trim() ?? '').slice(0, 200).replace(/[<>]/g, '');
+    sendBotPhoto(ADMIN_TG_ID, req.file.path,
+      `Новый пост #${postId}\nАвтор: ${user.first_name} (${handle})${cap ? `\n\n${cap}` : ''}\n\n/delete_post_${postId} — удалить`);
+  }
+
   res.status(201).json({ ...post, author_name: user.first_name, author_username: user.username, author_photo_url: user.photo_url, likes_count: 0, liked_by_me: false, comments_count: 0 });
+});
+
+// POST /api/feed/:id/rotate — rotate post photo 90° CW
+router.post('/:id/rotate', authMiddleware, async (req: AuthRequest, res) => {
+  const postId = parseInt(String(req.params.id), 10);
+  const post = db.prepare('SELECT id, user_id, photo_url FROM posts WHERE id = ?').get(postId) as
+    { id: number; user_id: number; photo_url: string } | undefined;
+  if (!post) { res.status(404).json({ error: 'Post not found' }); return; }
+  if (post.user_id !== req.userId) { res.status(403).json({ error: 'Not your post' }); return; }
+  const filePath = path.join(uploadsDir, path.basename(post.photo_url));
+  try {
+    if (fs.existsSync(filePath)) {
+      await sharp(filePath).rotate(90).jpeg({ quality: 85 }).toFile(filePath + '.rot');
+      fs.renameSync(filePath + '.rot', filePath);
+    }
+  } catch (e) {
+    logger.warn('rotate post failed', { postId, error: String(e) });
+  }
+  res.json({ success: true });
 });
 
 // DELETE /api/feed/comments/:id — must be before /:id to avoid param collision
@@ -127,10 +158,12 @@ router.post('/:id/like', authMiddleware, (req: AuthRequest, res) => {
     db.prepare('INSERT OR IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)').run(postId, req.userId!);
     const post = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId) as { user_id: number } | undefined;
     if (post) {
-      createNotification({ userId: post.user_id, actorId: req.userId!, type: 'like', entityType: 'post', entityId: postId });
-      const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(post.user_id) as { telegram_id: string } | undefined;
-      const liker = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
-      if (owner && liker) sendBotMessage(owner.telegram_id, `❤️ <b>${liker.first_name}</b> лайкнул ваш пост`);
+      const isNew = createNotification({ userId: post.user_id, actorId: req.userId!, type: 'like', entityType: 'post', entityId: postId });
+      if (isNew) {
+        const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(post.user_id) as { telegram_id: string } | undefined;
+        const liker = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
+        if (owner && liker) sendBotMessage(owner.telegram_id, `<b>${liker.first_name}</b> лайкнул ваш пост`);
+      }
     }
   }
 

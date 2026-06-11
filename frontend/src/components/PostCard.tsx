@@ -87,6 +87,7 @@ export default function PostCard({ post, isOwner, onViewUser, onLike, onComments
             recipientUserId={post.user_id}
             recipientName={post.author_name}
             context="post"
+            entityId={post.id}
             className="support-btn--floating"
           />
         )}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getUserProfile, getUserCats, getUserPosts } from '../api';
 import type { UserProfile, CatWithStats, Post } from '../types';
 import { Avatar } from './CatCardModal';
+import ShareButton from './ShareButton';
 import './UserProfileModal.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -47,6 +48,9 @@ export default function UserProfileModal({ userId, onClose }: Props) {
                   <div className="upm__stat"><span className="upm__stat-val">{profile.post_count}</span><span className="upm__stat-lbl">постов</span></div>
                   <div className="upm__sep" />
                   <div className="upm__stat"><span className="upm__stat-val">{profile.total_rated}</span><span className="upm__stat-lbl">оценил</span></div>
+                </div>
+                <div style={{ width: '100%', padding: '12px 0 0' }}>
+                  <ShareButton kind="profile" entityId={profile.id} title={profile.first_name} className="share-btn--full" />
                 </div>
               </div>
               <div className="upm__tabs">

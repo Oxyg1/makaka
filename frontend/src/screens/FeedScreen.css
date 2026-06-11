@@ -271,6 +271,9 @@
   border: none;
   background: transparent;
 }
+.post-viewer__share {
+  padding: 4px 16px 8px;
+}
 
 /* ── Comments sheet ──────────────────────────── */
 .feed__comments-sheet {

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { likePost, deletePost } from '../api';
-import { hapticImpact, hapticSuccess } from '../utils/haptics';
+import { likePost, deletePost, rotatePostPhoto } from '../api';
+import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import PostCard from './PostCard';
 import CommentsSheet from './CommentsSheet';
+import ShareButton from './ShareButton';
 import type { Post } from '../types';
 
 interface Props {
@@ -20,6 +21,16 @@ export default function PostViewerModal({ post, currentUserId, onClose, onViewUs
   const [showComments, setShowComments] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const swipe = useSheetSwipe(onClose);
+
+  const handleRotate = async () => {
+    hapticImpact('light');
+    try {
+      await rotatePostPhoto(local.id);
+      const refreshed = { ...local, photo_url: `${local.photo_url.split('?')[0]}?v=${Date.now()}` };
+      setLocal(refreshed);
+      onChange?.(refreshed);
+    } catch { hapticError(); }
+  };
 
   const isOwner = currentUserId !== null && post.user_id === currentUserId;
 
@@ -60,7 +71,15 @@ export default function PostViewerModal({ post, currentUserId, onClose, onViewUs
           <div className="modal-sheet__header">
             <button className="modal-sheet__close-btn" onClick={onClose}>Закрыть</button>
             <span className="modal-sheet__title">Пост</span>
-            <div style={{ width: 60 }} />
+            {isOwner ? (
+              <button className="modal-sheet__close-btn" onClick={handleRotate} title="Повернуть фото">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="21 8 21 3 16 3" />
+                  <path d="M21 3l-6.5 6.5" />
+                  <path d="M3 16a9 9 0 0 0 16.5 5" />
+                </svg>
+              </button>
+            ) : <div style={{ width: 60 }} />}
           </div>
           <div className="post-viewer__scroll">
             <PostCard
@@ -71,6 +90,9 @@ export default function PostViewerModal({ post, currentUserId, onClose, onViewUs
               onComments={() => setShowComments(true)}
               onAskDelete={() => setConfirmDelete(true)}
             />
+            <div className="post-viewer__share">
+              <ShareButton kind="post" entityId={local.id} className="share-btn--full" />
+            </div>
           </div>
         </div>
       </div>

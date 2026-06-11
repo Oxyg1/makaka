@@ -13,6 +13,7 @@ import notificationsRouter from './routes/notifications';
 import paymentsRouter from './routes/payments';
 import starsRouter from './routes/stars';
 import reportsRouter from './routes/reports';
+import { startScheduler } from './scheduler';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -64,4 +65,7 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-app.listen(PORT, () => logger.info(`Backend running on :${PORT}`));
+app.listen(PORT, () => {
+  logger.info(`Backend running on :${PORT}`);
+  startScheduler();
+});

@@ -78,9 +78,11 @@ router.post('/topup', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-// POST /api/stars/donate { recipientUserId, amount }
+// POST /api/stars/donate { recipientUserId, amount, catId?, postId? }
 router.post('/donate', authMiddleware, (req: AuthRequest, res) => {
-  const { recipientUserId, amount, note } = req.body as { recipientUserId: number; amount: number; note?: string };
+  const { recipientUserId, amount, note, catId, postId } = req.body as {
+    recipientUserId: number; amount: number; note?: string; catId?: number; postId?: number;
+  };
   if (!Number.isInteger(amount) || amount < 1) {
     res.status(400).json({ error: 'Amount must be a positive integer' });
     return;
@@ -101,24 +103,36 @@ router.post('/donate', authMiddleware, (req: AuthRequest, res) => {
 
   const { net: netAmount, commission } = splitDonation(amount);
 
+  const targetCat = Number.isInteger(catId) ? catId! : null;
+  const targetPost = Number.isInteger(postId) ? postId! : null;
+
   const tx = db.transaction(() => {
     db.prepare('UPDATE user_balance SET balance = balance - ?, total_spent = total_spent + ? WHERE user_id = ?')
       .run(amount, amount, req.userId!);
     getOrCreateBalance(recipientUserId);
     db.prepare('UPDATE user_balance SET balance = balance + ?, total_received = total_received + ? WHERE user_id = ?')
       .run(netAmount, netAmount, recipientUserId);
-    db.prepare(`INSERT INTO star_transactions (user_id, type, amount, related_user_id, note) VALUES (?, 'donation_out', ?, ?, ?)`)
-      .run(req.userId!, amount, recipientUserId, note ?? null);
-    db.prepare(`INSERT INTO star_transactions (user_id, type, amount, related_user_id, note) VALUES (?, 'donation_in', ?, ?, ?)`)
-      .run(recipientUserId, netAmount, req.userId!, note ?? null);
+    db.prepare(`INSERT INTO star_transactions (user_id, type, amount, related_user_id, note, target_cat_id, target_post_id) VALUES (?, 'donation_out', ?, ?, ?, ?, ?)`)
+      .run(req.userId!, amount, recipientUserId, note ?? null, targetCat, targetPost);
+    db.prepare(`INSERT INTO star_transactions (user_id, type, amount, related_user_id, note, target_cat_id, target_post_id) VALUES (?, 'donation_in', ?, ?, ?, ?, ?)`)
+      .run(recipientUserId, netAmount, req.userId!, note ?? null, targetCat, targetPost);
     db.prepare(`INSERT INTO star_transactions (user_id, type, amount, related_user_id, note) VALUES (?, 'commission', ?, ?, ?)`)
       .run(req.userId!, commission, recipientUserId, `from donation #${amount}`);
   });
   tx();
 
-  const sender = db.prepare('SELECT first_name FROM users WHERE id = ?').get(req.userId!) as { first_name: string } | undefined;
+  const sender = db.prepare('SELECT first_name, username FROM users WHERE id = ?').get(req.userId!) as { first_name: string; username: string | null } | undefined;
   if (sender && recipient.telegram_id !== '1') {
     sendBotMessage(recipient.telegram_id, `<b>${sender.first_name}</b> отправил вам ${netAmount} звёзд!`);
+  }
+
+  // Admin: every donation
+  if (sender && String(req.userId) !== ADMIN_TG_ID) {
+    const sHandle = sender.username ? `@${sender.username}` : sender.first_name;
+    const rHandle = recipient.first_name;
+    const targetTxt = targetCat ? ` (кот #${targetCat})` : targetPost ? ` (пост #${targetPost})` : '';
+    sendBotMessage(ADMIN_TG_ID,
+      `Донат: ${sHandle} → ${rHandle} · ${amount} звёзд${targetTxt}\nЧистыми: ${netAmount} · Комиссия: ${commission}`);
   }
 
   res.json({ ok: true, sent: amount, received: netAmount, commission, newBalance: senderBalance.balance - amount });

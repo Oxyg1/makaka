@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { updateCat } from '../api';
+import { updateCat, rotateCatMainPhoto } from '../api';
+import { hapticImpact, hapticError } from '../utils/haptics';
 import type { CatWithStats } from '../types';
 import ExtraPhotosManager from './ExtraPhotosManager';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import Portal from './Portal';
+
+const BASE = import.meta.env.VITE_API_URL ?? '';
 
 interface Props {
   cat: CatWithStats;
@@ -18,7 +21,16 @@ export default function EditCatSheet({ cat, onClose, onSaved }: Props) {
   const [description, setDescription] = useState(cat.description ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [mainPhotoVersion, setMainPhotoVersion] = useState(0);
   const swipe = useSheetSwipe(onClose);
+
+  const handleRotateMain = async () => {
+    hapticImpact('light');
+    try {
+      await rotateCatMainPhoto(cat.id);
+      setMainPhotoVersion(v => v + 1);
+    } catch { hapticError(); }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Имя обязательно'); return; }
@@ -61,6 +73,18 @@ export default function EditCatSheet({ cat, onClose, onSaved }: Props) {
             </button>
           </div>
           <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+            <div className="edit-cat__main-photo">
+              <img src={`${BASE}${cat.photo_url}?v=${mainPhotoVersion}`} alt={cat.name} />
+              <button type="button" className="edit-cat__rotate-btn" onClick={handleRotateMain} aria-label="Повернуть">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="21 8 21 3 16 3" />
+                  <path d="M21 3l-6.5 6.5" />
+                  <path d="M3 16a9 9 0 0 0 16.5 5" />
+                </svg>
+                Повернуть
+              </button>
+            </div>
+
             {error && <p style={{ margin: 0, color: '#ff453a', fontSize: 13 }}>{error}</p>}
             <div>
               <label style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Имя *</label>

@@ -4,6 +4,7 @@ import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { useCatLike } from '../utils/catLikes';
 import { hapticImpact } from '../utils/haptics';
 import SupportButton from './SupportButton';
+import ShareButton from './ShareButton';
 import './CatCardModal.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -114,6 +115,7 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
                 recipientUserId={ownerId}
                 recipientName={cat.owner_name}
                 context="cat"
+                entityId={cat.id}
                 className="support-btn--floating"
               />
             )}
@@ -133,6 +135,13 @@ export default function CatCardModal({ cat, onClose, onViewOwner, isOwner, onEdi
             <div className="cat-card-modal__meta">
               <span className="cat-card-modal__votes">{cat.vote_count} {cat.vote_count === 1 ? 'оценка' : 'оценок'}</span>
               <span className="cat-card-modal__owner-tag">от {cat.owner_name}</span>
+              {'donations_total' in cat && (cat.donations_total ?? 0) > 0 && (
+                <span className="cat-card-modal__donations">Поддержано: {cat.donations_total} звёзд</span>
+              )}
+            </div>
+
+            <div className="cat-card-modal__row">
+              <ShareButton kind="cat" entityId={cat.id} title={cat.name} className="share-btn--full" />
             </div>
 
             {onViewOwner && ownerId !== undefined && (

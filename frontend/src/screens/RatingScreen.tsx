@@ -185,6 +185,7 @@ export default function RatingScreen() {
                     recipientUserId={cat.owner_id}
                     recipientName={cat.owner_name}
                     context="cat"
+                    entityId={cat.id}
                     className="support-btn--floating"
                   />
                 )}

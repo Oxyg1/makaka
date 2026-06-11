@@ -134,6 +134,11 @@
   font-family: inherit;
   letter-spacing: -0.3px;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.stars-modal__input-wrap input::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 /* Action buttons */

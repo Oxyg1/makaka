@@ -78,6 +78,18 @@ export default function SubmitCatScreen({ onSubmitted }: Props) {
         </label>
         <input ref={inputRef} id="cat-photo" type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
 
+        <div className="submit__extra-teaser">
+          <div className="submit__extra-teaser-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12" r="4" />
+            </svg>
+          </div>
+          <div className="submit__extra-teaser-text">
+            <b>Можно добавить до 5 фото</b>
+            <span>После публикации — 2 звезды за фото</span>
+          </div>
+        </div>
+
         <div className="submit__group">
           <div className="submit__field">
             <label>Имя кота *</label>

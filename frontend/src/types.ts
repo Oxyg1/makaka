@@ -16,6 +16,7 @@ export interface CatLeaderboardEntry {
   avg_score: number; vote_count: number;
   owner_name: string; owner_id: number;
   likes_count?: number; liked_by_me?: boolean;
+  donations_total?: number;
   extra_photos?: string[];
 }
 
