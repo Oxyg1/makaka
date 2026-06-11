@@ -1,0 +1,220 @@
+.cat-card-modal__scroll {
+  overflow-y: auto;
+  flex: 1;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Hero photo ──────────────────────────────── */
+.cat-card-modal__photo-wrap {
+  position: relative;
+  margin: 0 12px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+.cat-card-modal__photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  max-height: 52vh;
+}
+
+/* Top overlay: #id + like */
+.cat-card-modal__overlay {
+  position: absolute; top: 12px; left: 12px; right: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.cat-card-modal__overlay > * { pointer-events: auto; }
+.cat-card-modal__overlay-right { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+
+.cat-card-modal__badge {
+  background: rgba(20,20,22,0.55);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-radius: 99em;
+  padding: 6px 12px;
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  border: 0.5px solid rgba(255,255,255,0.14);
+  letter-spacing: -0.2px;
+}
+
+.cat-card-modal__like-btn {
+  background: rgba(20,20,22,0.55);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 0.5px solid rgba(255,255,255,0.14);
+  border-radius: 99em;
+  padding: 6px 12px;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--ios-dur) var(--ios-ease),
+              color var(--ios-dur) var(--ios-ease),
+              transform 0.1s;
+}
+.cat-card-modal__like-btn--active {
+  background: rgba(255,69,58,0.92);
+  color: #fff;
+  border-color: rgba(255,255,255,0.18);
+}
+.cat-card-modal__like-btn:active { transform: scale(0.92); }
+
+/* Bottom-left score */
+.cat-card-modal__score {
+  position: absolute; bottom: 12px; left: 12px;
+  background: rgba(20,20,22,0.55);
+  color: #fff;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  padding: 6px 12px;
+  border-radius: 99em;
+  font-size: 14px; font-weight: 700;
+  border: 0.5px solid rgba(255,255,255,0.14);
+  letter-spacing: -0.2px;
+}
+
+/* Carousel dots — thin iOS-style segments */
+.cat-card-modal__dots {
+  position: absolute;
+  bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px;
+  background: rgba(20,20,22,0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 5px 8px;
+  border-radius: 99em;
+  border: 0.5px solid rgba(255,255,255,0.1);
+}
+.cat-card-modal__dot {
+  width: 5px; height: 5px;
+  border-radius: 99em;
+  background: rgba(255,255,255,0.45);
+  border: none; padding: 0; cursor: pointer;
+  transition: background var(--ios-dur) var(--ios-ease),
+              width var(--ios-dur) var(--ios-ease);
+}
+.cat-card-modal__dot--active {
+  background: #fff;
+  width: 16px;
+}
+
+/* ── Body ────────────────────────────────────── */
+.cat-card-modal__body {
+  padding: 18px 16px 24px;
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.cat-card-modal__name {
+  margin: 0;
+  font-size: 26px; font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+.cat-card-modal__breed {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.cat-card-modal__desc {
+  margin: 12px 0 0;
+  font-size: 15px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+}
+
+.cat-card-modal__meta {
+  display: flex; align-items: center; gap: 8px;
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+}
+.cat-card-modal__votes,
+.cat-card-modal__owner-tag {
+  font-size: 13px;
+  color: var(--text-soft);
+  font-weight: 500;
+}
+.cat-card-modal__owner-tag::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--text-muted);
+}
+.cat-card-modal__row {
+  margin-top: 12px;
+}
+.cat-card-modal__donations {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--border);
+  font-size: 13px;
+  color: #ffd55a;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+}
+
+/* ── Action buttons ──────────────────────────── */
+.cat-card-modal__owner-btn {
+  margin-top: 12px;
+  height: 50px;
+  background: var(--primary-dim);
+  color: var(--primary);
+  border: 0.5px solid rgba(124,109,249,0.3);
+  border-radius: 16px;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.1s;
+  width: 100%;
+  letter-spacing: -0.2px;
+}
+.cat-card-modal__owner-btn:active {
+  opacity: 0.75;
+  transform: scale(0.98);
+}
+
+.cat-card-modal__owner-actions {
+  display: flex; flex-direction: column;
+  gap: 8px; margin-top: 14px;
+}
+.cat-card-modal__edit-btn,
+.cat-card-modal__delete-btn {
+  height: 50px;
+  border-radius: 16px;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.1s;
+  width: 100%;
+  letter-spacing: -0.2px;
+}
+.cat-card-modal__edit-btn {
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  border: 0.5px solid rgba(255,255,255,0.12);
+}
+.cat-card-modal__delete-btn {
+  background: rgba(255,69,58,0.14);
+  color: #ff453a;
+  border: 0.5px solid rgba(255,69,58,0.25);
+}
+.cat-card-modal__edit-btn:active,
+.cat-card-modal__delete-btn:active {
+  opacity: 0.75; transform: scale(0.98);
+}
+.cat-card-modal__confirm-text {
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--text-soft);
+  text-align: center;
+}

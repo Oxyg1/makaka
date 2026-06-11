@@ -1,0 +1,222 @@
+.epm {
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+
+.epm__loading {
+  display: flex; justify-content: center;
+  padding: 24px 0;
+}
+
+.epm__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 4px;
+}
+.epm__title {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.epm__count {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.epm__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.epm__tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+.epm__tile img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.epm__tile-del, .epm__tile-rot {
+  position: absolute;
+  top: 6px;
+  width: 22px; height: 22px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 0.5px solid rgba(255,255,255,0.16);
+  border-radius: 50%;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, transform 0.1s;
+}
+.epm__tile-del { right: 6px; }
+.epm__tile-rot { left: 6px; }
+.epm__tile-del:active { background: rgba(255,69,58,0.85); transform: scale(0.92); }
+.epm__tile-rot:active { background: rgba(124,109,249,0.85); transform: scale(0.92); }
+
+.epm__add {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(124,109,249,0.08), rgba(155,84,222,0.05));
+  border: 1.5px dashed rgba(124,109,249,0.4);
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--primary);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  padding: 0;
+  font-family: inherit;
+}
+.epm__add:active {
+  transform: scale(0.97);
+  background: linear-gradient(135deg, rgba(124,109,249,0.14), rgba(155,84,222,0.1));
+}
+.epm__add--loading {
+  border-style: solid;
+}
+.epm__add-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background: var(--primary-gradient);
+  border-radius: 50%;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(124,109,249,0.4);
+}
+.epm__add-cost {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px;
+  background: rgba(20,20,22,0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 0.5px solid rgba(255,200,80,0.45);
+  border-radius: 99em;
+  color: #ffd55a;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: -0.1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.epm__error {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(255,69,58,0.12);
+  border: 0.5px solid rgba(255,69,58,0.3);
+  border-radius: 12px;
+  color: #ff6b62;
+  font-size: 13px; font-weight: 500;
+}
+
+.epm__hint {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.epm__hint b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Confirm dialog (same iOS style as the post delete confirm) */
+.epm__confirm {
+  width: calc(100% - 48px);
+  max-width: 320px;
+  margin: auto;
+  background: linear-gradient(180deg, rgba(34,34,38,0.96), rgba(22,22,26,0.98));
+  border: 0.5px solid rgba(255,255,255,0.12);
+  border-radius: 22px;
+  padding: 22px 20px 14px;
+  display: flex; flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: epm-confirm-in 0.3s var(--ios-ease);
+}
+@keyframes epm-confirm-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.epm__confirm h3 {
+  margin: 0;
+  font-size: 17px; font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.epm__confirm p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.epm__confirm-actions {
+  display: flex; gap: 8px;
+}
+.epm__confirm-cancel,
+.epm__confirm-delete {
+  flex: 1;
+  height: 44px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: -0.2px;
+}
+.epm__confirm-cancel {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+.epm__confirm-delete {
+  background: #ff453a;
+  color: #fff;
+}
+.epm__confirm-cancel:active,
+.epm__confirm-delete:active { opacity: 0.8; transform: scale(0.97); }
+
+/* Center the confirm in the viewport, overriding the default flex-end on modal-overlay */
+.modal-overlay:has(.epm__confirm) { align-items: center !important; }
+
+/* Main photo + rotate (used in EditCatSheet) */
+.edit-cat__main-photo {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+.edit-cat__main-photo img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  display: block;
+}
+.edit-cat__rotate-btn {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  background: rgba(20,20,22,0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid rgba(255,255,255,0.18);
+  border-radius: 99em;
+  color: #fff;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: -0.1px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, transform 0.1s;
+}
+.edit-cat__rotate-btn:active { transform: scale(0.94); background: rgba(124,109,249,0.7); }

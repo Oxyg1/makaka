@@ -1,0 +1,193 @@
+.lb { display: flex; flex-direction: column; height: 100%; background: var(--bg); }
+
+.lb__header { padding: 16px 16px 12px; flex-shrink: 0; }
+.lb__title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.lb__title { margin: 0; font-size: 22px; font-weight: 700; }
+
+/* Period switcher — sliding indicator */
+.lb__seg {
+  position: relative;
+  display: flex; gap: 0;
+  background: rgba(10,10,10,0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 99em; padding: 4px;
+  box-shadow: var(--glass-shadow);
+  isolation: isolate;
+}
+.lb__seg-indicator {
+  position: absolute; top: 4px; left: 4px;
+  width: calc((100% - 8px) / 4);
+  height: calc(100% - 8px);
+  border-radius: 99em;
+  background: rgba(0,0,0,0.5);
+  box-shadow: var(--glass-shadow-indicator);
+  transition: translate var(--ios-dur) var(--ios-ease);
+  translate: calc(var(--seg-idx, 0) * 100%) 0;
+  will-change: translate;
+  z-index: 0;
+}
+.lb__seg-btn {
+  flex: 1; position: relative; z-index: 1;
+  background: none; border: none;
+  padding: 8px 4px; border-radius: 99em;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  color: rgba(255,255,255,.55);
+  -webkit-tap-highlight-color: transparent;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+.lb__seg-btn--active { color: #fff; }
+
+.lb__body {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* Single scroll container: podium + list scroll together with the page */
+.lb__scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--nav-height,62px) + 24px);
+}
+.lb__podium-wrap {
+  padding: 4px 12px 8px;
+}
+.lb__list {
+  padding: 0 12px;
+}
+
+.lb__center { display: flex; align-items: center; justify-content: center; flex: 1; }
+
+.lb__empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; flex: 1; gap: 8px;
+  color: var(--text-muted); text-align: center;
+}
+.lb__empty p { margin: 0; font-size: 14px; }
+
+/* ── Podium top-3 ─────────────────────────────── */
+.lb__podium {
+  display: flex; gap: 8px;
+  align-items: flex-end;
+}
+
+.lb__podium-item {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  background: rgba(30,30,30,0.55);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--glass-shadow);
+  border-radius: 18px;
+  padding: 14px 6px;
+  border: none; cursor: pointer; color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  transition: opacity 0.15s linear, transform 0.1s;
+}
+.lb__podium-item:active { opacity: 0.7; transform: scale(0.98); }
+
+.lb__podium-item--0 { order: 2; height: 196px; }
+.lb__podium-item--1 { order: 1; height: 168px; }
+.lb__podium-item--2 { order: 3; height: 168px; }
+
+.lb__podium-photo-wrap {
+  position: relative; flex-shrink: 0;
+  width: 70px; height: 70px;
+}
+.lb__podium-item--0 .lb__podium-photo-wrap { width: 92px; height: 92px; }
+
+.lb__podium-photo {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover; display: block;
+}
+
+.lb__podium-item--0 .lb__podium-photo { box-shadow: 0 0 0 3px #f1aa05, 0 0 16px rgba(241,170,5,0.4); }
+.lb__podium-item--1 .lb__podium-photo { box-shadow: 0 0 0 2.5px #b0b0b0; }
+.lb__podium-item--2 .lb__podium-photo { box-shadow: 0 0 0 2.5px #c86c2a; }
+
+.lb__podium-text-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+.lb__podium-name, .lb__podium-score {
+  display: block;
+  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.lb__podium-name {
+  font-size: 12px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%; flex-shrink: 0;
+}
+.lb__podium-item--0 .lb__podium-name { font-size: 14px; }
+.lb__podium-score { font-size: 13px; font-weight: 800; color: var(--primary); flex-shrink: 0; }
+.lb__podium-item--0 .lb__podium-score { font-size: 15px; }
+
+/* ── Glass list (rank 4+) ─────────────────────── */
+.lb__glass-list {
+  background: rgba(30,30,30,0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--glass-shadow);
+  border-radius: 20px; overflow: hidden;
+}
+
+.lb__row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; width: 100%;
+  background: none; border: none; border-top: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer; text-align: left; color: var(--text);
+  -webkit-tap-highlight-color: transparent; transition: background 0.15s;
+}
+.lb__row:first-child { border-top: none; }
+.lb__row:active { background: rgba(255,255,255,0.04); }
+
+/* ── List rank number (outside avatar) ─────────── */
+.lb__rank-num {
+  width: 22px; text-align: center; flex-shrink: 0;
+  font-size: 13px; font-weight: 700; color: var(--text-muted);
+}
+
+/* ── Shared avatar + badge ────────────────────── */
+.lb__avatar-wrap { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
+.lb__avatar { width: 100%; height: 100%; border-radius: 12px; object-fit: cover; display: block; }
+
+.lb__badge {
+  position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+  height: 14px; min-width: 22px; padding: 0 4px;
+  border-radius: 5px; font-size: 9px; font-weight: 800;
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--bg); letter-spacing: -0.3px;
+}
+.lb__badge--gold   { background: linear-gradient(to bottom, #f1aa05, #ce930a); }
+.lb__badge--silver { background: linear-gradient(to top, #e3e3e3, #9f9f9f); color: #2a2a2a; }
+.lb__badge--bronze { background: linear-gradient(to top, #d96c28, #a43606); }
+.lb__badge--num    { background: rgba(255,255,255,0.18); }
+
+/* Podium uses same badge but larger positioning */
+.lb__podium-photo-wrap .lb__badge {
+  height: 20px; min-width: 30px; font-size: 11px; font-weight: 900; border-radius: 7px;
+  bottom: -8px; border-width: 2px;
+}
+.lb__podium-item--0 .lb__podium-photo-wrap .lb__badge {
+  height: 24px; min-width: 36px; font-size: 13px; border-radius: 9px;
+  bottom: -10px;
+}
+
+/* ── Row info / score ─────────────────────────── */
+.lb__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lb__name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb__breed { font-size: 12px; color: var(--text-muted); }
+.lb__owner { font-size: 12px; color: var(--text-muted); }
+
+.lb__score { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
+.lb__avg { font-size: 19px; font-weight: 800; color: var(--primary); line-height: 1; }
+.lb__votes { font-size: 11px; color: var(--text-muted); }

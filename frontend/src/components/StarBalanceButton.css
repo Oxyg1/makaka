@@ -1,0 +1,44 @@
+.stars-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  background: linear-gradient(135deg, rgba(48,36,18,0.92) 0%, rgba(28,20,8,0.95) 100%);
+  border: none;
+  border-radius: 99em;
+  color: #ffd95c;
+  font-size: 13px; font-weight: 800;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 0 0 0.5px rgba(255,200,80,0.45),
+    0 4px 14px rgba(0,0,0,0.4),
+    0 0 22px rgba(255,184,0,0.22);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.stars-btn:active {
+  transform: scale(0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 0 0 0.5px rgba(255,200,80,0.6),
+    0 2px 8px rgba(0,0,0,0.5);
+}
+
+.stars-btn__amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.stars-btn__plus {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  background: linear-gradient(135deg, #FFE486 0%, #FFB800 100%);
+  border-radius: 50%;
+  font-size: 14px; font-weight: 800;
+  line-height: 1;
+  color: #2a1a00;
+  margin-left: 2px;
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255,255,255,0.5),
+    0 1px 4px rgba(0,0,0,0.3);
+}

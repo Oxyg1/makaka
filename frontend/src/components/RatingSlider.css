@@ -1,0 +1,74 @@
+.rating-slider {
+  display: flex; flex-direction: column; gap: 6px;
+  cursor: pointer; touch-action: none; user-select: none;
+}
+.rating-slider--disabled { cursor: default; }
+
+/* Track */
+.rating-slider__track-wrap {
+  position: relative; height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 99em;
+  margin: 4px 7px;
+}
+
+.rating-slider__fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+  border-radius: 99em; pointer-events: none;
+  background: var(--rs-color, #6d6d71);
+  transition: width 0.22s cubic-bezier(0.32, 0.72, 0, 1), background 0.2s;
+  will-change: width;
+}
+
+/* Small thumb in slider color */
+.rating-slider__thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px; height: 14px;
+  background: var(--rs-color, #6d6d71);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 0.22s cubic-bezier(0.32, 0.72, 0, 1), background 0.2s;
+  will-change: left;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Transition stays on during drag too — the thumb snaps from tick to tick
+ * smoothly as the finger crosses each threshold. */
+
+.rating-slider__hint {
+  display: inline-flex; align-self: center; align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 0.5px solid var(--border);
+  border-radius: 99em;
+  color: var(--text-soft);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: -0.1px;
+  animation: hint-fade 0.4s var(--ios-ease-out);
+}
+@keyframes hint-fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Ticks */
+.rating-slider__ticks {
+  display: flex; justify-content: space-between; padding: 0 2px;
+}
+
+.rating-slider__tick {
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.2);
+  transition: color 0.15s; width: 18px; text-align: center;
+}
+.rating-slider__tick--active { color: var(--rs-color, inherit); }
+
+/* Big score number */
+.rating-slider__score {
+  text-align: center; font-size: 44px; font-weight: 800;
+  line-height: 1; letter-spacing: -2px;
+  color: var(--rs-color, var(--text-muted));
+  transition: color 0.2s;
+}
+
+@keyframes bump { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.rating-slider__score--bump { animation: bump 0.18s ease; }
