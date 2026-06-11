@@ -8,6 +8,7 @@ import { ageLabel } from '../components/CatCardModal';
 import { useCatLike, syncCatLike } from '../utils/catLikes';
 import StarBalanceButton from '../components/StarBalanceButton';
 import SupportButton from '../components/SupportButton';
+import ReportSheet from '../components/ReportSheet';
 import './RatingScreen.css';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
@@ -103,6 +104,7 @@ export default function RatingScreen() {
   const [dir, setDir] = useState<Dir>(null);
   const [count, setCount] = useState(0);
   const [descOpen, setDescOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
@@ -211,7 +213,14 @@ export default function RatingScreen() {
 
             <div className="rs__footer">
               <RatingSlider value={score} onChange={setScore} disabled={submitting} />
-              <p className="rs__label">{LABELS[score]}</p>
+              <div className="rs__label-row">
+                <p className="rs__label">{LABELS[score]}</p>
+                {score > 0 && score < 3 && (
+                  <button className="rs__report-link" onClick={() => setReportOpen(true)}>
+                    Пожаловаться
+                  </button>
+                )}
+              </div>
               <div className="rs__actions">
                 <button className="rs__skip" onClick={handleSkip} disabled={submitting}>Пропустить</button>
                 <button className="rs__rate-btn" onClick={handleRate} disabled={submitting} style={{ flex: 2 }}>
@@ -223,6 +232,15 @@ export default function RatingScreen() {
 
         </div>
       </div>
+
+      {reportOpen && (
+        <ReportSheet
+          type="cat"
+          entityId={cat.id}
+          entityName={cat.name}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
 
       {descOpen && cat.description && (
         <div className="modal-overlay" onClick={() => setDescOpen(false)}>

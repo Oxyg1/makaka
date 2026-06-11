@@ -5,6 +5,7 @@ import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import StarIcon from './StarIcon';
 import StarsModal from './StarsModal';
+import Portal from './Portal';
 import './SupportButton.css';
 
 const PRESETS = [10, 50, 100, 500];
@@ -90,6 +91,7 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
   }
 
   return (
+    <Portal>
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-sheet donate-sheet" ref={swipe.sheetRef}
         onTouchStart={swipe.handleTouchStart}
@@ -105,7 +107,7 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
 
         <div className="donate-sheet__body">
           <div className="donate-sheet__hero">
-            <div className="donate-sheet__hero-icon"><StarIcon size={40} /></div>
+            <div className="donate-sheet__hero-icon"><StarIcon size={56} /></div>
             <h3 className="donate-sheet__title">Поддержать {recipientName}</h3>
             <p className="donate-sheet__subtitle">Отправьте звёзды владельцу {context === 'cat' ? 'кота' : 'поста'}</p>
           </div>
@@ -163,5 +165,6 @@ function DonateSheet({ recipientUserId, recipientName, context, onClose }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

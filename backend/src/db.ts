@@ -164,4 +164,15 @@ db.exec(`
     admin_note TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_withdraw_status ON withdrawal_requests(status);
+
+  CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    entity_id INTEGER NOT NULL,
+    reporter_id INTEGER NOT NULL REFERENCES users(id),
+    reason TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
 `);

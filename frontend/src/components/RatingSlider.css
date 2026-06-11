@@ -1,13 +1,16 @@
 .rating-slider {
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 6px;
   cursor: pointer; touch-action: none; user-select: none;
+  padding-top: 6px;
 }
 .rating-slider--disabled { cursor: default; }
 
 /* Track */
 .rating-slider__track-wrap {
   position: relative; height: 6px;
-  background: rgba(255,255,255,0.1); border-radius: 99em;
+  background: rgba(255,255,255,0.1);
+  border-radius: 99em;
+  margin: 14px 12px 8px;
 }
 
 .rating-slider__fill {
@@ -15,15 +18,65 @@
   border-radius: 99em; pointer-events: none;
   background: var(--rs-color, #6d6d71);
   transition: width 0.08s, background 0.2s;
+  box-shadow: 0 0 16px var(--rs-color);
 }
+
+/* Visible draggable thumb */
+.rating-slider__thumb {
+  position: absolute;
+  top: 50%;
+  width: 28px; height: 28px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--rs-color, #6d6d71),
+    0 4px 14px rgba(0,0,0,0.3);
+  transform: translate(-50%, -50%);
+  transition: left 0.08s, box-shadow 0.2s, background 0.2s;
+  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.rating-slider__thumb-grip {
+  display: flex;
+  gap: 2.5px;
+}
+.rating-slider__thumb-grip span {
+  width: 1.5px; height: 11px;
+  background: var(--rs-color, #6d6d71);
+  border-radius: 1px;
+  opacity: 0.55;
+}
+
+/* Pulse hint until first drag */
+@keyframes thumb-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--rs-color, #6d6d71), 0 4px 14px rgba(0,0,0,0.3); }
+  50% { box-shadow: 0 0 0 2px var(--rs-color, #6d6d71), 0 0 0 8px rgba(255,255,255,0.18), 0 4px 14px rgba(0,0,0,0.3); }
+}
+.rating-slider--hint .rating-slider__thumb {
+  animation: thumb-pulse 1.6s ease-in-out infinite;
+}
+
+.rating-slider__hint {
+  display: inline-flex; align-self: center; align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 0.5px solid var(--border);
+  border-radius: 99em;
+  color: var(--text-soft);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: -0.1px;
+  animation: hint-fade 0.4s var(--ios-ease-out);
+}
+@keyframes hint-fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Ticks */
 .rating-slider__ticks {
-  display: flex; justify-content: space-between; padding: 0 2px;
+  display: flex; justify-content: space-between; padding: 0 6px;
 }
 
 .rating-slider__tick {
-  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.2);
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.22);
   transition: color 0.15s; width: 18px; text-align: center;
 }
 .rating-slider__tick--active { color: var(--rs-color, inherit); }

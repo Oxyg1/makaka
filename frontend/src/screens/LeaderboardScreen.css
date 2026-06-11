@@ -32,8 +32,10 @@
   background: none; border: none;
   padding: 8px 4px; border-radius: 99em;
   font-size: 12px; font-weight: 700; cursor: pointer;
-  color: rgba(255,255,255,.42);
+  color: rgba(255,255,255,.55);
   -webkit-tap-highlight-color: transparent;
+  isolation: isolate;
+  transform: translateZ(0);
 }
 .lb__seg-btn--active { color: #fff; }
 

@@ -4,6 +4,8 @@ import { db } from '../db';
 import { getOrCreateBalance, ADMIN_TG_ID } from './stars';
 import { sendBotMessage } from '../notifs';
 import { logger } from '../logger';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 const BOT_TOKEN = process.env.BOT_TOKEN ?? process.env.TELEGRAM_BOT_TOKEN ?? '';
@@ -159,6 +161,37 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
   if (approveMatch) { processWithdrawal(parseInt(approveMatch[1], 10), true, fromId); return; }
   if (rejectMatch) { processWithdrawal(parseInt(rejectMatch[1], 10), false, fromId); return; }
 
+  const delCatMatch = text.match(/^\/delete_cat_(\d+)$/);
+  if (delCatMatch) { deleteCatByAdmin(parseInt(delCatMatch[1], 10), fromId); return; }
+
+  const delPostMatch = text.match(/^\/delete_post_(\d+)$/);
+  if (delPostMatch) { deletePostByAdmin(parseInt(delPostMatch[1], 10), fromId); return; }
+
+  const ignoreMatch = text.match(/^\/ignore_(\d+)$/);
+  if (ignoreMatch) {
+    const id = parseInt(ignoreMatch[1], 10);
+    const r = db.prepare(`UPDATE reports SET status = 'ignored' WHERE id = ?`).run(id);
+    sendBotMessage(fromId, r.changes ? `Жалоба #${id} отклонена.` : `Жалоба #${id} не найдена.`);
+    return;
+  }
+
+  if (text === '/reports') {
+    const rows = db.prepare(`
+      SELECT r.id, r.type, r.entity_id, r.reason, r.created_at,
+        u.first_name AS reporter_name, u.username AS reporter_username
+      FROM reports r JOIN users u ON u.id = r.reporter_id
+      WHERE r.status = 'pending' ORDER BY r.created_at ASC LIMIT 20
+    `).all() as Array<{ id: number; type: string; entity_id: number; reason: string | null; created_at: string; reporter_name: string; reporter_username: string | null }>;
+    if (rows.length === 0) { sendBotMessage(fromId, 'Нет жалоб.'); return; }
+    const body = rows.map(row => {
+      const u = row.reporter_username ? `@${row.reporter_username}` : row.reporter_name;
+      const reasonLine = row.reason ? `\n<i>${row.reason.replace(/[<>]/g, '').slice(0, 200)}</i>` : '';
+      return `<b>#${row.id}</b> · ${row.type} #${row.entity_id} от ${u}${reasonLine}\n/delete_${row.type}_${row.entity_id}  /ignore_${row.id}`;
+    }).join('\n\n');
+    sendBotMessage(fromId, `<b>Жалобы:</b>\n\n${body}`);
+    return;
+  }
+
   if (text === '/users') {
     const top = db.prepare(`
       SELECT u.first_name, u.username, b.balance, b.total_received, b.total_spent
@@ -182,9 +215,59 @@ function handleBotCommand(text: string, from: { id: number; username?: string; f
 /withdrawals — список заявок на вывод
 /approve_N — одобрить заявку N
 /reject_N — отклонить (вернёт баланс юзеру)
+/reports — жалобы пользователей
+/delete_cat_N — удалить кота
+/delete_post_N — удалить пост
+/ignore_N — отклонить жалобу
 /users — топ юзеров по активности`);
     return;
   }
+}
+
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+function safeUnlink(rel: string | null | undefined) {
+  if (!rel) return;
+  try { fs.unlinkSync(path.join(UPLOADS_DIR, path.basename(rel))); } catch { /* gone */ }
+  try { fs.unlinkSync(path.join(UPLOADS_DIR, `thumb_${path.basename(rel)}`)); } catch { /* no thumb */ }
+}
+
+function deleteCatByAdmin(catId: number, adminTgId: string): void {
+  const cat = db.prepare('SELECT id, owner_id, name, photo_url FROM cats WHERE id = ?').get(catId) as
+    { id: number; owner_id: number; name: string; photo_url: string } | undefined;
+  if (!cat) { sendBotMessage(adminTgId, `Кот #${catId} не найден.`); return; }
+
+  const photos = db.prepare('SELECT photo_url FROM cat_photos WHERE cat_id = ?').all(catId) as { photo_url: string }[];
+
+  db.prepare('DELETE FROM ratings WHERE cat_id = ?').run(catId);
+  db.prepare('DELETE FROM skips WHERE cat_id = ?').run(catId);
+  db.prepare('DELETE FROM cat_likes WHERE cat_id = ?').run(catId);
+  db.prepare('DELETE FROM cat_photos WHERE cat_id = ?').run(catId);
+  db.prepare('DELETE FROM cats WHERE id = ?').run(catId);
+  db.prepare(`UPDATE reports SET status = 'resolved' WHERE type = 'cat' AND entity_id = ?`).run(catId);
+
+  safeUnlink(cat.photo_url);
+  for (const p of photos) safeUnlink(p.photo_url);
+
+  const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(cat.owner_id) as { telegram_id: string } | undefined;
+  if (owner) sendBotMessage(owner.telegram_id, `Ваш кот «${cat.name}» был удалён модератором за нарушение правил.`);
+  sendBotMessage(adminTgId, `Кот #${catId} (${cat.name}) удалён.`);
+}
+
+function deletePostByAdmin(postId: number, adminTgId: string): void {
+  const post = db.prepare('SELECT id, user_id, photo_url FROM posts WHERE id = ?').get(postId) as
+    { id: number; user_id: number; photo_url: string } | undefined;
+  if (!post) { sendBotMessage(adminTgId, `Пост #${postId} не найден.`); return; }
+
+  db.prepare('DELETE FROM post_likes WHERE post_id = ?').run(postId);
+  db.prepare('DELETE FROM post_comments WHERE post_id = ?').run(postId);
+  db.prepare('DELETE FROM posts WHERE id = ?').run(postId);
+  db.prepare(`UPDATE reports SET status = 'resolved' WHERE type = 'post' AND entity_id = ?`).run(postId);
+
+  safeUnlink(post.photo_url);
+
+  const owner = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(post.user_id) as { telegram_id: string } | undefined;
+  if (owner) sendBotMessage(owner.telegram_id, `Ваш пост был удалён модератором за нарушение правил.`);
+  sendBotMessage(adminTgId, `Пост #${postId} удалён.`);
 }
 
 function processWithdrawal(id: number, approve: boolean, adminTgId: string): void {

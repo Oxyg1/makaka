@@ -149,3 +149,7 @@ export function withdrawStars(amount: number): Promise<{ ok: boolean; requestId:
   return request('/api/stars/withdraw', { method: 'POST', body: JSON.stringify({ amount }) });
 }
 export function getStarTransactions(): Promise<StarTx[]> { return request<StarTx[]>('/api/stars/transactions'); }
+
+export function reportContent(type: 'cat' | 'post', entityId: number, reason?: string): Promise<{ ok: boolean; reportId: number }> {
+  return request('/api/reports', { method: 'POST', body: JSON.stringify({ type, entityId, reason }) });
+}

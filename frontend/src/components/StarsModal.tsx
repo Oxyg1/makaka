@@ -4,6 +4,7 @@ import { useBalance, refreshBalance, openStarInvoice, formatStars } from '../uti
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import StarIcon from './StarIcon';
+import Portal from './Portal';
 import './StarsModal.css';
 
 const PACKAGES = [50, 100, 250, 500, 1000, 2500];
@@ -73,6 +74,7 @@ export default function StarsModal({ onClose }: Props) {
   const numAmount = parseInt(amount, 10) || 0;
 
   return (
+    <Portal>
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-sheet stars-modal" ref={swipe.sheetRef}
         onTouchStart={swipe.handleTouchStart}
@@ -90,7 +92,7 @@ export default function StarsModal({ onClose }: Props) {
           <div className="stars-balance-card">
             <div className="stars-balance-card__label">Ваш баланс</div>
             <div className="stars-balance-card__value">
-              <StarIcon size={32} />
+              <StarIcon size={48} />
               <span>{formatStars(balance?.balance ?? 0)}</span>
             </div>
             {balance && (balance.total_received > 0 || balance.total_spent > 0) && (
@@ -166,5 +168,6 @@ export default function StarsModal({ onClose }: Props) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

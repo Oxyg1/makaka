@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { Post } from '../types';
 import { Avatar } from './CatCardModal';
 import SupportButton from './SupportButton';
+import ReportSheet from './ReportSheet';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -26,6 +27,7 @@ interface PostCardProps {
 
 export default function PostCard({ post, isOwner, onViewUser, onLike, onComments, onAskDelete, hideHeaderUser }: PostCardProps) {
   const [popKey, setPopKey] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
   const lastTapRef = useRef<number>(0);
 
   const triggerHeartPop = () => setPopKey(k => k + 1);
@@ -62,13 +64,11 @@ export default function PostCard({ post, isOwner, onViewUser, onLike, onComments
           </button>
           <div className="feed__card-meta">
             <span className="feed__time">{timeAgo(post.created_at)}</span>
-            {isOwner && (
-              <button className="feed__menu-btn" onClick={onAskDelete} aria-label="Удалить">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
-                </svg>
-              </button>
-            )}
+            <button className="feed__menu-btn" onClick={isOwner ? onAskDelete : () => setReportOpen(true)} aria-label={isOwner ? 'Удалить' : 'Пожаловаться'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
           </div>
         </header>
       )}
@@ -130,6 +130,13 @@ export default function PostCard({ post, isOwner, onViewUser, onLike, onComments
           <div className="feed__below-time">{timeAgo(post.created_at)}</div>
         )}
       </div>
+      {reportOpen && (
+        <ReportSheet
+          type="post"
+          entityId={post.id}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </article>
   );
 }
