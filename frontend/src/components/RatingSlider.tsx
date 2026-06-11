@@ -9,9 +9,14 @@ interface Props { value: number; onChange: (v: number) => void; disabled?: boole
 
 export default function RatingSlider({ value, onChange, disabled }: Props) {
   const [dragging, setDragging] = useState(false);
+  const [dragPct, setDragPct] = useState<number | null>(null);
   const [showHint, setShowHint] = useState<boolean>(() => localStorage.getItem(HINT_KEY) !== '1');
   const trackRef = useRef<HTMLDivElement>(null);
-  const pct = value > 0 ? ((value - 1) / 9) * 100 : 0;
+
+  // Discrete (snapped) position derived from value, used when the user isn't dragging.
+  const snappedPct = value > 0 ? ((value - 1) / 9) * 100 : 0;
+  // Continuous position is used during drag — follows the finger smoothly.
+  const visualPct = dragPct ?? snappedPct;
   const color = COLORS[value] || '#6d6d71';
 
   useEffect(() => {
@@ -21,11 +26,12 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
     }
   }, [dragging, showHint]);
 
-  const valueFromX = useCallback((clientX: number) => {
+  const handlePointer = useCallback((clientX: number) => {
     const track = trackRef.current;
     if (!track) return;
     const rect = track.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    setDragPct(ratio * 100);
     const v = Math.round(ratio * 9) + 1;
     if (v !== value) { hapticImpact('light'); onChange(v); }
   }, [value, onChange]);
@@ -34,15 +40,19 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
     if (disabled) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragging(true);
-    valueFromX(e.clientX);
+    handlePointer(e.clientX);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragging || disabled) return;
-    valueFromX(e.clientX);
+    handlePointer(e.clientX);
   };
 
-  const handlePointerUp = () => setDragging(false);
+  const handlePointerUp = () => {
+    setDragging(false);
+    // Let the thumb snap back to the discrete position with the standard transition.
+    setDragPct(null);
+  };
 
   return (
     <div
@@ -54,8 +64,8 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
       onPointerCancel={handlePointerUp}
     >
       <div className="rating-slider__track-wrap" ref={trackRef}>
-        <div className="rating-slider__fill" style={{ width: `${pct}%` }} />
-        <div className="rating-slider__thumb" style={{ left: `${pct}%` }} />
+        <div className="rating-slider__fill" style={{ width: `${visualPct}%` }} />
+        <div className="rating-slider__thumb" style={{ left: `${visualPct}%` }} />
       </div>
 
       <div className="rating-slider__ticks">
