@@ -55,11 +55,7 @@ export default function RatingSlider({ value, onChange, disabled }: Props) {
     >
       <div className="rating-slider__track-wrap" ref={trackRef}>
         <div className="rating-slider__fill" style={{ width: `${pct}%` }} />
-        <div className="rating-slider__thumb" style={{ left: `${pct}%` }}>
-          <div className="rating-slider__thumb-grip" aria-hidden>
-            <span /><span /><span />
-          </div>
-        </div>
+        <div className="rating-slider__thumb" style={{ left: `${pct}%` }} />
       </div>
 
       <div className="rating-slider__ticks">

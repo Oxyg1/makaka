@@ -92,7 +92,7 @@ export default function StarsModal({ onClose }: Props) {
           <div className="stars-balance-card">
             <div className="stars-balance-card__label">Ваш баланс</div>
             <div className="stars-balance-card__value">
-              <StarIcon size={48} />
+              <StarIcon size={32} />
               <span>{formatStars(balance?.balance ?? 0)}</span>
             </div>
             {balance && (balance.total_received > 0 || balance.total_spent > 0) && (
