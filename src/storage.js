@@ -22,13 +22,21 @@ const DEFAULT_STATE = {
 
   // Meta progression — persists across runs.
   meta: {
-    coins: 50,
+    coins: 80,
     gems: 0,
     boosters: 3,
     bestLevelEver: 1,
     totalMerges: 0,
     discovered: {},   // { '1': true, '2': true, ... }
-    tutorialDone: false
+    tutorialDone: false,
+    // Permanent upgrades — see UPGRADES in src/game.js.
+    upgrades: {
+      tapPower:      0, // +1 coin per tap per level
+      mergeBonus:    0, // +1 coin per merge per level
+      spawnDiscount: 0, // 5% cheaper spawn per level
+      idleIncome:    0  // passive coins per minute per level
+    },
+    lastTickAt: 0       // ms epoch — used to grant offline idle income
   },
 
   // Daily reward state.

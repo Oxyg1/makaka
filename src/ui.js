@@ -135,9 +135,34 @@ function buildFrogNode(level) {
 /* ============================================================
    HUD
 ============================================================ */
+// Tween coin numbers so increases feel rewarding instead of being a static jump.
+// Per-element generation counter cancels superseded tweens — important for the
+// rapid-tap clicker, where renderHUD can fire many times per second.
+const tweenStates = new WeakMap();
+function tweenNumber(el, to) {
+  if (!el) return;
+  const prev = tweenStates.get(el);
+  if (prev && prev.to === to) return;
+  const from = +el.textContent || 0;
+  const gen = (prev?.gen ?? 0) + 1;
+  tweenStates.set(el, { to, gen });
+  if (from === to) { el.textContent = to; return; }
+  const start = performance.now();
+  const dur = Math.min(450, 140 + Math.abs(to - from) * 4);
+  function step(now) {
+    if (tweenStates.get(el)?.gen !== gen) return;  // newer tween took over
+    const k = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(from + (to - from) * eased);
+    if (k < 1) requestAnimationFrame(step);
+    else el.textContent = to;
+  }
+  requestAnimationFrame(step);
+}
+
 export function renderHUD() {
   const s = getState();
-  $('#hud-coins').textContent = s.meta.coins;
+  tweenNumber($('#hud-coins'), s.meta.coins);
   $('#hud-gems').textContent  = s.meta.gems;
   $('#spawn-cost').textContent = Game.currentSpawnCost();
   $('#booster-count').textContent = s.meta.boosters;
@@ -214,6 +239,26 @@ function floatingText(text, x, y, color = '#6be39a') {
   setTimeout(() => el.remove(), 1100);
 }
 
+/**
+ * Clicker tap on an empty cell — used as the safety-net income loop.
+ * Fires +N floating text, plays a tap sfx and pulses the cell.
+ */
+function handleEmptyCellTap(cellElem) {
+  const r = +cellElem.dataset.r;
+  const c = +cellElem.dataset.c;
+  const amount = Game.tapForCoins(r, c);
+  if (amount <= 0) return;
+  const rect = cellElem.getBoundingClientRect();
+  floatingText(t('tap.reward', { n: amount }),
+               rect.left + rect.width / 2,
+               rect.top  + rect.height / 2,
+               '#ffd76a');
+  cellElem.classList.add('cell--tap');
+  setTimeout(() => cellElem.classList.remove('cell--tap'), 320);
+  sfx.tap();
+  renderHUD();
+}
+
 /* ============================================================
    Input: drag / drop merge
 ============================================================ */
@@ -222,7 +267,17 @@ function onPointerDown(e) {
   if (e.button !== undefined && e.button !== 0) return;
   if (drag) return;
   const frog = e.target.closest('.frog');
-  if (!frog) return;
+  if (!frog) {
+    // No frog under the pointer — try the clicker: tap an empty cell to
+    // earn small coin amounts. Important safety net so a player who runs
+    // out of money can always recover by interacting with the pond.
+    const targetCell = e.target.closest('.cell');
+    if (targetCell && !targetCell.querySelector('.frog')) {
+      e.preventDefault();
+      handleEmptyCellTap(targetCell);
+    }
+    return;
+  }
   e.preventDefault();
   const cell = frog.parentElement;
   if (!cell || !cell.classList.contains('cell')) return;
@@ -462,6 +517,60 @@ export function renderCollection() {
 }
 
 /* ============================================================
+   Upgrades shop
+============================================================ */
+export function renderUpgrades() {
+  const grid = $('#upgrades-grid');
+  const s = getState();
+  $('#upgrades-coins').textContent = s.meta.coins;
+  grid.innerHTML = '';
+  for (const def of Game.UPGRADES) {
+    const lvl  = Game.getUpgradeLevel(def.id);
+    const cost = Game.getUpgradeCost(def.id);
+    const maxed = lvl >= def.maxLevel;
+    const card = document.createElement('div');
+    card.className = 'upgrade-card' + (maxed ? ' upgrade-card--maxed' : '');
+    card.innerHTML = `
+      <div class="upgrade-card__icon">${upgradeIcon(def.id)}</div>
+      <div class="upgrade-card__body">
+        <div class="upgrade-card__head">
+          <h3 class="upgrade-card__name">${t(`upgrade.${def.id}.name`)}</h3>
+          <span class="upgrade-card__lvl">${maxed ? t('upgrades.max') : t('upgrades.level', { n: lvl })}</span>
+        </div>
+        <p class="upgrade-card__desc">${t(`upgrade.${def.id}.desc`)}</p>
+        <div class="upgrade-card__bar">
+          <span style="width:${(lvl / def.maxLevel) * 100}%"></span>
+        </div>
+      </div>
+      <button class="btn ${maxed ? 'btn--ghost' : 'btn--primary'} upgrade-card__btn" data-buy="${def.id}" ${maxed ? 'disabled' : ''}>
+        ${maxed
+          ? `<span>${t('upgrades.max')}</span>`
+          : `<span class="resource__icon resource__icon--coin"></span><span>${cost}</span>`}
+      </button>
+    `;
+    grid.appendChild(card);
+  }
+  // Wire buy buttons each render — cheap and avoids stale handlers.
+  grid.querySelectorAll('[data-buy]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ok = Game.buyUpgrade(btn.dataset.buy);
+      if (ok) { sfx.reward(); }
+      renderUpgrades();
+      renderHUD();
+    });
+  });
+}
+
+function upgradeIcon(id) {
+  // Inline SVGs keep the shop self-contained and crisp at any size.
+  if (id === 'tapPower') return `<svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M5 13l4 4 12-12" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+  if (id === 'mergeBonus') return `<svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="5" fill="#fff" opacity=".8"/><circle cx="16" cy="12" r="5" fill="#fff"/></svg>`;
+  if (id === 'spawnDiscount') return `<svg viewBox="0 0 24 24"><path d="M21 12L12 3H3v9l9 9 9-9z" stroke="#fff" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="7.5" cy="7.5" r="1.6" fill="#fff"/></svg>`;
+  if (id === 'idleIncome') return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2" fill="none"/><path d="M12 7v5l3 2" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
+  return '';
+}
+
+/* ============================================================
    Daily rewards
 ============================================================ */
 const DAILY_REWARDS = [10, 15, 20, 30, 45, 60, 100]; // 7-day cycle
@@ -553,6 +662,7 @@ export function cycleLang() {
   renderDiscoverBar();
   renderCollection();
   renderDaily();
+  renderUpgrades();
 }
 
 export function refreshAllText() {

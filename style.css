@@ -721,6 +721,122 @@ svg { display: block; }
 }
 .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 
+/* =========================================================
+   Menu row (two side-by-side secondary buttons)
+========================================================= */
+.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.menu-row .btn { padding: 12px 14px; }
+
+/* =========================================================
+   Tap-on-water clicker feedback
+========================================================= */
+.cell--tap {
+  animation: tapRipple .32s var(--ease-out);
+}
+@keyframes tapRipple {
+  0%   { box-shadow: inset 0 0 0 1px rgba(255,215,106,.9), 0 0 0 0 rgba(255,215,106,.7); background: rgba(255,215,106,.22); }
+  100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 0 0 18px rgba(255,215,106,0);  background: var(--tile); }
+}
+.cell {
+  cursor: pointer;
+}
+.cell:has(.frog) { cursor: default; }
+
+/* Subtle lily-pad hint on empty cells so the "tap me" affordance reads.
+   The dot grows slightly when hovered/tapped. */
+.cell::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 18%; height: 18%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 70%);
+  transform: translate(-50%, -50%);
+  opacity: .55;
+  transition: transform .2s var(--ease-out), opacity .2s var(--ease-out);
+  pointer-events: none;
+}
+.cell:has(.frog)::before { opacity: 0; }
+
+/* =========================================================
+   Screen: Upgrades shop
+========================================================= */
+.screen-hint {
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 12px;
+  padding: 0 18px 12px;
+}
+.resource--header {
+  justify-self: end;
+  padding: 6px 12px 6px 8px;
+  font-size: 13px;
+}
+.upgrades-grid {
+  display: flex; flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.upgrade-card {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+.upgrade-card__icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #2eb574 0%, #0f7a47 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 6px 14px -8px rgba(46,181,116,.6);
+}
+.upgrade-card__icon svg { width: 28px; height: 28px; }
+.upgrade-card__body { min-width: 0; }
+.upgrade-card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6px;
+}
+.upgrade-card__name { font-size: 14px; font-weight: 700; }
+.upgrade-card__lvl {
+  background: rgba(0,0,0,.32);
+  border: 1px solid var(--border-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+.upgrade-card__desc { font-size: 12px; color: var(--text-soft); margin-top: 2px; }
+.upgrade-card__bar {
+  margin-top: 6px;
+  height: 5px;
+  background: rgba(0,0,0,.32);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.upgrade-card__bar span {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+  transition: width .35s var(--ease-out);
+}
+.upgrade-card__btn {
+  padding: 10px 14px;
+  font-size: 13px;
+  min-width: 78px;
+}
+.upgrade-card__btn[disabled] { opacity: .6; cursor: default; pointer-events: none; }
+.upgrade-card--maxed { opacity: .85; }
+
+/* HUD coin pill — slightly bigger digits for at-a-glance clarity */
+.resource__value { font-variant-numeric: tabular-nums; font-size: 15px; }
+
 /* Responsive tweaks */
 @media (min-width: 600px) {
   .board { max-width: 500px; }

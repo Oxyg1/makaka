@@ -96,8 +96,11 @@
 
       <div class="menu-actions">
         <button class="btn btn--primary btn--lg" id="btn-play" data-i18n="menu.play">Play</button>
-        <button class="btn btn--secondary" id="btn-collection" data-i18n="menu.collection">Collection</button>
-        <button class="btn btn--secondary" id="btn-daily" data-i18n="menu.daily">Daily reward</button>
+        <div class="menu-row">
+          <button class="btn btn--secondary" id="btn-collection" data-i18n="menu.collection">Collection</button>
+          <button class="btn btn--secondary" id="btn-upgrades" data-i18n="menu.upgrades">Shop</button>
+        </div>
+        <button class="btn btn--gold" id="btn-daily" data-i18n="menu.daily">Daily reward</button>
       </div>
 
       <div class="menu-footer">
@@ -190,6 +193,22 @@
         <span class="sub-header__count"><span id="collection-count">0</span>/<span id="collection-total">12</span></span>
       </header>
       <div class="collection-grid" id="collection-grid"></div>
+    </section>
+
+    <!-- ===== UPGRADES SHOP ===== -->
+    <section id="screen-upgrades" class="screen screen--upgrades">
+      <header class="sub-header">
+        <button class="icon-btn icon-btn--ghost" data-back aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="sub-header__title" data-i18n="upgrades.title">Upgrade shop</h2>
+        <div class="resource resource--header">
+          <span class="resource__icon resource__icon--coin"></span>
+          <span class="resource__value" id="upgrades-coins">0</span>
+        </div>
+      </header>
+      <p class="screen-hint" data-i18n="upgrades.tapHint">Tap empty lily pads to earn coins.</p>
+      <div class="upgrades-grid" id="upgrades-grid"></div>
     </section>
 
     <!-- ===== DAILY REWARD ===== -->

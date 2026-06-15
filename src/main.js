@@ -42,9 +42,21 @@ async function boot() {
   hookGameEvents();
   UI.renderMenu();
 
-  // 6. Pick first screen: resume or main menu.
-  // Always boot into the main menu — it is the player's anchor point and
-  // shows progress, daily streak and collection counters.
+  // 6. Grant any idle income earned while the game was closed.
+  const idleEarned = Game.tickIdle();
+  if (idleEarned > 0) UI.toast(Locale.t('idle.welcome', { n: idleEarned }));
+
+  // 7. Start a low-frequency ticker so idle income keeps flowing during play.
+  //    requestAnimationFrame would be wasteful here — a 5s setInterval is fine.
+  setInterval(() => {
+    Game.tickIdle();
+    if (document.getElementById('screen-game').classList.contains('is-active')) UI.renderHUD();
+    if (document.getElementById('screen-menu').classList.contains('is-active')) UI.renderMenu();
+    if (document.getElementById('screen-upgrades').classList.contains('is-active')) UI.renderUpgrades();
+  }, 5000);
+
+  // 8. Always boot into the main menu — it is the player's anchor point and
+  //    shows progress, daily streak and collection counters.
   UI.showScreen('screen-menu');
 
   // 7. Prevent context menu on long-press for cleaner mobile feel.
@@ -84,7 +96,8 @@ function wireButtons() {
   // Menu
   $('#btn-play').addEventListener('click', () => { enterGame(); });
   $('#btn-collection').addEventListener('click', () => { UI.renderCollection(); UI.showScreen('screen-collection'); });
-  $('#btn-daily').addEventListener('click', () => { UI.renderDaily(); UI.showScreen('screen-daily'); });
+  $('#btn-upgrades').addEventListener('click',   () => { UI.renderUpgrades();  UI.showScreen('screen-upgrades');  });
+  $('#btn-daily').addEventListener('click',      () => { UI.renderDaily();     UI.showScreen('screen-daily');     });
   $('#btn-sound').addEventListener('click', () => UI.toggleSound());
   $('#btn-lang').addEventListener('click',  () => UI.cycleLang());
   $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
@@ -180,6 +193,8 @@ function hookGameEvents() {
     if (evt.type === 'boostersChanged'){ UI.renderHUD(); }
     if (evt.type === 'coinsChanged') { UI.renderHUD(); UI.renderMenu(); }
     if (evt.type === 'rescued')      { UI.renderBoard(); UI.renderHUD(); }
+    if (evt.type === 'upgradeBought'){ UI.renderHUD(); UI.renderMenu(); }
+    if (evt.type === 'tap')          { /* HUD already updated by handler */ }
     if (evt.type === 'error') {
       if (evt.code === 'notEnoughCoins') UI.toast(Locale.t('toast.notEnoughCoins'));
       if (evt.code === 'noSpace')        UI.toast(Locale.t('toast.noSpace'));

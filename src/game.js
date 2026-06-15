@@ -16,9 +16,91 @@ export const ROWS = 7;
 export const COLS = 6;
 
 const SPAWN_COST_BASE = 5;
-const SPAWN_COST_GROWTH = 0.10;   // 10% per spawn within this run
-const MERGE_COIN_REWARD = (lvl) => 2 + lvl * 2;
-const DISCOVERY_REWARD  = (lvl) => 25 + lvl * 8;
+const SPAWN_COST_GROWTH = 0.05;            // 5% per spawn (gentler ramp)
+const MERGE_COIN_REWARD = (lvl) => 4 + lvl * 3;
+const DISCOVERY_REWARD  = (lvl) => 40 + lvl * 12;
+
+/* ------------------------------------------------------------
+   Permanent upgrades.
+   Each upgrade has a max level, a base cost, and a geometric
+   growth factor. Add new ones by appending to UPGRADES + adding
+   locale keys upgrade.<id>.name / .desc.
+------------------------------------------------------------ */
+export const UPGRADES = [
+  { id: 'tapPower',      maxLevel: 9, baseCost: 25,  growth: 1.55 },
+  { id: 'mergeBonus',    maxLevel: 9, baseCost: 60,  growth: 1.70 },
+  { id: 'spawnDiscount', maxLevel: 9, baseCost: 90,  growth: 1.80 },
+  { id: 'idleIncome',    maxLevel: 9, baseCost: 140, growth: 1.95 }
+];
+
+export function getUpgradeDef(id)   { return UPGRADES.find((u) => u.id === id); }
+export function getUpgradeLevel(id) { return getState().meta.upgrades[id] || 0; }
+export function getUpgradeCost(id) {
+  const def = getUpgradeDef(id);
+  const lvl = getUpgradeLevel(id);
+  if (lvl >= def.maxLevel) return Infinity;
+  return Math.round(def.baseCost * Math.pow(def.growth, lvl));
+}
+export function buyUpgrade(id) {
+  const s = getState();
+  const def = getUpgradeDef(id);
+  if (!def) return false;
+  const lvl = getUpgradeLevel(id);
+  if (lvl >= def.maxLevel) return false;
+  const cost = getUpgradeCost(id);
+  if (s.meta.coins < cost) { emit('error', { code: 'notEnoughCoins' }); return false; }
+  s.meta.coins -= cost;
+  s.meta.upgrades[id] = lvl + 1;
+  save();
+  emit('upgradeBought', { id, level: lvl + 1 });
+  emit('coinsChanged');
+  return true;
+}
+
+/**
+ * Tap-on-water: rewards small coins for tapping empty cells. This is the
+ * core "feel something happening" loop and a safety net so a player who
+ * runs out of coins can always recover by interacting with the pond.
+ *
+ * Returns the amount awarded (0 if the cell is occupied / coords invalid).
+ */
+export function tapForCoins(r, c) {
+  if (!isInBounds(r, c)) return 0;
+  const s = getState();
+  if (s.run.board?.[r]?.[c]) return 0;
+  const amount = 1 + getUpgradeLevel('tapPower');
+  s.meta.coins += amount;
+  save();
+  emit('tap', { r, c, amount });
+  emit('coinsChanged');
+  return amount;
+}
+
+/**
+ * Grant idle income earned while the game was closed or inactive.
+ * Called from main.js on boot and from a periodic ticker while playing.
+ * Cap accumulation at 8 hours so the offline reward stays predictable
+ * (and so a returning player still has reason to keep tapping).
+ */
+const IDLE_CAP_MS = 8 * 60 * 60 * 1000;
+export function tickIdle() {
+  const s = getState();
+  const lvl = getUpgradeLevel('idleIncome');
+  const now = Date.now();
+  if (!s.meta.lastTickAt) { s.meta.lastTickAt = now; save(); return 0; }
+  if (lvl === 0) { s.meta.lastTickAt = now; save(); return 0; }
+  const elapsed = Math.min(now - s.meta.lastTickAt, IDLE_CAP_MS);
+  // Each level = 1 coin per minute → 1 coin / (60_000 / level) ms.
+  const coinsPerMs = lvl / 60_000;
+  const earned = Math.floor(elapsed * coinsPerMs);
+  if (earned > 0) {
+    s.meta.coins += earned;
+    s.meta.lastTickAt = now - (elapsed - earned / coinsPerMs);
+    save();
+    emit('coinsChanged');
+  }
+  return earned;
+}
 
 const listeners = new Set();
 export function onEvent(fn)   { listeners.add(fn); return () => listeners.delete(fn); }
@@ -156,7 +238,9 @@ export function spawnFrog() {
 
 export function currentSpawnCost() {
   const s = getState();
-  return Math.round(SPAWN_COST_BASE * (1 + s.run.spawnsThisRun * SPAWN_COST_GROWTH));
+  const raw = SPAWN_COST_BASE * (1 + s.run.spawnsThisRun * SPAWN_COST_GROWTH);
+  const discount = getUpgradeLevel('spawnDiscount') * 0.05;
+  return Math.max(1, Math.round(raw * (1 - discount)));
 }
 
 /**
@@ -192,7 +276,7 @@ export function moveOrMerge(fromR, fromC, toR, toC) {
   s.run.board[fromR][fromC] = null;
   s.run.board[toR][toC] = { level: newLevel };
 
-  const coinReward = MERGE_COIN_REWARD(newLevel);
+  const coinReward = MERGE_COIN_REWARD(newLevel) + getUpgradeLevel('mergeBonus');
   s.meta.coins += coinReward;
   s.run.mergesThisRun += 1;
   s.meta.totalMerges += 1;
