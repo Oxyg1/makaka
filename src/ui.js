@@ -201,7 +201,7 @@ export function renderDiscoverBar() {
 /* ============================================================
    Effects: particles + floating numbers
 ============================================================ */
-function emitParticles(x, y, color = '#6be39a', count = 14) {
+function emitParticles(x, y, color = '#49df64', count = 14) {
   if (!particleLayer) return;
   const layerRect = particleLayer.getBoundingClientRect();
   for (let i = 0; i < count; i++) {
@@ -227,7 +227,7 @@ function emitParticles(x, y, color = '#6be39a', count = 14) {
   }
 }
 
-function floatingText(text, x, y, color = '#6be39a') {
+function floatingText(text, x, y, color = '#49df64') {
   const layerRect = particleLayer.getBoundingClientRect();
   const el = document.createElement('span');
   el.className = 'floating-text';
@@ -252,7 +252,7 @@ function handleEmptyCellTap(cellElem) {
   floatingText(t('tap.reward', { n: amount }),
                rect.left + rect.width / 2,
                rect.top  + rect.height / 2,
-               '#ffd76a');
+               '#f1aa05');
   cellElem.classList.add('cell--tap');
   setTimeout(() => cellElem.classList.remove('cell--tap'), 320);
   sfx.tap();
