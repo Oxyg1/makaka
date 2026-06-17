@@ -1,30 +1,44 @@
 /* =========================================================
    Frog Lagoon — global styles
-   Visual language inspired by Portals (portal-market.com):
-   - Charcoal #121212 base, layered card surfaces #1C1C1C / #282727
-   - Vivid green #49df64 for gains and primary CTAs
-   - Telegram blue #1689ff for secondary actions
-   - Purple #af51de / #6D51DE for premium and daily reward
-   - Generous corner radii (24-32px), SF Pro Text typography
+   Visual language: iOS 26 "Liquid Glass" + Portals.
+   - Charcoal #0F0F0F base with ambient colored blobs in the body so the
+     blur layer has something to refract.
+   - Card surfaces are translucent white over the base (rgba(255,255,255,.06))
+     + backdrop-filter: blur(20px) saturate(140%) for the frosted feel.
+   - Every glass surface gets a 1px top-highlight (lighter) and a subtle
+     1px bottom-shadow to fake the rim-light of physical glass.
+   - Primary green #49df64 / Telegram blue #1689ff / premium purple #af51de.
+   - Generous radii (20–32px) and full pills (99em) on actionable elements.
    ========================================================= */
 
 :root {
   /* Background */
-  --bg-dark:        #121212;
+  --bg-dark:        #0F0F0F;
   --bg-mid:         #181818;
+
+  /* Glass surfaces — semi-transparent so backdrop-filter does the work */
+  --glass-1:        rgba(255, 255, 255, 0.05);
+  --glass-2:        rgba(255, 255, 255, 0.08);
+  --glass-3:        rgba(255, 255, 255, 0.12);
+  --glass-hover:    rgba(255, 255, 255, 0.14);
+  --glass-press:    rgba(255, 255, 255, 0.18);
+
+  /* Solid card fallbacks (used where blur is not supported) */
   --bg-card:        #1C1C1C;
   --bg-card-2:      #282727;
   --bg-overlay:     rgba(255, 255, 255, 0.04);
   --bg-overlay-2:   rgba(255, 255, 255, 0.08);
 
-  /* Border */
-  --border-soft:    rgba(255, 255, 255, 0.06);
-  --border-bright:  rgba(255, 255, 255, 0.10);
+  /* Glass rim — top-highlight + bottom-shadow combination */
+  --rim-top:        rgba(255, 255, 255, 0.18);
+  --rim-bot:        rgba(0, 0, 0, 0.30);
+  --border-soft:    rgba(255, 255, 255, 0.08);
+  --border-bright:  rgba(255, 255, 255, 0.14);
 
   /* Text */
   --text-bright:    #ffffff;
-  --text-soft:      #9f9f9f;
-  --text-dim:       #6d6d71;
+  --text-soft:      #b8b8bd;
+  --text-dim:       #7a7a82;
 
   /* Brand */
   --accent:         #49df64;     /* gains, primary CTA */
@@ -32,22 +46,30 @@
   --accent-deep:    #1ea011;
   --primary:        #1689ff;     /* Telegram blue */
   --primary-deep:   #0976E3;
-  --premium:        #af51de;     /* purple — premium */
+  --premium:        #af51de;
   --premium-deep:   #6D51DE;
   --gold:           #f1aa05;
   --gold-deep:      #c98a14;
   --danger:         #ff595a;
 
+  /* Glow tokens — used on focus / hover */
+  --glow-accent:    0 8px 30px -8px rgba(73, 223, 100, .55);
+  --glow-premium:   0 8px 30px -8px rgba(175, 81, 222, .55);
+  --glow-gold:      0 8px 30px -8px rgba(241, 170, 5, .55);
+
+  /* Saturation boost for the blur — exact value used by Portals */
+  --saturation:     140%;
+
   /* Backwards-compat tokens (kept so older selectors still resolve) */
-  --bg-glass:       var(--bg-overlay);
-  --bg-glass-2:     var(--bg-overlay-2);
-  --tile:           rgba(255, 255, 255, 0.04);
-  --tile-hover:     rgba(255, 255, 255, 0.08);
+  --bg-glass:       var(--glass-1);
+  --bg-glass-2:     var(--glass-2);
+  --tile:           rgba(255, 255, 255, 0.05);
+  --tile-hover:     rgba(255, 255, 255, 0.10);
 
   /* Sizing */
   --radius-xs:  8px;
   --radius-sm: 12px;
-  --radius-md: 16px;
+  --radius-md: 18px;
   --radius-lg: 24px;
   --radius-xl: 28px;
   --radius-2xl: 32px;
@@ -66,7 +88,6 @@
 html, body { width: 100%; height: 100%; overflow: hidden; }
 body {
   font-family: SFProText, -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
-  background: var(--bg-dark);
   color: var(--text-bright);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -74,9 +95,66 @@ body {
   touch-action: manipulation;
   overscroll-behavior: none;
   letter-spacing: -0.01em;
+  background: var(--bg-dark);
+}
+
+/* Ambient color blobs as a fixed full-screen layer behind everything.
+   Slow drift gives the glass surfaces something live to refract — the
+   shimmer is what sells the liquid-glass illusion. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 24% at 12% 8%,  rgba(73, 223, 100, .28), transparent 65%),
+    radial-gradient(44% 32% at 92% 22%, rgba(22, 137, 255, .22), transparent 65%),
+    radial-gradient(54% 38% at 80% 95%, rgba(175, 81, 222, .32), transparent 65%),
+    radial-gradient(46% 36% at 8% 88%,  rgba(241, 170, 5,  .18), transparent 65%);
+  filter: blur(20px);
+  animation: ambientDrift 22s ease-in-out infinite alternate;
+}
+@keyframes ambientDrift {
+  0%   { transform: translate(0,    0)    scale(1); }
+  50%  { transform: translate(2%,  -1.5%) scale(1.04); }
+  100% { transform: translate(-2%,  1.5%) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
 }
 button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 svg { display: block; }
+
+/* =========================================================
+   Reusable "glass" helper — apply to any panel that should
+   look like Portals' frosted surfaces.
+========================================================= */
+.glass {
+  background: var(--glass-1);
+  backdrop-filter: blur(20px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
+  /* Rim-light: bright top, dark bottom, like a glass pane viewed from above. */
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot),
+    var(--shadow-card);
+}
+.glass--strong {
+  background: var(--glass-2);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+}
+.glass--soft {
+  background: rgba(255,255,255,.03);
+  backdrop-filter: blur(14px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(14px) saturate(var(--saturation));
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  /* No-blur fallback — go solid charcoal so cards still read. */
+  .glass, .glass--strong, .glass--soft { background: var(--bg-card); }
+}
 
 /* =========================================================
    App container
@@ -115,9 +193,7 @@ svg { display: block; }
   align-items: center;
   justify-content: center;
   gap: 24px;
-  background:
-    radial-gradient(60% 40% at 50% 30%, rgba(73,223,100,.10), transparent 70%),
-    var(--bg-dark);
+  background: transparent;
 }
 .loading-logo { text-align: center; display: flex; flex-direction: column; align-items: center; }
 .loading-logo__svg {
@@ -155,13 +231,10 @@ svg { display: block; }
    Main menu
 ========================================================= */
 .screen--menu { align-items: center; justify-content: space-between; padding-top: 24px; padding-bottom: 18px; gap: 18px; }
-.menu-bg {
-  position: absolute; inset: 0; z-index: -1;
-  background:
-    radial-gradient(45% 30% at 18% 0%, rgba(73,223,100,.10), transparent 65%),
-    radial-gradient(60% 40% at 90% 100%, rgba(175,81,222,.14), transparent 65%);
-  pointer-events: none;
-}
+/* Body already paints ambient color blobs behind the whole app, so .menu-bg
+   is just a passive layer — kept as a hook in case we want screen-specific
+   tints later without touching index.html. */
+.menu-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .menu-header { text-align: center; padding: 14px 18px 0; }
 .menu-title {
   font-size: 36px;
@@ -173,11 +246,16 @@ svg { display: block; }
 
 .menu-card {
   width: min(420px, 92vw);
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(24px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(24px) saturate(var(--saturation));
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-xl);
   padding: 20px 20px 16px;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot),
+    var(--shadow-card);
 }
 .menu-card__progress { display: flex; justify-content: space-between; align-items: baseline; }
 .menu-card__label { color: var(--text-soft); font-size: 13px; font-weight: 500; }
@@ -185,9 +263,10 @@ svg { display: block; }
 .menu-card__bar {
   margin: 12px 0 18px;
   height: 8px;
-  background: var(--bg-card-2);
+  background: rgba(0,0,0,.35);
   border-radius: 999px;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.4);
 }
 .menu-card__bar-fill {
   height: 100%;
@@ -198,10 +277,14 @@ svg { display: block; }
 }
 .menu-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat {
-  background: var(--bg-card-2);
+  background: var(--glass-1);
+  backdrop-filter: blur(14px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(14px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   padding: 12px 8px;
   text-align: center;
+  box-shadow: inset 0 1px 0 var(--rim-top);
 }
 .stat__label { display: block; font-size: 11px; color: var(--text-dim); font-weight: 500; }
 .stat__value { display: block; margin-top: 4px; font-size: 18px; font-weight: 700; color: var(--text-bright); letter-spacing: -0.01em; }
@@ -232,36 +315,58 @@ svg { display: block; }
 .btn--primary {
   background: var(--accent);
   color: #062a17;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.45),
+    inset 0 -1px 0 rgba(0,0,0,.18),
+    var(--glow-accent);
 }
-.btn--primary:hover { filter: brightness(1.05); }
+.btn--primary:hover  { filter: brightness(1.05); }
 .btn--primary:active { background: var(--accent-2); }
 
+/* Glass-style secondary — translucent, looks like frosted ice on the bg blobs */
 .btn--secondary {
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(20px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   color: var(--text-bright);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot);
 }
-.btn--secondary:active { background: var(--bg-card-2); }
+.btn--secondary:active { background: var(--glass-press); }
 
 .btn--ghost {
   background: transparent;
   color: var(--text-soft);
 }
-.btn--ghost:active { background: var(--bg-overlay); }
+.btn--ghost:active { background: var(--glass-1); }
 
 .btn--gold {
   background: var(--gold);
   color: #382100;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.45),
+    inset 0 -1px 0 rgba(0,0,0,.20),
+    var(--glow-gold);
 }
 .btn--gold:active { background: var(--gold-deep); color: #fff; }
 
 .btn--premium {
   background: linear-gradient(135deg, var(--premium) 0%, var(--premium-deep) 100%);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    inset 0 -1px 0 rgba(0,0,0,.25),
+    var(--glow-premium);
 }
 
 .btn--blue {
   background: var(--primary);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    inset 0 -1px 0 rgba(0,0,0,.25);
 }
 .btn--blue:active { background: var(--primary-deep); }
 
@@ -281,21 +386,27 @@ svg { display: block; }
   width: 40px; height: 40px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(18px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(18px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   color: var(--text-bright);
+  box-shadow: inset 0 1px 0 var(--rim-top);
   transition: transform .12s var(--ease-out), background-color .2s var(--ease-out);
 }
-.icon-btn:active { transform: scale(.94); background: var(--bg-card-2); }
-.icon-btn--ghost { background: transparent; }
-.icon-btn--ghost:active { background: var(--bg-overlay); }
+.icon-btn:active { transform: scale(.94); background: var(--glass-press); }
+.icon-btn--ghost { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; box-shadow: none; }
+.icon-btn--ghost:active { background: var(--glass-1); }
 .icon-btn__icon, .icon-btn svg { width: 22px; height: 22px; }
 .lang-text { font-weight: 800; letter-spacing: .5px; font-size: 13px; }
 
 /* =========================================================
    GAME SCREEN
+   Transparent so the body's ambient color blobs show through —
+   the frosted-glass cards then have real color to blur over.
 ========================================================= */
 .screen--game {
-  background: var(--bg-dark);
+  background: transparent;
 }
 
 .hud {
@@ -310,11 +421,15 @@ svg { display: block; }
 .resource {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px 7px 9px;
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(20px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: 99em;
   font-weight: 700;
   font-size: 14px;
   color: var(--text-bright);
+  box-shadow: inset 0 1px 0 var(--rim-top);
 }
 .resource__value { color: var(--accent); }
 .resource__icon {
@@ -347,16 +462,20 @@ svg { display: block; }
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 8px;
   padding: 8px 14px;
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(18px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(18px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: 99em;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-soft);
+  box-shadow: inset 0 1px 0 var(--rim-top);
 }
 .mission__check {
   width: 16px; height: 16px;
   border-radius: 50%;
-  background: var(--bg-card-2);
+  background: rgba(0,0,0,.35);
   flex: 0 0 16px;
   position: relative;
 }
@@ -373,13 +492,17 @@ svg { display: block; }
 .discover-bar {
   margin: 0 14px 10px;
   padding: 12px 16px;
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(20px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bot);
 }
 .discover-bar__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .discover-bar__label { font-size: 12px; font-weight: 500; color: var(--text-dim); }
 .discover-bar__name { font-size: 13px; font-weight: 700; color: var(--premium); }
-.discover-bar__track { height: 6px; border-radius: 999px; background: var(--bg-card-2); overflow: hidden; }
+.discover-bar__track { height: 6px; border-radius: 999px; background: rgba(0,0,0,.35); overflow: hidden; box-shadow: inset 0 1px 0 rgba(0,0,0,.4); }
 .discover-bar__fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--premium), var(--accent)); transition: width .4s var(--ease-out); }
 
 /* Board */
@@ -401,15 +524,22 @@ svg { display: block; }
   width: 100%;
   max-width: 460px;
   aspect-ratio: var(--cols) / var(--rows);
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(24px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(24px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot),
+    var(--shadow-card);
   touch-action: none;
 }
 .cell {
   position: relative;
   border-radius: var(--radius-sm);
-  background: var(--bg-card-2);
+  background: rgba(255,255,255,.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 -1px 0 rgba(0,0,0,.20);
   transition: background-color .15s var(--ease-out), box-shadow .15s var(--ease-out), transform .15s var(--ease-out);
 }
 .cell--hover {
@@ -425,8 +555,14 @@ svg { display: block; }
   inset: 4px;
   display: flex; align-items: center; justify-content: center;
   border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  box-shadow: 0 6px 14px -8px rgba(0,0,0,.6);
+  background: var(--glass-3);
+  backdrop-filter: blur(14px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(14px) saturate(var(--saturation));
+  border: 1px solid var(--border-bright);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.25),
+    inset 0 -1px 0 rgba(0,0,0,.35),
+    0 6px 14px -8px rgba(0,0,0,.6);
   transition: transform .25s var(--ease-out), opacity .25s var(--ease-out), box-shadow .25s var(--ease-out);
   cursor: grab;
   will-change: transform, opacity;
@@ -446,7 +582,10 @@ svg { display: block; }
   font-size: 10px;
   font-weight: 700;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--bg-card);
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(10px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(10px) saturate(var(--saturation));
+  border: 1px solid rgba(255,255,255,.10);
   color: var(--accent);
 }
 .frog.spawn-pop { animation: pop .35s var(--ease-out); }
@@ -517,10 +656,14 @@ svg { display: block; }
   position: relative;
   width: 56px; height: 56px;
   border-radius: 50%;
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(20px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   color: var(--premium);
+  box-shadow: inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bot);
 }
-.btn--booster:active { background: var(--bg-card-2); transform: scale(.94); }
+.btn--booster:active { background: var(--glass-press); transform: scale(.94); }
 .btn--booster svg { width: 24px; height: 24px; }
 .booster-badge {
   position: absolute; top: -4px; right: -4px;
@@ -547,12 +690,16 @@ svg { display: block; }
 .sub-header__title { text-align: center; font-size: 18px; font-weight: 700; }
 .sub-header__count {
   justify-self: end;
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(16px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(16px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   padding: 6px 12px;
   border-radius: 99em;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-soft);
+  box-shadow: inset 0 1px 0 var(--rim-top);
 }
 
 /* Collection */
@@ -566,15 +713,19 @@ svg { display: block; }
 }
 .coll-card {
   position: relative;
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(18px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(18px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   padding: 8px;
   display: flex; flex-direction: column; align-items: center;
   aspect-ratio: 1 / 1.18;
   text-align: center;
+  box-shadow: inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bot);
   transition: transform .15s var(--ease-out), background-color .15s var(--ease-out);
 }
-.coll-card:active { background: var(--bg-card-2); }
+.coll-card:active { background: var(--glass-press); }
 .coll-card:active { transform: scale(.97); }
 .coll-card__art { width: 100%; height: 70%; display: flex; align-items: center; justify-content: center; }
 .coll-card__art svg, .coll-card__art img { width: 86%; height: 86%; filter: drop-shadow(0 3px 6px rgba(0,0,0,.4)); }
@@ -601,13 +752,17 @@ svg { display: block; }
   align-content: start;
 }
 .daily-cell {
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(18px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(18px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   padding: 10px 6px;
   text-align: center;
   position: relative;
   aspect-ratio: 1 / 1.1;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
+  box-shadow: inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bot);
 }
 .daily-cell__day { font-size: 11px; color: var(--text-dim); font-weight: 500; }
 .daily-cell__amount { font-size: 16px; font-weight: 800; color: var(--accent); margin-top: 2px; letter-spacing: -0.01em; }
@@ -636,19 +791,25 @@ svg { display: block; }
    Modals
 ========================================================= */
 .screen--modal {
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   align-items: center;
   justify-content: center;
 }
 .modal {
   width: min(420px, 92vw);
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--border-bright);
   border-radius: var(--radius-xl);
   padding: 28px 22px 22px;
   text-align: center;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot),
+    var(--shadow-card);
   animation: modalIn .35s var(--ease-out);
 }
 @keyframes modalIn { from { transform: translateY(20px) scale(.96); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
@@ -664,9 +825,13 @@ svg { display: block; }
 
 .reward-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .reward-strip__item {
-  background: var(--bg-card-2);
+  background: var(--glass-1);
+  backdrop-filter: blur(14px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(14px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   padding: 10px 8px;
+  box-shadow: inset 0 1px 0 var(--rim-top);
 }
 .reward-strip__label { display: block; font-size: 11px; color: var(--text-dim); font-weight: 500; }
 .reward-strip__value { display: block; font-size: 20px; font-weight: 800; color: var(--accent); margin-top: 2px; letter-spacing: -0.01em; }
@@ -674,8 +839,9 @@ svg { display: block; }
 /* Discovery popup */
 .discovery-popup {
   position: fixed; inset: 0;
-  background: rgba(4, 14, 24, .7);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, .45);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   display: none;
   align-items: center; justify-content: center;
   z-index: 100;
@@ -684,12 +850,19 @@ svg { display: block; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .discovery-popup__card {
   width: min(360px, 88vw);
-  background: var(--bg-card);
+  background: var(--glass-2);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--border-bright);
   border-radius: var(--radius-xl);
   padding: 30px 22px 22px;
   text-align: center;
   position: relative;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot),
+    var(--shadow-card),
+    var(--glow-premium);
   overflow: hidden;
   animation: modalIn .4s var(--ease-out);
 }
@@ -720,7 +893,10 @@ svg { display: block; }
 .toast {
   position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom));
   transform: translate(-50%, 20px);
-  background: var(--bg-card);
+  background: var(--glass-3);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-bright);
   color: var(--text-bright);
   padding: 12px 18px;
   border-radius: 99em;
@@ -730,7 +906,10 @@ svg { display: block; }
   pointer-events: none;
   transition: opacity .25s, transform .25s var(--ease-out);
   z-index: 200;
-  box-shadow: 0 8px 20px -10px rgba(0,0,0,.8);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 var(--rim-bot),
+    0 12px 30px -12px rgba(0,0,0,.8);
 }
 .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 
@@ -747,8 +926,8 @@ svg { display: block; }
   animation: tapRipple .32s var(--ease-out);
 }
 @keyframes tapRipple {
-  0%   { box-shadow: inset 0 0 0 1.5px var(--gold), 0 0 0 0 rgba(241,170,5,.6); background: rgba(241,170,5,.22); }
-  100% { box-shadow: none, 0 0 0 18px rgba(241,170,5,0); background: var(--bg-card-2); }
+  0%   { box-shadow: inset 0 0 0 1.5px var(--gold), 0 0 0 0 rgba(241,170,5,.6); background: rgba(241,170,5,.28); }
+  100% { box-shadow: inset 0 0 0 0   var(--gold), 0 0 0 18px rgba(241,170,5,0); background: rgba(255,255,255,.04); }
 }
 .cell {
   cursor: pointer;
@@ -797,14 +976,22 @@ svg { display: block; }
   gap: 12px;
   align-items: center;
   padding: 14px;
-  background: var(--bg-card);
+  background: var(--glass-1);
+  backdrop-filter: blur(22px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(22px) saturate(var(--saturation));
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bot);
 }
 .upgrade-card__icon {
   width: 52px; height: 52px;
   border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, var(--premium) 0%, var(--premium-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    inset 0 -1px 0 rgba(0,0,0,.20),
+    var(--glow-premium);
 }
 .upgrade-card__icon svg { width: 28px; height: 28px; }
 .upgrade-card__body { min-width: 0; }
@@ -814,20 +1001,22 @@ svg { display: block; }
 }
 .upgrade-card__name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
 .upgrade-card__lvl {
-  background: var(--bg-card-2);
+  background: rgba(0,0,0,.35);
   padding: 3px 10px;
   border-radius: 99em;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-soft);
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.4);
 }
 .upgrade-card__desc { font-size: 12px; color: var(--text-soft); margin-top: 3px; font-weight: 500; }
 .upgrade-card__bar {
   margin-top: 8px;
   height: 4px;
-  background: var(--bg-card-2);
+  background: rgba(0,0,0,.35);
   border-radius: 999px;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.4);
 }
 .upgrade-card__bar span {
   display: block; height: 100%;
