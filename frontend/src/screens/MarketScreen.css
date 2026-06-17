@@ -1,0 +1,33 @@
+.market__filter-btn {
+  position: relative;
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.market__filter-btn:active { background: rgba(255,255,255,0.12); }
+.market__filter-btn--active { background: var(--primary-dim); border-color: rgba(74,222,128,0.4); color: var(--primary); }
+.market__filter-dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  background: var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(74,222,128,0.7);
+}
+
+.market__active-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 4px 16px 0;
+}
+
+.market__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.market__cell { cursor: pointer; -webkit-tap-highlight-color: transparent; }

@@ -1,0 +1,29 @@
+.inv__sync {
+  width: 44px; height: 44px;
+  background: var(--primary-dim);
+  border: 1px solid rgba(74,222,128,0.4);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.inv__sync:disabled { opacity: 0.6; }
+.inv__sync:not(:disabled):active { background: rgba(74,222,128,0.22); }
+
+.inv__error {
+  margin: 0 16px;
+  padding: 10px 14px;
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.3);
+  color: var(--danger);
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.inv__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
