@@ -1,15 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { authUser, getConfig, getInventory, getNotifications, getOffers } from './api';
+import { authUser, getConfig, getNotifications, getOffers } from './api';
 import { loadPreload } from './utils/changes';
 import type { AppConfig, User } from './types';
 import BottomNav from './components/BottomNav';
 import MarketScreen from './screens/MarketScreen';
-import InventoryScreen from './screens/InventoryScreen';
 import WhalesScreen from './screens/WhalesScreen';
 import TradesScreen from './screens/TradesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 
-export type Tab = 'market' | 'inventory' | 'whales' | 'trades' | 'profile';
+export type Tab = 'market' | 'whales' | 'trades' | 'profile';
 
 type TgWebApp = {
   initData?: string;
@@ -48,13 +47,11 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [config, setConfig] = useState<AppConfig | null>(null);
 
-  const [inventoryCount, setInventoryCount] = useState(0);
   const [unreadOffers, setUnreadOffers] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   const [marketKey, setMarketKey] = useState(0);
   const [tradesKey, setTradesKey] = useState(0);
-  const [inventoryKey, setInventoryKey] = useState(0);
   const [profileKey, setProfileKey] = useState(0);
 
   useEffect(() => {
@@ -79,12 +76,10 @@ export default function App() {
 
   const refreshBadges = useCallback(async () => {
     try {
-      const [inv, offIn, notifs] = await Promise.all([
-        getInventory(),
+      const [offIn, notifs] = await Promise.all([
         getOffers('in'),
         getNotifications(),
       ]);
-      setInventoryCount(inv.length);
       setUnreadOffers(offIn.filter(o => o.status === 'pending').length);
       setUnreadNotifs(notifs.filter(n => !n.read).length);
     } catch { /* ignore */ }
@@ -97,7 +92,6 @@ export default function App() {
   function changeTab(t: Tab) {
     setActiveTab(t);
     if (t === 'market') setMarketKey(k => k + 1);
-    if (t === 'inventory') setInventoryKey(k => k + 1);
     if (t === 'trades') setTradesKey(k => k + 1);
     if (t === 'profile') setProfileKey(k => k + 1);
   }
@@ -108,9 +102,6 @@ export default function App() {
         <TabPane active={activeTab === 'market'}>
           <MarketScreen myUserId={user?.id ?? null} config={config} refreshKey={marketKey} />
         </TabPane>
-        <TabPane active={activeTab === 'inventory'}>
-          <InventoryScreen user={user} config={config} refreshKey={inventoryKey} onChanged={refreshBadges} />
-        </TabPane>
         <TabPane active={activeTab === 'whales'}>
           <WhalesScreen myUserId={user?.id ?? null} config={config} />
         </TabPane>
@@ -120,9 +111,9 @@ export default function App() {
         <TabPane active={activeTab === 'profile'}>
           <ProfileScreen
             user={user}
-            inventoryCount={inventoryCount}
-            onOpenInventory={() => changeTab('inventory')}
+            config={config}
             onNotificationsRead={() => setUnreadNotifs(0)}
+            onChanged={refreshBadges}
             refreshKey={profileKey}
           />
         </TabPane>

@@ -10,15 +10,6 @@ const ICONS: Record<Tab, ReactElement> = {
       <path d="M21 15l-4 4-4-4" /><path d="M17 19v-8h-7" />
     </svg>
   ),
-  inventory: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <ellipse cx="12" cy="15" rx="8" ry="6" />
-      <circle cx="8" cy="9" r="3" />
-      <circle cx="16" cy="9" r="3" />
-      <circle cx="8" cy="9.5" r="1" fill="currentColor" stroke="none" />
-      <circle cx="16" cy="9.5" r="1" fill="currentColor" stroke="none" />
-    </svg>
-  ),
   whales: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 14c0-3 3-5 6-5h7c3 0 5 2 5 5 0 3-3 4-5 4H9l-3 3v-3c-2 0-3-1-3-4z" />
@@ -39,10 +30,10 @@ const ICONS: Record<Tab, ReactElement> = {
 };
 
 const LABELS: Record<Tab, string> = {
-  market: 'Обмены', inventory: 'Мои', whales: 'Холдеры', trades: 'Сделки', profile: 'Профиль',
+  market: 'Обмены', whales: 'Холдеры', trades: 'Сделки', profile: 'Профиль',
 };
 
-const TABS: Tab[] = ['market', 'inventory', 'whales', 'trades', 'profile'];
+const TABS: Tab[] = ['market', 'whales', 'trades', 'profile'];
 
 interface Props { activeTab: Tab; onTabChange: (tab: Tab) => void; unreadOffers?: number; unreadNotifs?: number; }
 

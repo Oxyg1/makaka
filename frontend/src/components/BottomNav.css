@@ -15,7 +15,7 @@
 
 .bottom-nav__indicator {
   position: absolute; top: 5px; left: 5px;
-  width: calc((100% - 10px) / 5);
+  width: calc((100% - 10px) / 4);
   height: calc(100% - 10px);
   border-radius: 99em;
   background: rgba(74,222,128,0.10);
