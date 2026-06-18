@@ -1,3 +1,16 @@
+.market__header {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(13,20,16,0.78);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.market__header-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px;
+}
+
 .market__filter-btn {
   position: relative;
   width: 44px; height: 44px;
@@ -8,26 +21,75 @@
   color: var(--text);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 .market__filter-btn:active { background: rgba(255,255,255,0.12); }
 .market__filter-btn--active { background: var(--primary-dim); border-color: rgba(74,222,128,0.4); color: var(--primary); }
-.market__filter-dot {
-  position: absolute; top: 6px; right: 6px;
-  width: 7px; height: 7px;
-  background: var(--primary);
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(74,222,128,0.7);
+.market__filter-count {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 18px; height: 18px;
+  background: var(--primary); color: #0d1410;
+  border-radius: 99em;
+  font-size: 10.5px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 5px;
+  border: 1.5px solid var(--bg);
 }
 
-.market__active-chips {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  padding: 4px 16px 0;
+/* Горизонтальный ряд пилюль (как в Portals) */
+.market__row {
+  display: flex; gap: 6px;
+  margin-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
 }
+.market__row::-webkit-scrollbar { display: none; }
+.market__row-sep {
+  flex-shrink: 0;
+  width: 1px; align-self: stretch;
+  margin: 4px 4px;
+  background: var(--border-strong);
+}
+
+.pill {
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  padding: 7px 14px;
+  border-radius: 99em;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+  scroll-snap-align: start;
+}
+.pill:active { transform: scale(0.96); }
+.pill--active {
+  background: var(--primary);
+  color: #0d1410;
+  border-color: var(--primary);
+  font-weight: 700;
+}
+
+.market__scroll { padding-top: 8px; }
 
 .market__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
-.market__cell { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+.market__skeleton {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+}
+.market__skeleton-cell {
+  aspect-ratio: 1; border-radius: 20px;
+  background: linear-gradient(110deg, var(--bg-card) 30%, rgba(255,255,255,0.04) 50%, var(--bg-card) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }

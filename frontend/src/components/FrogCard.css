@@ -2,7 +2,7 @@
   display: flex; flex-direction: column;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 20px;
   overflow: hidden;
   padding: 0;
   text-align: left;
@@ -18,19 +18,43 @@
   position: relative; aspect-ratio: 1; width: 100%;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
+  isolation: isolate;
 }
-.frog-card__art img { position: relative; z-index: 1; width: 78%; height: 78%; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,0.4)); animation: img-in 0.25s ease; }
+
+/* Глянец сверху, чтобы фон не казался плоским */
+.frog-card__art::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 28%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.22) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.frog-card__model-img {
+  position: relative; z-index: 3;
+  width: 78%; height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 22px rgba(0,0,0,0.45));
+  animation: img-in 0.28s ease;
+}
 @keyframes img-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
 
-.frog-card__pattern { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: overlay; }
+.frog-card__pattern {
+  position: absolute; inset: 0; pointer-events: none;
+  background-repeat: repeat;
+  opacity: 0.32;
+  mix-blend-mode: soft-light;
+  z-index: 1;
+}
 
 .frog-card__badge {
-  position: absolute; top: 8px; left: 8px;
+  position: absolute; top: 8px; right: 8px;
   background: rgba(0,0,0,0.62); color: #fff;
-  padding: 3px 8px; border-radius: 99em;
+  padding: 4px 10px; border-radius: 99em;
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.2px;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  z-index: 5;
 }
 
 .frog-card__body { padding: 10px 12px 12px; }
@@ -43,13 +67,13 @@
   font-size: 11.5px; color: var(--text-muted); margin-top: 3px;
   white-space: nowrap; overflow: hidden;
 }
-.frog-card__num { font-weight: 600; color: var(--text-soft); }
+.frog-card__num { font-weight: 700; color: var(--text-soft); }
 .frog-card__dot { opacity: 0.5; }
 
 /* sizes */
 .frog-card--sm .frog-card__body { padding: 8px 10px; }
 .frog-card--sm .frog-card__model { font-size: 12.5px; }
 .frog-card--sm .frog-card__meta { font-size: 10.5px; }
-.frog-card--lg .frog-card__body { padding: 14px 16px 16px; }
+.frog-card--lg .frog-card__body { padding: 16px 18px 18px; }
 .frog-card--lg .frog-card__model { font-size: 17px; }
 .frog-card--lg .frog-card__meta { font-size: 13px; }

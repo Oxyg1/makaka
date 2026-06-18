@@ -12,6 +12,8 @@ import offersRouter from './routes/offers';
 import notificationsRouter from './routes/notifications';
 import configRouter from './routes/config';
 import debugRouter from './routes/debug';
+import visualsRouter from './routes/visuals';
+import { warmup as visualsWarmup } from './services/visuals';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -40,6 +42,7 @@ app.use('/api/offers', offersRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/config', configRouter);
 app.use('/api/debug', debugRouter);
+app.use('/api/visuals', visualsRouter);
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : String(err);
@@ -57,4 +60,5 @@ process.on('uncaughtException', (err) => {
 });
 
 seed();
+visualsWarmup();
 app.listen(PORT, () => logger.info(`SWAMP backend running on :${PORT}`));

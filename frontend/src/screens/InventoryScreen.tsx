@@ -51,21 +51,24 @@ export default function InventoryScreen({ user, config, refreshKey, onChanged }:
 
   return (
     <div className="screen">
-      <div className="screen__header">
+      <header className="inv__header">
         <div>
           <h1 className="screen__title">Инвентарь</h1>
           <p className="screen__subtitle">{items.length} лягуш{items.length === 1 ? 'ка' : items.length < 5 ? 'ки' : 'ек'} · {lastSync}</p>
         </div>
         <button className="inv__sync" onClick={handleSync} disabled={syncing}>
           {syncing ? <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="23 4 23 10 17 10" />
-              <polyline points="1 20 1 14 7 14" />
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-            </svg>
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+              <span>Синк</span>
+            </>
           )}
         </button>
-      </div>
+      </header>
 
       {error && <div className="inv__error">{error}</div>}
 

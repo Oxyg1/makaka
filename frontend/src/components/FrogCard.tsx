@@ -1,9 +1,9 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { Frog } from '../types';
-import { getBackdropInfo, modelImageUrl, patternImageUrl } from '../utils/changes';
+import { getBackdropInfoSync, modelImageUrl, patternImageUrl } from '../utils/changes';
 import './FrogCard.css';
 
-// Запасные градиенты на случай если backdrop ещё не загрузился или API недоступен.
+// Фоллбэк-градиенты пока preload не приехал.
 const FALLBACK_GRADIENTS: Record<string, string> = {
   Mint:     'linear-gradient(135deg,#a7f3d0 0%,#34d399 100%)',
   Lagoon:   'linear-gradient(135deg,#6ee7b7 0%,#0e7490 100%)',
@@ -44,29 +44,14 @@ interface Props {
 }
 
 export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
-  const [bd, setBd] = useState<{ center?: string; edge?: string; pattern?: string }>({});
   const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    getBackdropInfo(frog.backdrop).then(info => {
-      if (!alive || !info) return;
-      setBd({ center: info.centerColor, edge: info.edgeColor, pattern: info.patternColor });
-    });
-    return () => { alive = false; };
-  }, [frog.backdrop]);
-
-  const artStyle: CSSProperties = bd.center
-    ? { background: `radial-gradient(circle at 50% 35%, ${bd.center} 0%, ${bd.edge ?? bd.center} 100%)` }
+  const info = getBackdropInfoSync(frog.backdrop);
+  const artStyle: CSSProperties = info?.centerColor
+    ? { background: `radial-gradient(circle at 50% 35%, ${info.centerColor} 0%, ${info.edgeColor ?? info.centerColor} 100%)` }
     : { background: FALLBACK_GRADIENTS[frog.backdrop] ?? 'linear-gradient(135deg,#4ade80 0%,#16a34a 100%)' };
 
-  const patternStyle: CSSProperties = {
-    backgroundImage: `url(${patternImageUrl(frog.pattern, 256)})`,
-    backgroundSize: size === 'sm' ? '40px 40px' : size === 'lg' ? '64px 64px' : '52px 52px',
-    backgroundRepeat: 'repeat',
-    opacity: 0.18,
-    filter: bd.pattern ? undefined : 'brightness(1.4) contrast(1.1)',
-  };
+  const patternBg = `url(${patternImageUrl(frog.pattern, size === 'sm' ? 64 : 128)})`;
+  const patternTile = size === 'sm' ? 36 : size === 'lg' ? 60 : 48;
 
   const modelSize = size === 'lg' ? 512 : size === 'sm' ? 128 : 256;
   const cls = `frog-card frog-card--${size}${onClick ? ' frog-card--btn' : ''}`;
@@ -74,19 +59,25 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
   return (
     <button className={cls} onClick={onClick} type="button" disabled={!onClick}>
       <div className="frog-card__art" style={artStyle}>
-        <div className="frog-card__pattern" style={patternStyle} />
-        {frog.image_url && !imgError ? (
-          <img src={frog.image_url} alt={frog.model} onError={() => setImgError(true)} />
-        ) : (
+        <div
+          className="frog-card__pattern"
+          style={{
+            backgroundImage: patternBg,
+            backgroundSize: `${patternTile}px ${patternTile}px`,
+            color: info?.patternColor,
+          }}
+        />
+        {!imgError ? (
           <img
             src={modelImageUrl(frog.model, modelSize)}
             alt={frog.model}
             onError={() => setImgError(true)}
             className="frog-card__model-img"
-            style={imgError ? { display: 'none' } : undefined}
+            loading="lazy"
           />
+        ) : (
+          <FrogFace size={size === 'lg' ? 110 : size === 'sm' ? 50 : 80} />
         )}
-        {imgError && <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />}
         {badge && <span className="frog-card__badge">{badge}</span>}
       </div>
       <div className="frog-card__body">

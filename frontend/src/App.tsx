@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { authUser, getConfig, getInventory, getNotifications, getOffers } from './api';
+import { loadPreload } from './utils/changes';
 import type { AppConfig, User } from './types';
 import BottomNav from './components/BottomNav';
 import MarketScreen from './screens/MarketScreen';
@@ -58,6 +59,7 @@ export default function App() {
       })
       .catch(() => setReady(true));
     getConfig().then(setConfig).catch(() => {});
+    loadPreload().catch(() => {/* картинки покажутся фоллбэком */});
   }, []);
 
   const refreshBadges = useCallback(async () => {
