@@ -34,6 +34,14 @@
   --card-shadow: 0 2px 20px rgba(0,0,0,0.55);
   --frog-glow: 0 0 0 1px rgba(74,222,128,0.18), 0 12px 36px rgba(22,163,74,0.18);
 
+  /* Portals-style «стеклянная фаска»: яркий внутренний кант сверху-слева,
+     мягкий снизу-справа. Это то, что делает кнопки/карточки объёмными. */
+  --bevel:
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    inset 1.5px 1px 0 -1px rgba(255,255,255,0.24),
+    inset -1.5px -1px 0 -1px rgba(255,255,255,0.16);
+  --glass-panel: linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.015) 100%);
+
   --tg-theme-bg-color: #0d1410;
   --tg-theme-text-color: #eaf3ec;
   --tg-theme-hint-color: #6f7a72;
@@ -77,26 +85,29 @@ body {
 .btn-primary {
   background: var(--primary-gradient); color: #0d1410; border: none; border-radius: 99em;
   padding: 0 24px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
-  -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.12s cubic-bezier(0.34,1.4,0.5,1);
   height: 50px; letter-spacing: -0.2px;
-  box-shadow: 0 4px 24px rgba(74,222,128,0.4), var(--glass-shadow);
+  box-shadow: 0 6px 22px rgba(74,222,128,0.42), 0 1px 0 rgba(255,255,255,0.4) inset, var(--bevel);
 }
 .btn-primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; color: var(--text-soft); }
-.btn-primary:not(:disabled):active { opacity: 0.9; transform: scale(0.98); }
+.btn-primary:not(:disabled):active { opacity: 0.94; transform: scale(0.97); }
 
 .btn-ghost {
-  background: rgba(255,255,255,0.06); color: var(--text);
+  background: var(--glass-panel), rgba(255,255,255,0.05); color: var(--text);
   border: 1px solid var(--border-strong); border-radius: 99em;
   padding: 0 22px; height: 44px; font-size: 14px; font-weight: 600; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: background 0.15s, transform 0.1s;
+  backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%);
+  box-shadow: var(--bevel);
+  -webkit-tap-highlight-color: transparent; transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.4,0.5,1);
 }
-.btn-ghost:not(:disabled):active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
+.btn-ghost:not(:disabled):active { background: rgba(255,255,255,0.12); transform: scale(0.97); }
 .btn-ghost:disabled { opacity: 0.4; cursor: default; }
 
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 10px; border-radius: 99em;
   background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  box-shadow: var(--bevel);
   font-size: 11px; font-weight: 600; letter-spacing: 0.2px; color: var(--text-soft);
   white-space: nowrap;
 }
@@ -128,14 +139,15 @@ body {
 @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
 .modal-sheet {
   width: 100%; max-height: 92dvh;
-  background: linear-gradient(180deg, #182018 0%, #131a14 100%);
-  border-radius: 24px 24px 0 0;
+  background: linear-gradient(180deg, #1b231b 0%, #121912 100%);
+  border-radius: 28px 28px 0 0;
   overflow: hidden; display: flex; flex-direction: column;
   animation: sheet-up 0.38s cubic-bezier(0.22,1,0.36,1);
   border-top: 1px solid var(--border-strong);
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.10) inset, 0 -24px 60px rgba(0,0,0,0.5);
 }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.modal-sheet__handle { width: 36px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+.modal-sheet__handle { width: 40px; height: 5px; background: rgba(255,255,255,0.22); border-radius: 99em; margin: 9px auto 0; flex-shrink: 0; }
 .modal-sheet__header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
@@ -176,9 +188,13 @@ input.field, textarea.field {
   padding: 12px 14px;
   font-size: 15px;
   outline: none;
-  transition: border-color 0.15s, background 0.15s;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
 }
-input.field:focus, textarea.field:focus { border-color: var(--primary); background: var(--bg-elev); }
+input.field:focus, textarea.field:focus {
+  border-color: var(--primary); background: var(--bg-elev);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 0 0 3px var(--primary-dim);
+}
 textarea.field { min-height: 80px; resize: none; }
 
 .rarity-mark {
