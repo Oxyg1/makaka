@@ -15,6 +15,35 @@ const FALLBACK_GRADIENTS: Record<string, string> = {
   Obsidian: 'linear-gradient(135deg,#1f2937 0%,#0f172a 100%)',
 };
 
+// Классическая TG-NFT расстановка символов вокруг модели.
+// Размер карточки = 100×100%, центр для модели — точка (50,50).
+//   - 4 крупных в углах (повёрнуты «лучом» от центра)
+//   - 4 средних посередине каждой стороны
+//   - 8 мелких в промежутках для плотности
+// Симбол отрисовываем через CSS mask + цвет patternColor — получаем
+// настоящий монохромный паттерн, а не «плитку».
+const SYMBOLS: { top: number; left: number; size: number; opacity: number; rot: number }[] = [
+  // 4 крупных по углам
+  { top: 6,  left: 6,  size: 18, opacity: 0.55, rot: -30 },
+  { top: 6,  left: 76, size: 18, opacity: 0.55, rot: 30 },
+  { top: 76, left: 6,  size: 18, opacity: 0.55, rot: -150 },
+  { top: 76, left: 76, size: 18, opacity: 0.55, rot: 150 },
+  // 4 средних по сторонам
+  { top: 2,  left: 41, size: 14, opacity: 0.45, rot: 0 },
+  { top: 84, left: 41, size: 14, opacity: 0.45, rot: 180 },
+  { top: 41, left: 2,  size: 14, opacity: 0.45, rot: -90 },
+  { top: 41, left: 84, size: 14, opacity: 0.45, rot: 90 },
+  // 8 мелких заполняющих
+  { top: 22, left: 22, size: 9, opacity: 0.35, rot: -15 },
+  { top: 22, left: 69, size: 9, opacity: 0.35, rot: 15 },
+  { top: 69, left: 22, size: 9, opacity: 0.35, rot: -165 },
+  { top: 69, left: 69, size: 9, opacity: 0.35, rot: 165 },
+  { top: 17, left: 47, size: 7, opacity: 0.3,  rot: 0 },
+  { top: 76, left: 47, size: 7, opacity: 0.3,  rot: 180 },
+  { top: 47, left: 17, size: 7, opacity: 0.3,  rot: -90 },
+  { top: 47, left: 76, size: 7, opacity: 0.3,  rot: 90 },
+];
+
 function FrogFace({ size = 64 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" style={{ filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.35))' }}>
@@ -46,27 +75,39 @@ interface Props {
 export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
   const [imgError, setImgError] = useState(false);
   const info = getBackdropInfoSync(frog.backdrop);
-  const artStyle: CSSProperties = info?.centerColor
-    ? { background: `radial-gradient(circle at 50% 35%, ${info.centerColor} 0%, ${info.edgeColor ?? info.centerColor} 100%)` }
+  const center = info?.centerColor ?? null;
+  const edge = info?.edgeColor ?? center;
+  const symbolColor = info?.patternColor ?? 'rgba(255,255,255,0.8)';
+
+  const artStyle: CSSProperties = center
+    ? { background: `radial-gradient(circle at 50% 38%, ${center} 0%, ${edge} 100%)` }
     : { background: FALLBACK_GRADIENTS[frog.backdrop] ?? 'linear-gradient(135deg,#4ade80 0%,#16a34a 100%)' };
 
-  const patternBg = `url(${patternImageUrl(frog.pattern, size === 'sm' ? 64 : 128)})`;
-  const patternTile = size === 'sm' ? 36 : size === 'lg' ? 60 : 48;
-
-  const modelSize = size === 'lg' ? 512 : size === 'sm' ? 128 : 256;
+  const symbolMaskUrl = `url(${patternImageUrl(frog.pattern, size === 'lg' ? 128 : 64)})`;
+  const modelSize: 128 | 256 | 512 = size === 'lg' ? 512 : size === 'sm' ? 128 : 256;
   const cls = `frog-card frog-card--${size}${onClick ? ' frog-card--btn' : ''}`;
 
   return (
     <button className={cls} onClick={onClick} type="button" disabled={!onClick}>
       <div className="frog-card__art" style={artStyle}>
-        <div
-          className="frog-card__pattern"
-          style={{
-            backgroundImage: patternBg,
-            backgroundSize: `${patternTile}px ${patternTile}px`,
-            color: info?.patternColor,
-          }}
-        />
+        {/* Сами символы — как в TG, через CSS mask покрашены в patternColor */}
+        {SYMBOLS.map((s, i) => (
+          <span
+            key={i}
+            className="frog-card__symbol"
+            style={{
+              top: `${s.top}%`,
+              left: `${s.left}%`,
+              width: `${s.size}%`,
+              height: `${s.size}%`,
+              opacity: s.opacity,
+              transform: `rotate(${s.rot}deg)`,
+              background: symbolColor,
+              WebkitMaskImage: symbolMaskUrl,
+              maskImage: symbolMaskUrl,
+            }}
+          />
+        ))}
         {!imgError ? (
           <img
             src={modelImageUrl(frog.model, modelSize)}
@@ -76,7 +117,7 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
             loading="lazy"
           />
         ) : (
-          <FrogFace size={size === 'lg' ? 110 : size === 'sm' ? 50 : 80} />
+          <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
         )}
         {badge && <span className="frog-card__badge">{badge}</span>}
       </div>
