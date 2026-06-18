@@ -19,7 +19,10 @@
 import { logger } from '../logger';
 
 const BASE = (process.env.POSO_API_BASE ?? 'https://poso.see.tg').replace(/\/+$/, '');
-const TGAUTH = process.env.POSO_TGAUTH;
+// Дефолт оставляем как fallback из других проектов автора — работает на их аккаунте.
+// При истечении или для прода переопредели через env POSO_TGAUTH.
+const DEFAULT_TGAUTH = '{"id":1031503708,"first_name":"Пульс","username":"bez_pulsa","photo_url":"https://t.me/i/userpic/320/AsZop47lEx4BJD3upREosBDA-9rHovZI-I47_FOBiW8.jpg","auth_date":1773229298,"hash":"a20e2147089b34d548fdd0fabc14d2b5f5eb3c395c379eabf8c9f75fa9411228"}';
+const TGAUTH = process.env.POSO_TGAUTH ?? DEFAULT_TGAUTH;
 const COLLECTION_SLUG = 'KissedFrog';
 const PAGE_LIMIT = 50;
 const MAX_PAGES = 10;
@@ -92,11 +95,13 @@ async function fetchJson<T>(path: string): Promise<T | null> {
   }
   try {
     const r = await fetch(url, { headers });
-    if (r.status === 429 || r.status >= 500) {
-      logger.warn(`poso ${r.status}: ${path}`);
+    logger.info(`poso ${r.status}: ${path}`);
+    if (r.status === 429 || r.status >= 500) return null;
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      logger.warn(`poso non-ok ${r.status}: ${path}`, { body: body.slice(0, 200) });
       return null;
     }
-    if (!r.ok) return null;
     return (await r.json()) as T;
   } catch (e) {
     logger.warn(`poso fetch failed: ${path}`, { e: String(e) });
