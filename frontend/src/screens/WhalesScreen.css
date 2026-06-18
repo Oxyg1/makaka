@@ -1,0 +1,68 @@
+.whales__header {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(13,20,16,0.78);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.whales__link {
+  display: flex; gap: 8px; align-items: center;
+}
+.whales__link .field { flex: 1; }
+.whales__error {
+  margin: 8px 0 0; color: var(--danger); font-size: 13px;
+}
+
+.whales__list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.whale-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, border-color 0.15s;
+}
+.whale-row:active { transform: scale(0.99); border-color: var(--border-strong); }
+
+.whale-row__rank {
+  font-size: 12px; font-weight: 800;
+  color: var(--text-muted);
+  width: 26px; text-align: center;
+}
+.whale-row__avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--primary-gradient);
+  color: #0d1410; font-weight: 800; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.whale-row__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.whale-row__info { flex: 1; min-width: 0; }
+.whale-row__name {
+  font-size: 15px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.whale-row__un { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.whale-row__count {
+  display: flex; flex-direction: column; align-items: flex-end;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 12px;
+  min-width: 60px;
+}
+.whale-row__count-value { font-size: 16px; font-weight: 800; }
+.whale-row__count-label { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+.whales__grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+}

@@ -209,7 +209,9 @@ export async function fetchUserGifts(opts: { telegramId?: string; username?: str
       if (norm) result.push({
         ...norm,
         owner_username: norm.owner_username ?? owner.username,
-        owner_telegram_id: norm.owner_telegram_id ?? (owner.telegram_id !== undefined ? String(owner.telegram_id) : undefined),
+        owner_telegram_id: norm.owner_telegram_id
+          ?? (owner.telegram_id !== undefined ? String(owner.telegram_id) : undefined)
+          ?? opts.telegramId,
       });
     }
     if (items.length < PAGE_LIMIT) break;

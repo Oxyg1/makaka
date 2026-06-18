@@ -5,11 +5,11 @@ import type { AppConfig, User } from './types';
 import BottomNav from './components/BottomNav';
 import MarketScreen from './screens/MarketScreen';
 import InventoryScreen from './screens/InventoryScreen';
-import SearchScreen from './screens/SearchScreen';
-import OffersScreen from './screens/OffersScreen';
+import WhalesScreen from './screens/WhalesScreen';
+import TradesScreen from './screens/TradesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 
-export type Tab = 'market' | 'inventory' | 'search' | 'offers' | 'profile';
+export type Tab = 'market' | 'inventory' | 'whales' | 'trades' | 'profile';
 
 type TgWebApp = {
   initData?: string;
@@ -38,7 +38,7 @@ export default function App() {
   const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   const [marketKey, setMarketKey] = useState(0);
-  const [offersKey, setOffersKey] = useState(0);
+  const [tradesKey, setTradesKey] = useState(0);
   const [inventoryKey, setInventoryKey] = useState(0);
   const [profileKey, setProfileKey] = useState(0);
 
@@ -59,7 +59,7 @@ export default function App() {
       })
       .catch(() => setReady(true));
     getConfig().then(setConfig).catch(() => {});
-    loadPreload().catch(() => {/* картинки покажутся фоллбэком */});
+    loadPreload().catch(() => {});
   }, []);
 
   const refreshBadges = useCallback(async () => {
@@ -70,7 +70,7 @@ export default function App() {
         getNotifications(),
       ]);
       setInventoryCount(inv.length);
-      setUnreadOffers(offIn.filter(o => o.status === 'pending' || (o.status === 'awaiting_escrow' && !o.to_escrow_at)).length);
+      setUnreadOffers(offIn.filter(o => o.status === 'pending').length);
       setUnreadNotifs(notifs.filter(n => !n.read).length);
     } catch { /* ignore */ }
   }, []);
@@ -83,7 +83,7 @@ export default function App() {
     setActiveTab(t);
     if (t === 'market') setMarketKey(k => k + 1);
     if (t === 'inventory') setInventoryKey(k => k + 1);
-    if (t === 'offers') setOffersKey(k => k + 1);
+    if (t === 'trades') setTradesKey(k => k + 1);
     if (t === 'profile') setProfileKey(k => k + 1);
   }
 
@@ -96,11 +96,11 @@ export default function App() {
         <div style={show(activeTab === 'inventory')}>
           <InventoryScreen user={user} config={config} refreshKey={inventoryKey} onChanged={refreshBadges} />
         </div>
-        <div style={show(activeTab === 'search')}>
-          <SearchScreen myUserId={user?.id ?? null} config={config} />
+        <div style={show(activeTab === 'whales')}>
+          <WhalesScreen myUserId={user?.id ?? null} config={config} />
         </div>
-        <div style={show(activeTab === 'offers')}>
-          <OffersScreen myUserId={user?.id ?? null} config={config} refreshKey={offersKey} onChanged={refreshBadges} />
+        <div style={show(activeTab === 'trades')}>
+          <TradesScreen myUserId={user?.id ?? null} refreshKey={tradesKey} onChanged={refreshBadges} />
         </div>
         <div style={show(activeTab === 'profile')}>
           <ProfileScreen

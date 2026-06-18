@@ -6,9 +6,8 @@ import './BottomNav.css';
 const ICONS: Record<Tab, ReactElement> = {
   market: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l1.5-4h15L21 9" />
-      <path d="M4 9h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9z" />
-      <path d="M8 13c0 2 1.8 3.5 4 3.5s4-1.5 4-3.5" />
+      <path d="M3 9l4-4 4 4" /><path d="M7 5v8h7" />
+      <path d="M21 15l-4 4-4-4" /><path d="M17 19v-8h-7" />
     </svg>
   ),
   inventory: (
@@ -20,16 +19,16 @@ const ICONS: Record<Tab, ReactElement> = {
       <circle cx="16" cy="9.5" r="1" fill="currentColor" stroke="none" />
     </svg>
   ),
-  search: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
-      <circle cx="11" cy="11" r="7" />
-      <line x1="20" y1="20" x2="16.2" y2="16.2" />
+  whales: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 14c0-3 3-5 6-5h7c3 0 5 2 5 5 0 3-3 4-5 4H9l-3 3v-3c-2 0-3-1-3-4z" />
+      <circle cx="9" cy="13" r="1.2" fill="currentColor" />
+      <circle cx="15" cy="13" r="1.2" fill="currentColor" />
     </svg>
   ),
-  offers: (
+  trades: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l4-4 4 4" /><path d="M7 5v8h7" />
-      <path d="M21 15l-4 4-4-4" /><path d="M17 19v-8h-7" />
+      <path d="M4 7h13l-3-3" /><path d="M20 17H7l3 3" />
     </svg>
   ),
   profile: (
@@ -40,10 +39,10 @@ const ICONS: Record<Tab, ReactElement> = {
 };
 
 const LABELS: Record<Tab, string> = {
-  market: 'Маркет', inventory: 'Инвентарь', search: 'Поиск', offers: 'Сделки', profile: 'Профиль',
+  market: 'Обмены', inventory: 'Мои', whales: 'Холдеры', trades: 'Сделки', profile: 'Профиль',
 };
 
-const TABS: Tab[] = ['market', 'inventory', 'search', 'offers', 'profile'];
+const TABS: Tab[] = ['market', 'inventory', 'whales', 'trades', 'profile'];
 
 interface Props { activeTab: Tab; onTabChange: (tab: Tab) => void; unreadOffers?: number; unreadNotifs?: number; }
 
@@ -53,7 +52,7 @@ export default function BottomNav({ activeTab, onTabChange, unreadOffers = 0, un
     <nav className="bottom-nav">
       <div className="bottom-nav__indicator" style={{ translate: `${activeIndex * 100}% 0` }} />
       {TABS.map(tab => {
-        const dot = tab === 'offers' ? unreadOffers : tab === 'profile' ? unreadNotifs : 0;
+        const dot = tab === 'trades' ? unreadOffers : tab === 'profile' ? unreadNotifs : 0;
         return (
           <button key={tab}
             className={`bottom-nav__tab${activeTab === tab ? ' bottom-nav__tab--active' : ''}`}

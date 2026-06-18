@@ -13,18 +13,9 @@ interface Props {
   refreshKey?: number;
 }
 
-type Sort = 'new' | 'price_asc' | 'price_desc' | 'rare';
-const SORTS: { v: Sort; l: string }[] = [
+const SORTS: { v: 'new' | 'rare'; l: string }[] = [
   { v: 'new', l: 'Свежие' },
-  { v: 'price_asc', l: 'Цена ↑' },
-  { v: 'price_desc', l: 'Цена ↓' },
   { v: 'rare', l: 'Редкие' },
-];
-
-const KINDS: { v: '' | 'trade' | 'sell'; l: string }[] = [
-  { v: '', l: 'Все' },
-  { v: 'trade', l: 'Обмен' },
-  { v: 'sell', l: 'Продажа' },
 ];
 
 export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
@@ -38,12 +29,12 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
     setLoading(true);
     try {
       const r = await getMarket({
-        kind: filter.kind,
-        models: filter.models,
-        backdrops: filter.backdrops,
-        patterns: filter.patterns,
-        min_price: filter.min_price,
-        max_price: filter.max_price,
+        offer_models: filter.offer_models,
+        offer_backdrops: filter.offer_backdrops,
+        offer_patterns: filter.offer_patterns,
+        wants_models: filter.wants_models,
+        wants_backdrops: filter.wants_backdrops,
+        wants_patterns: filter.wants_patterns,
         sort: filter.sort,
       });
       setItems(r);
@@ -54,16 +45,22 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
 
   useEffect(() => { load(); }, [load, refreshKey]);
 
-  const activeAttr = filter.models.length + filter.backdrops.length + filter.patterns.length;
+  const activeAttr =
+    (filter.offer_models?.length ?? 0)
+    + (filter.offer_backdrops?.length ?? 0)
+    + (filter.offer_patterns?.length ?? 0)
+    + (filter.wants_models?.length ?? 0)
+    + (filter.wants_backdrops?.length ?? 0)
+    + (filter.wants_patterns?.length ?? 0);
 
   return (
     <div className="screen">
       <header className="market__header">
         <div className="market__header-top">
           <div>
-            <h1 className="screen__title">Маркет</h1>
+            <h1 className="screen__title">Обмены</h1>
             <p className="screen__subtitle">
-              {loading ? 'Загружаем…' : `${items.length} ${plural(items.length, 'ордер', 'ордера', 'ордеров')}`}
+              {loading ? 'Загружаем…' : `${items.length} ${plural(items.length, 'предложение', 'предложения', 'предложений')}`}
             </p>
           </div>
           <button
@@ -80,18 +77,7 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
           </button>
         </div>
 
-        {/* Горизонтальные быстрые фильтры — стиль Portals */}
         <div className="market__row">
-          {KINDS.map(k => (
-            <button
-              key={k.v || 'all'}
-              className={`pill${(filter.kind ?? '') === k.v ? ' pill--active' : ''}`}
-              onClick={() => { hapticImpact('light'); setFilter(f => ({ ...f, kind: (k.v || undefined) as FilterValue['kind'] })); }}
-            >
-              {k.l}
-            </button>
-          ))}
-          <div className="market__row-sep" />
           {SORTS.map(s => (
             <button
               key={s.v}
@@ -107,15 +93,15 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
       <div className="screen__scroll market__scroll">
         {loading && items.length === 0 && (
           <div className="market__skeleton">
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="market__skeleton-cell" />)}
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="market__skeleton-card" />)}
           </div>
         )}
 
         {!loading && items.length === 0 && (
           <div className="empty">
             <div className="empty__icon">🪷</div>
-            <h3>Пока пусто</h3>
-            <p>Ничего не нашлось.<br />Попробуйте сбросить фильтры или зайдите позже.</p>
+            <h3>Нет открытых обменов</h3>
+            <p>Никто пока не выставил то, что вы ищете.<br />Создайте свой ордер из инвентаря.</p>
             {!isEmptyFilter(filter) && (
               <button className="btn-ghost" style={{ marginTop: 12 }} onClick={() => setFilter(EMPTY_FILTER)}>
                 Сбросить фильтры
@@ -124,16 +110,8 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
           </div>
         )}
 
-        <div className="market__grid">
-          {items.map(o => (
-            <FrogCard
-              key={o.id}
-              frog={{ id: o.frog_id, number: o.number, model: o.model, backdrop: o.backdrop, pattern: o.pattern, image_url: o.image_url }}
-              size="md"
-              badge={o.kind === 'trade' ? 'обмен' : `${o.price_stars ?? ''}⭐`}
-              onClick={() => { hapticImpact('light'); setViewFrog(o.frog_id); }}
-            />
-          ))}
+        <div className="market__list">
+          {items.map(o => <OrderRow key={o.id} order={o} onOpen={() => setViewFrog(o.frog_id)} />)}
         </div>
       </div>
 
@@ -157,6 +135,69 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
       )}
     </div>
   );
+}
+
+function OrderRow({ order: o, onOpen }: { order: MarketEntry; onOpen: () => void }) {
+  const wantsM = parseJson(o.wants_models);
+  const wantsB = parseJson(o.wants_backdrops);
+  const wantsP = parseJson(o.wants_patterns);
+
+  return (
+    <article className="order-row" onClick={() => { hapticImpact('light'); onOpen(); }}>
+      <div className="order-row__top">
+        <div className="order-row__avatar">{(o.user_name || '?')[0].toUpperCase()}</div>
+        <div className="order-row__person">
+          <div className="order-row__name">{o.user_name}</div>
+          {o.user_username && <div className="order-row__un">@{o.user_username}</div>}
+        </div>
+        <div className="order-row__time">{timeAgo(o.created_at)}</div>
+      </div>
+
+      <div className="order-row__exchange">
+        <div className="order-row__side">
+          <div className="order-row__side-label">Отдаёт</div>
+          <FrogCard
+            frog={{ id: o.frog_id, number: o.number, model: o.model, backdrop: o.backdrop, pattern: o.pattern, image_url: o.image_url }}
+            size="sm"
+          />
+        </div>
+
+        <div className="order-row__arrow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" /><path d="M13 6l6 6-6 6" />
+          </svg>
+        </div>
+
+        <div className="order-row__wants">
+          <div className="order-row__side-label">Хочет</div>
+          <div className="order-row__wants-list">
+            {wantsM.map(v => <span key={`m-${v}`} className="chip chip--primary">{v}</span>)}
+            {wantsB.map(v => <span key={`b-${v}`} className="chip">{v}</span>)}
+            {wantsP.map(v => <span key={`p-${v}`} className="chip chip--ghost">{v}</span>)}
+            {wantsM.length + wantsB.length + wantsP.length === 0 && (
+              <span className="order-row__wants-empty">любую</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {o.note && <div className="order-row__note">«{o.note}»</div>}
+    </article>
+  );
+}
+
+function parseJson(s: string | null): string[] {
+  if (!s) return [];
+  try { const v = JSON.parse(s); return Array.isArray(v) ? v : []; }
+  catch { return []; }
+}
+
+function timeAgo(s: string) {
+  const d = Math.floor((Date.now() - new Date(s + 'Z').getTime()) / 1000);
+  if (d < 60) return 'только что';
+  if (d < 3600) return `${Math.floor(d / 60)} мин.`;
+  if (d < 86400) return `${Math.floor(d / 3600)} ч.`;
+  return `${Math.floor(d / 86400)} д.`;
 }
 
 function plural(n: number, one: string, few: string, many: string): string {

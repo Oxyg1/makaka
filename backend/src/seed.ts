@@ -1,4 +1,4 @@
-// Простой сид: добавляем демо-юзеров и пачку лягушек, чтобы маркет был не пустой.
+// Демо-данные на первый старт.
 import { db } from './db';
 import { upsertFrog } from './services/frogs';
 
@@ -12,7 +12,14 @@ const MODELS = ['Lily Pad','Swamp King','Royal Hopper','Bubble Mage','Moss Druid
 const BACKDROPS = ['Mint','Lagoon','Sunset','Jungle','Aurora','Twilight','Coral','Obsidian'];
 const PATTERNS = ['Dots','Stripes','Camo','Stars','Vines','Glyphs','Lotus','Plain'];
 
-function pick<T>(arr: T[], seed: number): T { return arr[seed % arr.length]; }
+const NOTES = [
+  'Хочу собрать сет в этой модели — нужен такой же, но с другим фоном.',
+  'Не хватает этого фона в коллекции, готов отдать любимую лягушку.',
+  'Меняю на узор как у меня сейчас — для пары.',
+  'Открыт к предложениям, главное чтобы редкий фон.',
+];
+
+function pick<T>(arr: T[], seed: number): T { return arr[Math.abs(seed) % arr.length]; }
 
 export function seed() {
   const exists = db.prepare(`SELECT COUNT(*) AS c FROM users WHERE telegram_id LIKE 'demo_%'`).get() as { c: number };
@@ -25,12 +32,12 @@ export function seed() {
     userIds.push(Number(r.lastInsertRowid));
   }
 
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 24; i++) {
     const ownerId = userIds[i % userIds.length];
     const ownerUn = DEMO_USERS[i % userIds.length].username;
     const n = 1000 + i * 23;
     const frog = upsertFrog({
-      gift_id: `KissedFrog-${n}`,
+      gift_id: `demo-${n}`,
       slug: `KissedFrog-${n}`,
       number: n,
       model: pick(MODELS, i * 7 + 3),
@@ -42,22 +49,20 @@ export function seed() {
       owner_username: ownerUn,
     }, ownerId);
 
+    // Каждой второй лягушке — открытый ордер с осмысленным wants
     if (i % 2 === 0) {
-      const kind = i % 4 === 0 ? 'sell' : 'trade';
-      const price = kind === 'sell' ? 100 + i * 25 : null;
+      const wantedBackdrop = pick(BACKDROPS, i * 13 + 7);
       db.prepare(`
-        INSERT INTO orders (frog_id, user_id, kind, price_stars, wants_models, note)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO orders (frog_id, user_id, wants_backdrops, wants_models, note)
+        VALUES (?, ?, ?, ?, ?)
       `).run(
-        frog.id, ownerId, kind, price,
-        kind === 'trade' ? JSON.stringify([pick(MODELS, i + 1), pick(MODELS, i + 4)]) : null,
-        kind === 'trade' ? 'Готов к обмену' : null,
+        frog.id, ownerId,
+        JSON.stringify([wantedBackdrop]),
+        i % 4 === 0 ? JSON.stringify([frog.model]) : null,
+        pick(NOTES, i),
       );
     }
   }
 }
 
-if (require.main === module) {
-  seed();
-  console.log('seeded');
-}
+if (require.main === module) { seed(); console.log('seeded'); }

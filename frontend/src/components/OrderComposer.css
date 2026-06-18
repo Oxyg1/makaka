@@ -1,36 +1,35 @@
-.order-comp__hero {
+.order-comp__lead {
+  display: flex; align-items: center; gap: 14px;
   background: linear-gradient(180deg, rgba(74,222,128,0.10) 0%, rgba(74,222,128,0) 100%);
   border: 1px solid rgba(74,222,128,0.18);
   border-radius: 16px;
-  padding: 14px;
+  padding: 12px;
   margin-bottom: 8px;
 }
+.order-comp__lead-text { flex: 1; min-width: 0; }
+.order-comp__lead-label {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--primary);
+}
+.order-comp__lead-title {
+  font-size: 18px; font-weight: 800; letter-spacing: -0.3px;
+  margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.order-comp__lead-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 
-.order-comp__kind {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-  background: var(--bg-input);
-  border-radius: 99em;
-  padding: 5px;
-  border: 1px solid var(--border);
-}
-.order-comp__kind-btn {
-  background: none; border: none;
-  padding: 9px 10px;
-  border-radius: 99em;
-  color: var(--text-soft);
-  font-size: 13px; font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.order-comp__kind-btn--active {
-  background: var(--primary);
-  color: #0d1410;
-  box-shadow: 0 4px 16px rgba(74,222,128,0.4);
+.order-comp__hint {
+  font-size: 12.5px; line-height: 1.45; color: var(--text-muted);
+  margin: 0 0 10px;
 }
 
-.order-comp__chips {
-  display: flex; flex-wrap: wrap; gap: 6px;
+.order-comp__group { margin-bottom: 14px; }
+.order-comp__group-label {
+  font-size: 12px; font-weight: 700; color: var(--text-soft);
+  margin-bottom: 6px;
 }
+
+.order-comp__chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .order-comp__chip {
   background: var(--bg-input); border: 1px solid var(--border-strong);
   color: var(--text-soft);
@@ -39,12 +38,19 @@
   font-size: 12.5px; font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
 }
+.order-comp__chip:active { transform: scale(0.96); }
 .order-comp__chip--active {
   background: var(--primary-dim);
   color: var(--primary);
   border-color: rgba(74,222,128,0.4);
+}
+
+.order-comp__note { min-height: 100px; }
+.order-comp__counter {
+  text-align: right; font-size: 11px; color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .order-comp__error {

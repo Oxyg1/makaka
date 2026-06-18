@@ -36,23 +36,13 @@
   border: 1.5px solid var(--bg);
 }
 
-/* Горизонтальный ряд пилюль (как в Portals) */
 .market__row {
   display: flex; gap: 6px;
   margin-top: 12px;
   overflow-x: auto;
   scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding-bottom: 2px;
-  scroll-snap-type: x proximity;
 }
 .market__row::-webkit-scrollbar { display: none; }
-.market__row-sep {
-  flex-shrink: 0;
-  width: 1px; align-self: stretch;
-  margin: 4px 4px;
-  background: var(--border-strong);
-}
 
 .pill {
   flex-shrink: 0;
@@ -65,7 +55,6 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
-  scroll-snap-align: start;
 }
 .pill:active { transform: scale(0.96); }
 .pill--active {
@@ -75,21 +64,74 @@
   font-weight: 700;
 }
 
-.market__scroll { padding-top: 8px; }
+.market__scroll { padding-top: 12px; }
+.market__list { display: flex; flex-direction: column; gap: 12px; }
 
-.market__grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.market__skeleton {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
-}
-.market__skeleton-cell {
-  aspect-ratio: 1; border-radius: 20px;
+.market__skeleton { display: flex; flex-direction: column; gap: 12px; }
+.market__skeleton-card {
+  height: 180px; border-radius: 18px;
   background: linear-gradient(110deg, var(--bg-card) 30%, rgba(255,255,255,0.04) 50%, var(--bg-card) 70%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ----------- Карточка ордера ----------- */
+.order-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s, border-color 0.15s;
+}
+.order-row:active { transform: scale(0.99); border-color: var(--border-strong); }
+
+.order-row__top {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.order-row__avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary-gradient);
+  color: #0d1410; font-weight: 800; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.order-row__person { flex: 1; min-width: 0; }
+.order-row__name {
+  font-size: 14px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.order-row__un { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+.order-row__time { font-size: 11.5px; color: var(--text-muted); flex-shrink: 0; }
+
+.order-row__exchange {
+  display: grid;
+  grid-template-columns: 130px 28px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.order-row__side { display: flex; flex-direction: column; gap: 6px; }
+.order-row__side-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.order-row__arrow {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary);
+}
+.order-row__wants { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.order-row__wants-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.order-row__wants-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+.order-row__note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 13px; line-height: 1.45;
+  color: var(--text-soft);
+  font-style: italic;
+}

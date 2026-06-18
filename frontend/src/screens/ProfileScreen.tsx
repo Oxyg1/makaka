@@ -53,7 +53,7 @@ export default function ProfileScreen({ user, inventoryCount, onOpenInventory, o
           </button>
           <div className="profile__stat">
             <div className="profile__stat-value">{orders.length}</div>
-            <div className="profile__stat-label">на маркете</div>
+            <div className="profile__stat-label">на обмене</div>
           </div>
         </div>
       </div>
@@ -69,13 +69,9 @@ export default function ProfileScreen({ user, inventoryCount, onOpenInventory, o
                     <div className="profile__order-title">
                       {o.model} <span className="profile__order-num">#{o.number}</span>
                     </div>
-                    <div className="profile__order-meta">
-                      {o.kind === 'sell' ? `Продажа · ${o.price_stars}⭐`
-                        : o.kind === 'trade' ? 'Обмен'
-                        : `Любой · ${o.price_stars ?? '—'}⭐`}
-                    </div>
+                    <div className="profile__order-meta">{o.note}</div>
                   </div>
-                  <button className="profile__order-cancel" onClick={() => handleCancel(o.id)}>×</button>
+                  <button className="profile__order-cancel" onClick={() => handleCancel(o.id)} aria-label="Снять">×</button>
                 </div>
               ))}
             </div>
@@ -90,7 +86,7 @@ export default function ProfileScreen({ user, inventoryCount, onOpenInventory, o
             {notifs.map(n => (
               <div key={n.id} className={`profile__notif${!n.read ? ' profile__notif--unread' : ''}`}>
                 <div className="profile__notif-icon">
-                  {n.type === 'trade_done' ? '🤝' : n.type === 'offer_in' ? '📩' : n.type === 'offer_accepted' ? '✅' : n.type === 'offer_declined' ? '❌' : n.type === 'escrow_in' ? '🔒' : '🐸'}
+                  {n.type === 'offer_in' ? '📩' : n.type === 'offer_accepted' ? '✅' : n.type === 'offer_declined' ? '❌' : '🐸'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="profile__notif-text">{n.text}</div>

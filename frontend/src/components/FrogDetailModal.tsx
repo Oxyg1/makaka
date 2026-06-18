@@ -16,12 +16,10 @@ interface Props {
   onCreatedOrder?: () => void;
 }
 
-function rarityBadge(r: number | null | undefined): string {
+function rarityLabel(r: number | null | undefined): string {
   if (r === null || r === undefined) return '';
-  const pct = (r * 100).toFixed(1);
-  return `${pct}%`;
+  return `${(r * 100).toFixed(1)}%`;
 }
-
 function rarityClass(r: number | null | undefined): string {
   if (r === null || r === undefined) return 'rarity-mark';
   if (r < 0.1) return 'rarity-mark rarity-mark--leg';
@@ -30,7 +28,7 @@ function rarityClass(r: number | null | undefined): string {
   return 'rarity-mark';
 }
 
-export default function FrogDetailModal({ frogId, myUserId, config, onClose, onCreatedOffer, onCreatedOrder }: Props) {
+export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOffer, onCreatedOrder }: Props) {
   const [frog, setFrog] = useState<Frog | null>(null);
   const [loading, setLoading] = useState(true);
   const [showOffer, setShowOffer] = useState(false);
@@ -39,6 +37,14 @@ export default function FrogDetailModal({ frogId, myUserId, config, onClose, onC
   useEffect(() => { getFrog(frogId).then(setFrog).catch(() => setFrog(null)).finally(() => setLoading(false)); }, [frogId]);
 
   const isMine = !!frog && frog.owner_id === myUserId;
+
+  function openChat(username: string) {
+    hapticImpact('medium');
+    const url = `https://t.me/${username}`;
+    const tg = (window as unknown as { Telegram?: { WebApp?: { openTelegramLink?: (u: string) => void } } }).Telegram?.WebApp;
+    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    else window.open(url, '_blank');
+  }
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -57,77 +63,86 @@ export default function FrogDetailModal({ frogId, myUserId, config, onClose, onC
               <div className="frog-detail__hero">
                 <FrogCard frog={frog} size="lg" />
               </div>
+              <h2 className="frog-detail__name">{frog.model}</h2>
+              <p className="frog-detail__sub">#{frog.number}</p>
+
               <div className="frog-detail__attrs">
                 <Attr label="Модель" value={frog.model} rarity={frog.model_rarity} />
                 <Attr label="Фон" value={frog.backdrop} rarity={frog.backdrop_rarity} />
                 <Attr label="Узор" value={frog.pattern} rarity={frog.pattern_rarity} />
-                <Attr label="Номер" value={`#${frog.number}`} />
               </div>
+
               <div className="frog-detail__owner">
                 <div className="frog-detail__owner-label">Владелец</div>
                 {frog.owner_name ? (
                   <div className="frog-detail__owner-row">
                     <div className="frog-detail__avatar">{frog.owner_name[0]?.toUpperCase()}</div>
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="frog-detail__owner-name">{frog.owner_name}</div>
                       {frog.owner_un && <div className="frog-detail__owner-un">@{frog.owner_un}</div>}
                     </div>
+                    {frog.owner_un && !isMine && (
+                      <button className="btn-ghost frog-detail__chat-btn" onClick={() => openChat(frog.owner_un!)}>
+                        Чат
+                      </button>
+                    )}
                   </div>
                 ) : frog.owner_username ? (
                   <div className="frog-detail__owner-row">
                     <div className="frog-detail__avatar">@</div>
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="frog-detail__owner-name">@{frog.owner_username}</div>
-                      <div className="frog-detail__owner-un">Не зарегистрирован в SWAMP</div>
+                      <div className="frog-detail__owner-un">Ещё не заходил в SWAMP</div>
                     </div>
                   </div>
                 ) : (
                   <div className="frog-detail__owner-un">Владелец неизвестен</div>
                 )}
               </div>
-
-              <div className="frog-detail__actions">
-                {isMine ? (
-                  frog.active_order_id ? (
-                    <div className="chip chip--primary">Уже на маркете</div>
-                  ) : (
-                    <button className="btn-primary" onClick={() => { hapticImpact('light'); setShowOrder(true); }}>
-                      Выставить на маркет
-                    </button>
-                  )
-                ) : (
-                  <button
-                    className="btn-primary"
-                    disabled={!frog.owner_id}
-                    onClick={() => { hapticImpact('light'); setShowOffer(true); }}
-                  >
-                    {frog.owner_id ? 'Предложить обмен' : 'Владелец не в SWAMP'}
-                  </button>
-                )}
-              </div>
-
-              {showOffer && frog.owner_id && (
-                <OfferComposer
-                  toFrog={frog}
-                  orderId={frog.active_order_id ?? null}
-                  config={config}
-                  onClose={() => setShowOffer(false)}
-                  onSent={() => { hapticSuccess(); setShowOffer(false); onCreatedOffer?.(); onClose(); }}
-                  onError={() => hapticError()}
-                  fetchMyInventory={getInventory}
-                  send={createOffer}
-                />
-              )}
-              {showOrder && (
-                <OrderComposer
-                  frog={frog}
-                  onClose={() => setShowOrder(false)}
-                  onCreated={() => { hapticSuccess(); setShowOrder(false); onCreatedOrder?.(); onClose(); }}
-                />
-              )}
             </>
           )}
         </div>
+
+        {frog && !loading && (
+          <div className="modal-sheet__footer">
+            {isMine ? (
+              frog.active_order_id ? (
+                <button className="btn-ghost" disabled>На обмене</button>
+              ) : (
+                <button className="btn-primary" onClick={() => { hapticImpact('light'); setShowOrder(true); }}>
+                  Открыть обмен
+                </button>
+              )
+            ) : (
+              <button
+                className="btn-primary"
+                disabled={!frog.owner_id}
+                onClick={() => { hapticImpact('light'); setShowOffer(true); }}
+              >
+                {frog.owner_id ? 'Предложить обмен' : 'Владелец не в SWAMP'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {frog && showOffer && frog.owner_id && (
+          <OfferComposer
+            toFrog={frog}
+            orderId={frog.active_order_id ?? null}
+            onClose={() => setShowOffer(false)}
+            onSent={() => { hapticSuccess(); setShowOffer(false); onCreatedOffer?.(); onClose(); }}
+            onError={() => hapticError()}
+            fetchMyInventory={getInventory}
+            send={createOffer}
+          />
+        )}
+        {frog && showOrder && (
+          <OrderComposer
+            frog={frog}
+            onClose={() => setShowOrder(false)}
+            onCreated={() => { hapticSuccess(); setShowOrder(false); onCreatedOrder?.(); onClose(); }}
+          />
+        )}
       </div>
     </div>
   );
@@ -140,7 +155,7 @@ function Attr({ label, value, rarity }: { label: string; value: string; rarity?:
       <div className="frog-detail__attr-row">
         <span className="frog-detail__attr-value">{value}</span>
         {rarity !== undefined && rarity !== null && (
-          <span className={rarityClass(rarity)}>{rarityBadge(rarity)}</span>
+          <span className={rarityClass(rarity)}>{rarityLabel(rarity)}</span>
         )}
       </div>
     </div>

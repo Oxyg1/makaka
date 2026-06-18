@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
-import type { AppConfig, Frog } from '../types';
+import type { Frog } from '../types';
 import FrogCard from './FrogCard';
 import './OfferComposer.css';
 
 interface Props {
   toFrog: Frog;
   orderId: number | null;
-  config: AppConfig | null;
   onClose: () => void;
   onSent: () => void;
   onError: (err: Error) => void;
   fetchMyInventory: () => Promise<Frog[]>;
-  send: (payload: { to_frog_id: number; from_frog_id?: number | null; stars?: number | null; message?: string; order_id?: number | null }) => Promise<{ id: number }>;
+  send: (payload: { to_frog_id: number; from_frog_id: number; message: string; order_id?: number | null }) => Promise<{ id: number }>;
 }
 
-export default function OfferComposer({ toFrog, orderId, config, onClose, onSent, onError, fetchMyInventory, send }: Props) {
+export default function OfferComposer({ toFrog, orderId, onClose, onSent, onError, fetchMyInventory, send }: Props) {
   const [inventory, setInventory] = useState<Frog[]>([]);
   const [loading, setLoading] = useState(true);
   const [chosen, setChosen] = useState<Frog | null>(null);
-  const [stars, setStars] = useState<string>('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -28,15 +26,16 @@ export default function OfferComposer({ toFrog, orderId, config, onClose, onSent
       .finally(() => setLoading(false));
   }, [fetchMyInventory]);
 
+  const canSubmit = !!chosen && message.trim().length > 0;
+
   const handleSubmit = async () => {
-    if (!chosen && !stars) return;
+    if (!canSubmit) return;
     setSending(true);
     try {
       await send({
         to_frog_id: toFrog.id,
-        from_frog_id: chosen?.id ?? null,
-        stars: stars ? Number(stars) : null,
-        message: message.trim() || undefined,
+        from_frog_id: chosen!.id,
+        message: message.trim(),
         order_id: orderId,
       });
       onSent();
@@ -53,24 +52,28 @@ export default function OfferComposer({ toFrog, orderId, config, onClose, onSent
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Отмена</button>
-          <span className="modal-sheet__title">Предложить обмен</span>
-          <button className="modal-sheet__action" onClick={handleSubmit} disabled={(!chosen && !stars) || sending}>Отпр.</button>
+          <span className="modal-sheet__title">Запрос на обмен</span>
+          <span style={{ width: 60 }} />
         </div>
         <div className="modal-sheet__scroll">
           <div className="offer-comp__target">
-            <div className="offer-comp__target-label">За эту лягушку:</div>
-            <div className="offer-comp__target-card">
+            <div style={{ width: 120, flexShrink: 0 }}>
               <FrogCard frog={toFrog} size="sm" />
+            </div>
+            <div>
+              <div className="offer-comp__target-label">Хотите получить</div>
+              <div className="offer-comp__target-title">{toFrog.model}</div>
+              <div className="offer-comp__target-meta">#{toFrog.number} · {toFrog.backdrop}</div>
             </div>
           </div>
 
-          <div className="section-title">Ваше предложение</div>
+          <div className="section-title">Что отдаёте</div>
 
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>
           ) : inventory.length === 0 ? (
             <div className="empty" style={{ padding: 24 }}>
-              <p>Нет свободных лягушек для обмена. Можете предложить только звёзды.</p>
+              <p>В инвентаре нет свободных лягушек для обмена.<br />Сначала синхронизируйте инвентарь.</p>
             </div>
           ) : (
             <div className="offer-comp__grid">
@@ -88,35 +91,25 @@ export default function OfferComposer({ toFrog, orderId, config, onClose, onSent
             </div>
           )}
 
-          <div className="section-title">+ Звёзды (необязательно)</div>
-          <input
-            className="field"
-            type="number" inputMode="numeric"
-            placeholder="например, 100"
-            value={stars}
-            onChange={e => setStars(e.target.value)}
-            min={0}
-          />
-
-          <div className="section-title">Сообщение</div>
+          <div className="section-title">Сообщение владельцу</div>
+          <p className="offer-comp__hint">Без сообщения запрос почти никто не принимает. Расскажите почему именно эта лягушка вам нужна и почему вы готовы отдать свою.</p>
           <textarea
-            className="field"
-            placeholder="Опишите предложение"
+            className="field offer-comp__note"
+            placeholder="Привет! Собираю сет в Lily Pad, у меня уже три. Очень не хватает твоего фона Aurora — обменяемся? Моя тоже Lily Pad, но Mint."
             value={message} onChange={e => setMessage(e.target.value)}
-            maxLength={280}
+            maxLength={500}
           />
+          <div className="offer-comp__counter">{message.length}/500</div>
 
-          {config && (
-            <p className="offer-comp__note">
-              Если оба согласятся, оба отправят лягушек на <b>@{config.escrow_username}</b>, после чего бот раздаст их новым владельцам.
-            </p>
-          )}
-
-          <div style={{ marginTop: 16 }}>
-            <button className="btn-primary" onClick={handleSubmit} disabled={(!chosen && !stars) || sending}>
-              {sending ? 'Отправляем…' : 'Отправить оффер'}
-            </button>
-          </div>
+          <p className="offer-comp__note-after">
+            Если хозяин согласится — оба получите кнопку «Открыть чат» и договоритесь о фактической передаче в личке.
+            SWAMP — это только хаб для поиска предложений, передачу делаете сами.
+          </p>
+        </div>
+        <div className="modal-sheet__footer">
+          <button className="btn-primary" onClick={handleSubmit} disabled={!canSubmit || sending}>
+            {sending ? 'Отправляем…' : 'Отправить запрос'}
+          </button>
         </div>
       </div>
     </div>

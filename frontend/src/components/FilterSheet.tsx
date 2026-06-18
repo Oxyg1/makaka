@@ -4,19 +4,25 @@ import { getAttributes } from '../api';
 import './FilterSheet.css';
 
 export interface FilterValue {
-  kind?: 'trade' | 'sell' | 'any';
-  models: string[];
-  backdrops: string[];
-  patterns: string[];
-  min_price?: number;
-  max_price?: number;
-  sort?: 'new' | 'price_asc' | 'price_desc' | 'rare';
+  offer_models: string[];
+  offer_backdrops: string[];
+  offer_patterns: string[];
+  wants_models: string[];
+  wants_backdrops: string[];
+  wants_patterns: string[];
+  sort?: 'new' | 'rare';
 }
 
-export const EMPTY_FILTER: FilterValue = { models: [], backdrops: [], patterns: [], sort: 'new' };
+export const EMPTY_FILTER: FilterValue = {
+  offer_models: [], offer_backdrops: [], offer_patterns: [],
+  wants_models: [], wants_backdrops: [], wants_patterns: [],
+  sort: 'new',
+};
 
 export function isEmptyFilter(f: FilterValue) {
-  return !f.kind && !f.models.length && !f.backdrops.length && !f.patterns.length && f.min_price === undefined && f.max_price === undefined && (f.sort === 'new' || !f.sort);
+  return !f.offer_models.length && !f.offer_backdrops.length && !f.offer_patterns.length
+    && !f.wants_models.length && !f.wants_backdrops.length && !f.wants_patterns.length
+    && (f.sort === 'new' || !f.sort);
 }
 
 interface Props {
@@ -25,29 +31,33 @@ interface Props {
   onApply: (v: FilterValue) => void;
 }
 
+type Tab = 'offer' | 'wants';
+
 export default function FilterSheet({ value, onClose, onApply }: Props) {
   const [attrs, setAttrs] = useState<Attributes | null>(null);
   const [draft, setDraft] = useState<FilterValue>(value);
-  const [minP, setMinP] = useState(value.min_price?.toString() ?? '');
-  const [maxP, setMaxP] = useState(value.max_price?.toString() ?? '');
+  const [tab, setTab] = useState<Tab>('offer');
 
   useEffect(() => { getAttributes().then(setAttrs).catch(() => {}); }, []);
 
-  function toggle(key: 'models' | 'backdrops' | 'patterns', v: string) {
-    setDraft(d => ({ ...d, [key]: d[key].includes(v) ? d[key].filter(x => x !== v) : [...d[key], v] }));
-  }
-
-  function apply() {
-    onApply({
-      ...draft,
-      min_price: minP ? Number(minP) : undefined,
-      max_price: maxP ? Number(maxP) : undefined,
+  function toggle(key: keyof FilterValue, v: string) {
+    setDraft(d => {
+      const list = d[key] as string[];
+      return { ...d, [key]: list.includes(v) ? list.filter(x => x !== v) : [...list, v] };
     });
   }
 
   function reset() {
-    setDraft(EMPTY_FILTER); setMinP(''); setMaxP('');
+    setDraft(EMPTY_FILTER);
   }
+
+  const offerCount = draft.offer_models.length + draft.offer_backdrops.length + draft.offer_patterns.length;
+  const wantsCount = draft.wants_models.length + draft.wants_backdrops.length + draft.wants_patterns.length;
+
+  const prefix = tab === 'offer' ? 'offer' : 'wants';
+  const M = `${prefix}_models` as keyof FilterValue;
+  const B = `${prefix}_backdrops` as keyof FilterValue;
+  const P = `${prefix}_patterns` as keyof FilterValue;
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -56,69 +66,59 @@ export default function FilterSheet({ value, onClose, onApply }: Props) {
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={reset}>Сброс</button>
           <span className="modal-sheet__title">Фильтры</span>
-          <button className="modal-sheet__action" onClick={apply}>Готово</button>
+          <button className="modal-sheet__action" onClick={() => onApply(draft)}>Готово</button>
         </div>
         <div className="modal-sheet__scroll">
-          <div className="section-title">Тип</div>
-          <div className="filter__kind">
-            {(['', 'trade', 'sell'] as const).map(k => (
-              <button
-                key={k || 'all'}
-                className={`filter__kind-btn${(draft.kind ?? '') === k ? ' filter__kind-btn--active' : ''}`}
-                onClick={() => setDraft(d => ({ ...d, kind: (k || undefined) as FilterValue['kind'] }))}
-                type="button"
-              >
-                {k === 'trade' ? 'Обмен' : k === 'sell' ? 'Продажа' : 'Все'}
-              </button>
-            ))}
+          <div className="filter__tabs">
+            <button
+              className={`filter__tab${tab === 'offer' ? ' filter__tab--active' : ''}`}
+              onClick={() => setTab('offer')}
+            >
+              Отдают {offerCount > 0 && <span className="filter__tab-badge">{offerCount}</span>}
+            </button>
+            <button
+              className={`filter__tab${tab === 'wants' ? ' filter__tab--active' : ''}`}
+              onClick={() => setTab('wants')}
+            >
+              Хотят {wantsCount > 0 && <span className="filter__tab-badge">{wantsCount}</span>}
+            </button>
           </div>
 
+          <p className="filter__hint">
+            {tab === 'offer'
+              ? 'Какую лягушку хочется получить — выбирайте здесь.'
+              : 'Какую лягушку готовы отдать — выбирайте здесь.'}
+          </p>
+
           <div className="section-title">Сортировка</div>
-          <div className="filter__sort">
-            {([
-              ['new', 'Новые'],
-              ['price_asc', 'Цена ↑'],
-              ['price_desc', 'Цена ↓'],
-              ['rare', 'Редкость'],
-            ] as const).map(([v, l]) => (
+          <div className="filter__chips">
+            {(['new', 'rare'] as const).map(v => (
               <button
                 key={v}
                 className={`filter__chip${(draft.sort ?? 'new') === v ? ' filter__chip--active' : ''}`}
                 onClick={() => setDraft(d => ({ ...d, sort: v }))}
                 type="button"
               >
-                {l}
+                {v === 'new' ? 'Свежие' : 'Редкие'}
               </button>
             ))}
           </div>
 
-          {(draft.kind === 'sell' || !draft.kind) && (
-            <>
-              <div className="section-title">Цена (звёзды)</div>
-              <div className="filter__range">
-                <input className="field" inputMode="numeric" placeholder="От" value={minP} onChange={e => setMinP(e.target.value)} />
-                <span className="filter__range-dash">—</span>
-                <input className="field" inputMode="numeric" placeholder="До" value={maxP} onChange={e => setMaxP(e.target.value)} />
-              </div>
-            </>
-          )}
-
           {attrs && (
             <>
               <div className="section-title">Модель</div>
-              <ChipList options={attrs.models} selected={draft.models} onToggle={v => toggle('models', v)} />
+              <ChipList options={attrs.models} selected={draft[M] as string[]} onToggle={v => toggle(M, v)} />
 
               <div className="section-title">Фон</div>
-              <ChipList options={attrs.backdrops} selected={draft.backdrops} onToggle={v => toggle('backdrops', v)} />
+              <ChipList options={attrs.backdrops} selected={draft[B] as string[]} onToggle={v => toggle(B, v)} />
 
               <div className="section-title">Узор</div>
-              <ChipList options={attrs.patterns} selected={draft.patterns} onToggle={v => toggle('patterns', v)} />
+              <ChipList options={attrs.patterns} selected={draft[P] as string[]} onToggle={v => toggle(P, v)} />
             </>
           )}
-
-          <div style={{ marginTop: 16 }}>
-            <button className="btn-primary" onClick={apply}>Применить</button>
-          </div>
+        </div>
+        <div className="modal-sheet__footer">
+          <button className="btn-primary" onClick={() => onApply(draft)}>Применить</button>
         </div>
       </div>
     </div>
