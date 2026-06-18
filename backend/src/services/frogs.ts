@@ -20,6 +20,13 @@ export interface FrogRow {
 
 export function upsertFrog(g: PosoGift, ownerId: number | null): FrogRow {
   const ownerUn = g.owner_username ?? null;
+
+  // У poso уникальный per-gift id может прийти как UUID, а в БД могла остаться
+  // старая запись с тем же slug, но другим gift_id (или наоборот). Поэтому
+  // прежде чем вставлять — снимаем потенциальные дубли по gift_id с другим slug
+  // (slug — наш канонический ключ "KissedFrog-NNNN").
+  db.prepare(`DELETE FROM frogs WHERE gift_id = ? AND slug <> ?`).run(g.gift_id, g.slug);
+
   db.prepare(`
     INSERT INTO frogs
       (gift_id, slug, number, model, backdrop, pattern,
@@ -27,6 +34,7 @@ export function upsertFrog(g: PosoGift, ownerId: number | null): FrogRow {
        image_url, lottie_url, owner_id, owner_username, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(slug) DO UPDATE SET
+      gift_id = excluded.gift_id,
       model = excluded.model,
       backdrop = excluded.backdrop,
       pattern = excluded.pattern,

@@ -126,7 +126,8 @@ function normalize(raw: PosoGiftRaw): PosoGift | null {
   if (!raw.num || Number.isNaN(raw.num)) return null;
 
   return {
-    gift_id: raw.gift_id ?? raw.id ?? `${COLLECTION_SLUG}-${raw.num}`,
+    // raw.id — уникальный UUID конкретного гифта; raw.gift_id у poso это id коллекции (один на всю KissedFrog)
+    gift_id: raw.id ?? raw.gift_id ?? `${COLLECTION_SLUG}-${raw.num}`,
     slug: `${COLLECTION_SLUG}-${raw.num}`,
     number: raw.num,
     model: raw.model_name ?? 'Unknown',
