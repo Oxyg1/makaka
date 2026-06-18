@@ -7,6 +7,7 @@ export const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// 1. Создаём таблицы (если ещё нет).
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,14 +38,7 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_frogs_owner ON frogs(owner_id);
-  CREATE INDEX IF NOT EXISTS idx_frogs_owner_tg ON frogs(owner_telegram_id);
-  CREATE INDEX IF NOT EXISTS idx_frogs_model ON frogs(model);
-  CREATE INDEX IF NOT EXISTS idx_frogs_backdrop ON frogs(backdrop);
-  CREATE INDEX IF NOT EXISTS idx_frogs_pattern ON frogs(pattern);
 
-  -- Открытый ордер на обмен. "Отдаю frog_id, хочу что-то по этим критериям, вот почему".
-  -- Никаких цен и продаж — только обмен.
   CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     frog_id INTEGER NOT NULL REFERENCES frogs(id) ON DELETE CASCADE,
@@ -57,14 +51,7 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-  CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_active_frog
-    ON orders(frog_id) WHERE status = 'open';
 
-  -- Конкретный запрос на обмен между двумя людьми.
-  -- "Я предлагаю свою X за твою Y, вот сообщение".
-  -- Когда оба нажали 'agreed' — статус matched, договариваются в личке TG.
   CREATE TABLE IF NOT EXISTS offers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
@@ -79,8 +66,6 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_offers_to ON offers(to_user_id, status);
-  CREATE INDEX IF NOT EXISTS idx_offers_from ON offers(from_user_id, status);
 
   CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,9 +78,27 @@ db.exec(`
     read INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_notifs_user ON notifications(user_id, read);
 `);
 
-// Миграции для старой схемы (на серверах где БД уже существовала).
+// 2. Миграции — добавляем недостающие колонки в старых БД.
 function safeAlter(sql: string) { try { db.exec(sql); } catch { /* column exists */ } }
 safeAlter(`ALTER TABLE frogs ADD COLUMN owner_telegram_id TEXT`);
+
+// 3. Создаём индексы (после того как все колонки точно на месте).
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_frogs_owner ON frogs(owner_id);
+  CREATE INDEX IF NOT EXISTS idx_frogs_owner_tg ON frogs(owner_telegram_id);
+  CREATE INDEX IF NOT EXISTS idx_frogs_model ON frogs(model);
+  CREATE INDEX IF NOT EXISTS idx_frogs_backdrop ON frogs(backdrop);
+  CREATE INDEX IF NOT EXISTS idx_frogs_pattern ON frogs(pattern);
+
+  CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+  CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_active_frog
+    ON orders(frog_id) WHERE status = 'open';
+
+  CREATE INDEX IF NOT EXISTS idx_offers_to ON offers(to_user_id, status);
+  CREATE INDEX IF NOT EXISTS idx_offers_from ON offers(from_user_id, status);
+
+  CREATE INDEX IF NOT EXISTS idx_notifs_user ON notifications(user_id, read);
+`);
