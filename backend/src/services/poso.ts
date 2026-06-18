@@ -8,12 +8,18 @@
 //   - hard-cap 10 страниц = 500 гифтов на юзера за один синк
 //   - бэкофф при 429/5xx
 //
-// При желании можно передать POSO_API_KEY (Bearer-токен).
+// Аутентификация: poso ждёт хедер `tgauth` со строкой JSON Telegram Login
+// (id, first_name, username, auth_date, hash). Получить вручную:
+//   1. Открыть https://poso.see.tg в Telegram (WebApp)
+//   2. DevTools → Network → любой запрос → скопировать значение хедера `tgauth`
+//   3. В systemd-юнит:
+//      Environment=POSO_TGAUTH={"id":...,"hash":"..."}
+//   Срок жизни ограничен auth_date (обычно ~сутки), при истечении — обновить.
 
 import { logger } from '../logger';
 
 const BASE = (process.env.POSO_API_BASE ?? 'https://poso.see.tg').replace(/\/+$/, '');
-const API_KEY = process.env.POSO_API_KEY;
+const TGAUTH = process.env.POSO_TGAUTH;
 const COLLECTION_SLUG = 'KissedFrog';
 const PAGE_LIMIT = 50;
 const MAX_PAGES = 10;
@@ -79,7 +85,11 @@ function cacheSet<T>(k: string, v: T) { cache.set(k, { at: Date.now(), value: v 
 async function fetchJson<T>(path: string): Promise<T | null> {
   const url = `${BASE}${path}`;
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (API_KEY) headers['Authorization'] = `Bearer ${API_KEY}`;
+  if (TGAUTH) {
+    headers['tgauth'] = TGAUTH;
+    // некоторые установки poso читают cookie вместо хедера — отправим и так:
+    headers['cookie'] = `tgauth=${encodeURIComponent(TGAUTH)}`;
+  }
   try {
     const r = await fetch(url, { headers });
     if (r.status === 429 || r.status >= 500) {
