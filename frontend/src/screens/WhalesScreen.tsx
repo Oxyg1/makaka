@@ -1,0 +1,162 @@
+import { useEffect, useState } from 'react';
+import { getUserFrogs, getWhales, lookupFrog } from '../api';
+import type { AppConfig, Frog, Whale } from '../types';
+import FrogCard from '../components/FrogCard';
+import FrogDetailModal from '../components/FrogDetailModal';
+import { hapticImpact, hapticError } from '../utils/haptics';
+import './WhalesScreen.css';
+
+interface Props {
+  myUserId: number | null;
+  config: AppConfig | null;
+}
+
+export default function WhalesScreen({ myUserId, config }: Props) {
+  const [whales, setWhales] = useState<Whale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openWhale, setOpenWhale] = useState<Whale | null>(null);
+  const [viewFrog, setViewFrog] = useState<number | null>(null);
+
+  const [link, setLink] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
+  useEffect(() => {
+    getWhales().then(setWhales).catch(() => setWhales([])).finally(() => setLoading(false));
+  }, []);
+
+  async function findByLink() {
+    if (!link.trim()) return;
+    setLinkLoading(true); setLinkError('');
+    try {
+      const f = await lookupFrog(link.trim());
+      setViewFrog(f.id);
+    } catch (e) {
+      setLinkError((e as Error).message);
+      hapticError();
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  return (
+    <div className="screen">
+      <header className="whales__header">
+        <h1 className="screen__title">Холдеры</h1>
+        <p className="screen__subtitle">Топ-владельцы KissedFrog. Зайдите в коллекцию и предложите обмен лично.</p>
+      </header>
+
+      <div className="screen__scroll">
+        <div className="section-title">Поиск по ссылке</div>
+        <div className="whales__link">
+          <input
+            className="field"
+            placeholder="t.me/nft/KissedFrog-1234 или #1234"
+            value={link}
+            onChange={e => setLink(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && findByLink()}
+          />
+          <button className="btn-ghost" onClick={findByLink} disabled={linkLoading || !link.trim()}>
+            {linkLoading ? '…' : 'Открыть'}
+          </button>
+        </div>
+        {linkError && <p className="whales__error">{linkError}</p>}
+
+        <div className="section-title">Топ холдеров</div>
+
+        {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
+
+        {!loading && whales.length === 0 && (
+          <div className="empty" style={{ padding: 24 }}>
+            <p>Не удалось получить список холдеров.<br />Зайдите чуть позже.</p>
+          </div>
+        )}
+
+        <div className="whales__list">
+          {whales.map((w, i) => (
+            <button
+              key={w.id}
+              className="whale-row"
+              onClick={() => { hapticImpact('light'); setOpenWhale(w); }}
+            >
+              <div className="whale-row__rank">#{i + 1}</div>
+              <div className="whale-row__avatar">
+                {w.photo_url ? <img src={w.photo_url} alt="" /> : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
+              </div>
+              <div className="whale-row__info">
+                <div className="whale-row__name">{w.name ?? w.username ?? '—'}</div>
+                {w.username && <div className="whale-row__un">@{w.username}</div>}
+              </div>
+              <div className="whale-row__count">
+                <div className="whale-row__count-value">{w.gifts_count}</div>
+                <div className="whale-row__count-label">🐸</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {openWhale && (
+        <WhaleCollection
+          whale={openWhale}
+          onClose={() => setOpenWhale(null)}
+          onPick={id => { setViewFrog(id); setOpenWhale(null); }}
+        />
+      )}
+
+      {viewFrog !== null && (
+        <FrogDetailModal
+          frogId={viewFrog}
+          myUserId={myUserId}
+          config={config}
+          onClose={() => setViewFrog(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: () => void; onPick: (id: number) => void }) {
+  const [frogs, setFrogs] = useState<Frog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!whale.telegram_id) { setLoading(false); return; }
+    getUserFrogs(whale.telegram_id)
+      .then(setFrogs)
+      .catch(() => setFrogs([]))
+      .finally(() => setLoading(false));
+  }, [whale.telegram_id]);
+
+  return (
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-sheet">
+        <div className="modal-sheet__handle" />
+        <div className="modal-sheet__header">
+          <button className="modal-sheet__close" onClick={onClose}>Назад</button>
+          <span className="modal-sheet__title">{whale.name ?? whale.username ?? 'Коллекция'}</span>
+          <span style={{ width: 60 }} />
+        </div>
+        <div className="modal-sheet__scroll">
+          {!whale.telegram_id && (
+            <div className="empty"><p>У этого холдера нет публичного telegram_id, коллекция недоступна.</p></div>
+          )}
+          {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
+          {!loading && frogs.length === 0 && whale.telegram_id && (
+            <div className="empty"><p>Не удалось загрузить коллекцию.<br />Возможно, холдер скрыл подарки.</p></div>
+          )}
+          <div className="whales__grid">
+            {frogs.map(f => (
+              <FrogCard
+                key={f.id}
+                frog={f}
+                size="md"
+                onClick={() => onPick(f.id)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
