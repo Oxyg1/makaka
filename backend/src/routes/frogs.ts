@@ -3,15 +3,42 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
 import { fetchGiftBySlug } from '../services/poso';
 import { upsertFrog } from '../services/frogs';
+import { getPreload } from '../services/visuals';
 
 const router = Router();
 
-// Список всех доступных атрибутов для фильтров.
-router.get('/attributes', authMiddleware, (_req: AuthRequest, res) => {
-  const models = (db.prepare(`SELECT model AS v, COUNT(*) AS c FROM frogs GROUP BY model ORDER BY c DESC, v`).all() as { v: string; c: number }[]);
-  const backdrops = (db.prepare(`SELECT backdrop AS v, COUNT(*) AS c FROM frogs GROUP BY backdrop ORDER BY c DESC, v`).all() as { v: string; c: number }[]);
-  const patterns = (db.prepare(`SELECT pattern AS v, COUNT(*) AS c FROM frogs GROUP BY pattern ORDER BY c DESC, v`).all() as { v: string; c: number }[]);
-  res.json({ models, backdrops, patterns });
+// Счётчики по колонке (model/backdrop/pattern) из локальной БД.
+function dbCounts(col: 'model' | 'backdrop' | 'pattern'): Map<string, number> {
+  const rows = db.prepare(`SELECT ${col} AS v, COUNT(*) AS c FROM frogs GROUP BY ${col}`).all() as { v: string; c: number }[];
+  const m = new Map<string, number>();
+  for (const r of rows) if (r.v) m.set(r.v, r.c);
+  return m;
+}
+function dbDistinct(col: 'model' | 'backdrop' | 'pattern') {
+  return db.prepare(`SELECT ${col} AS v, COUNT(*) AS c FROM frogs GROUP BY ${col} ORDER BY c DESC, v`).all() as { v: string; c: number }[];
+}
+
+// Полный каталог атрибутов KissedFrog для фильтров.
+// Источник истины — preload от changes.tg (все модели/фоны/узоры коллекции),
+// счётчики подмешиваем из локальной БД. Если preload недоступен —
+// откатываемся на distinct по своим лягушкам.
+router.get('/attributes', authMiddleware, async (_req: AuthRequest, res) => {
+  const fromCatalog = (names: string[], counts: Map<string, number>) =>
+    names
+      .map(v => ({ v, c: counts.get(v) ?? 0 }))
+      .sort((a, b) => b.c - a.c || a.v.localeCompare(b.v));
+
+  try {
+    const preload = await getPreload();
+    const backdropNames = Object.keys(preload.backdrops ?? {});
+    res.json({
+      models: preload.models?.length ? fromCatalog(preload.models, dbCounts('model')) : dbDistinct('model'),
+      backdrops: backdropNames.length ? fromCatalog(backdropNames, dbCounts('backdrop')) : dbDistinct('backdrop'),
+      patterns: preload.patterns?.length ? fromCatalog(preload.patterns, dbCounts('pattern')) : dbDistinct('pattern'),
+    });
+  } catch {
+    res.json({ models: dbDistinct('model'), backdrops: dbDistinct('backdrop'), patterns: dbDistinct('pattern') });
+  }
 });
 
 // Достать лягушку по slug / ссылке. Если её нет в БД — пробуем подтянуть с poso.

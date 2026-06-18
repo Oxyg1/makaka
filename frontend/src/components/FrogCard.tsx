@@ -1,6 +1,6 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import type { Frog } from '../types';
-import { getBackdropInfoSync, modelImageUrl, patternImageUrl } from '../utils/changes';
+import { getBackdropInfoSync, loadPreload, modelImageUrl, patternImageUrl, type BackdropInfo } from '../utils/changes';
 import './FrogCard.css';
 
 // Фоллбэк-градиенты пока preload не приехал.
@@ -74,7 +74,21 @@ interface Props {
 
 export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
   const [imgError, setImgError] = useState(false);
-  const info = getBackdropInfoSync(frog.backdrop);
+  // Цвета фона приходят из preload (changes.tg). Карточка могла
+  // отрендериться раньше, чем preload догрузился, — поэтому держим
+  // info в state и обновляем, когда словарь приедет.
+  const [info, setInfo] = useState<BackdropInfo | null>(() => getBackdropInfoSync(frog.backdrop));
+
+  useEffect(() => {
+    const sync = getBackdropInfoSync(frog.backdrop);
+    if (sync) { setInfo(sync); return; }
+    let alive = true;
+    loadPreload()
+      .then(() => { if (alive) setInfo(getBackdropInfoSync(frog.backdrop)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [frog.backdrop]);
+
   const center = info?.centerColor ?? null;
   const edge = info?.edgeColor ?? center;
   const symbolColor = info?.patternColor ?? 'rgba(255,255,255,0.8)';
