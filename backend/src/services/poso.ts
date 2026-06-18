@@ -1,16 +1,27 @@
 // Клиент к poso.see.tg.
-// Реальный API описан тут: https://poso.see.tg/api/docs
-// Здесь оставляем минимальный fetch + парсер ответа, плюс мок-fallback,
-// чтобы фронт можно было гонять без бот-токена.
+// Реальный API: https://poso.see.tg/api/docs
+//
+// Бережём API:
+//   - in-memory кэш с TTL 5 минут на инвентарь/гифт/владельца
+//   - всю коллекцию подтягиваем батчами по 50 (макс по доке)
+//     ОДНИМ запросом фильтра — НЕ долбим по каждому гифту отдельно
+//   - hard-cap 10 страниц = 500 гифтов на юзера за один синк
+//   - бэкофф при 429/5xx
+//
+// При желании можно передать POSO_API_KEY (Bearer-токен).
 
 import { logger } from '../logger';
 
-const BASE = process.env.POSO_API_BASE ?? 'https://poso.see.tg/api';
-const GIFT_SLUG = 'KissedFrog';
+const BASE = (process.env.POSO_API_BASE ?? 'https://poso.see.tg').replace(/\/+$/, '');
+const API_KEY = process.env.POSO_API_KEY;
+const COLLECTION_SLUG = 'KissedFrog';
+const PAGE_LIMIT = 50;
+const MAX_PAGES = 10;
+const CACHE_TTL_MS = 5 * 60_000;
 
 export interface PosoGift {
   gift_id: string;
-  slug: string;          // "KissedFrog-12345"
+  slug: string;          // полный slug "KissedFrog-12345" (для нашей БД)
   number: number;
   model: string;
   backdrop: string;
@@ -24,107 +35,138 @@ export interface PosoGift {
 }
 
 interface PosoGiftRaw {
-  id?: string | number;
-  slug?: string;
-  number?: number;
-  collection?: string;
-  collection_slug?: string;
-  attributes?: {
-    model?: { name?: string; rarity?: number };
-    backdrop?: { name?: string; rarity?: number };
-    pattern?: { name?: string; rarity?: number };
-  };
-  model?: string;
-  backdrop?: string;
-  pattern?: string;
+  id?: string;
+  gift_id?: string;
+  slug?: string;                       // у poso это slug коллекции, например "KissedFrog"
+  num?: number;
+  title?: string;
+  model_name?: string;
+  pattern_name?: string;
+  backdrop_name?: string;
+  model_rarity?: number;
+  pattern_rarity?: number;
+  backdrop_rarity?: number;
   image_url?: string;
   lottie_url?: string;
-  owner?: { username?: string };
+  animation_url?: string;
+  current_owner?: { username?: string; telegram_id?: string; name?: string };
 }
 
-function normalize(raw: PosoGiftRaw): PosoGift | null {
-  const slugSource = raw.collection_slug ?? raw.collection ?? raw.slug ?? '';
-  if (slugSource && !slugSource.toLowerCase().includes('kissedfrog')) return null;
-
-  const number = raw.number ?? Number(String(raw.slug ?? '').split('-').pop());
-  if (!number || Number.isNaN(number)) return null;
-
-  const model = raw.attributes?.model?.name ?? raw.model ?? 'Unknown';
-  const backdrop = raw.attributes?.backdrop?.name ?? raw.backdrop ?? 'Unknown';
-  const pattern = raw.attributes?.pattern?.name ?? raw.pattern ?? 'Unknown';
-
-  return {
-    gift_id: String(raw.id ?? `${GIFT_SLUG}-${number}`),
-    slug: raw.slug ?? `${GIFT_SLUG}-${number}`,
-    number,
-    model,
-    backdrop,
-    pattern,
-    model_rarity: raw.attributes?.model?.rarity,
-    backdrop_rarity: raw.attributes?.backdrop?.rarity,
-    pattern_rarity: raw.attributes?.pattern?.rarity,
-    image_url: raw.image_url,
-    lottie_url: raw.lottie_url,
-    owner_username: raw.owner?.username,
-  };
+interface PosoOwner {
+  id: string;
+  telegram_id?: string;
+  username?: string;
+  name?: string;
 }
 
-async function tryFetch<T>(url: string): Promise<T | null> {
+interface PosoListResponse<T> {
+  data?: T[];
+  items?: T[];
+  total?: number;
+}
+
+// --------- cache ---------
+const cache = new Map<string, { at: number; value: unknown }>();
+function cacheGet<T>(k: string): T | null {
+  const e = cache.get(k);
+  if (!e) return null;
+  if (Date.now() - e.at > CACHE_TTL_MS) { cache.delete(k); return null; }
+  return e.value as T;
+}
+function cacheSet<T>(k: string, v: T) { cache.set(k, { at: Date.now(), value: v }); }
+
+// --------- http ---------
+async function fetchJson<T>(path: string): Promise<T | null> {
+  const url = `${BASE}${path}`;
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (API_KEY) headers['Authorization'] = `Bearer ${API_KEY}`;
   try {
-    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    const r = await fetch(url, { headers });
+    if (r.status === 429 || r.status >= 500) {
+      logger.warn(`poso ${r.status}: ${path}`);
+      return null;
+    }
     if (!r.ok) return null;
     return (await r.json()) as T;
   } catch (e) {
-    logger.warn(`poso fetch failed: ${url}`, { e: String(e) });
+    logger.warn(`poso fetch failed: ${path}`, { e: String(e) });
     return null;
   }
 }
 
-export async function fetchUserGifts(username: string): Promise<PosoGift[]> {
-  const data = await tryFetch<{ gifts?: PosoGiftRaw[] } | PosoGiftRaw[]>(`${BASE}/users/${encodeURIComponent(username)}/gifts?collection=${GIFT_SLUG}`);
-  if (!data) return mockGiftsForUser(username);
-  const list = Array.isArray(data) ? data : data.gifts ?? [];
-  return list.map(normalize).filter((g): g is PosoGift => g !== null);
-}
+// --------- normalize ---------
+function normalize(raw: PosoGiftRaw): PosoGift | null {
+  const collection = raw.slug ?? '';
+  if (!collection || collection.toLowerCase() !== COLLECTION_SLUG.toLowerCase()) return null;
+  if (!raw.num || Number.isNaN(raw.num)) return null;
 
-export async function fetchGiftBySlug(slug: string): Promise<PosoGift | null> {
-  const data = await tryFetch<PosoGiftRaw>(`${BASE}/gifts/${encodeURIComponent(slug)}`);
-  if (!data) return mockGiftBySlug(slug);
-  return normalize(data);
-}
-
-// ----------------- Mock data (fallback for local dev) -----------------
-
-const MODELS = ['Lily Pad','Swamp King','Royal Hopper','Bubble Mage','Moss Druid','Pondling','Ribbit Star','Toxic Bloom','Golden Croak','Reed Sage'];
-const BACKDROPS = ['Mint','Lagoon','Sunset','Jungle','Aurora','Twilight','Coral','Obsidian'];
-const PATTERNS = ['Dots','Stripes','Camo','Stars','Vines','Glyphs','Lotus','Plain'];
-
-function pick<T>(arr: T[], seed: number): T { return arr[seed % arr.length]; }
-
-function mockFrog(n: number, owner?: string): PosoGift {
   return {
-    gift_id: `KissedFrog-${n}`,
-    slug: `KissedFrog-${n}`,
-    number: n,
-    model: pick(MODELS, n * 7),
-    backdrop: pick(BACKDROPS, n * 13),
-    pattern: pick(PATTERNS, n * 31),
-    model_rarity: 0.2 + ((n * 7) % 50) / 100,
-    backdrop_rarity: 0.3 + ((n * 13) % 40) / 100,
-    pattern_rarity: 0.15 + ((n * 31) % 60) / 100,
-    image_url: undefined,
-    owner_username: owner,
+    gift_id: raw.gift_id ?? raw.id ?? `${COLLECTION_SLUG}-${raw.num}`,
+    slug: `${COLLECTION_SLUG}-${raw.num}`,
+    number: raw.num,
+    model: raw.model_name ?? 'Unknown',
+    backdrop: raw.backdrop_name ?? 'Unknown',
+    pattern: raw.pattern_name ?? 'Unknown',
+    model_rarity: raw.model_rarity,
+    backdrop_rarity: raw.backdrop_rarity,
+    pattern_rarity: raw.pattern_rarity,
+    image_url: raw.image_url ?? raw.animation_url,
+    lottie_url: raw.lottie_url,
+    owner_username: raw.current_owner?.username,
   };
 }
 
-function mockGiftsForUser(username: string): PosoGift[] {
-  const base = [...username].reduce((a, c) => a + c.charCodeAt(0), 0);
-  const count = 2 + (base % 5);
-  return Array.from({ length: count }, (_, i) => mockFrog(1000 + (base * 31 + i * 17) % 9000, username));
+// --------- public API ---------
+async function getOwnerByUsername(username: string): Promise<PosoOwner | null> {
+  const k = `owner:${username.toLowerCase()}`;
+  const cached = cacheGet<PosoOwner>(k);
+  if (cached) return cached;
+  const data = await fetchJson<PosoOwner>(`/api/owner?username=${encodeURIComponent(username)}`);
+  if (data?.id) cacheSet(k, data);
+  return data?.id ? data : null;
 }
 
-function mockGiftBySlug(slug: string): PosoGift | null {
-  const n = Number(slug.split('-').pop());
-  if (!n) return null;
-  return mockFrog(n);
+export async function fetchUserGifts(username: string): Promise<PosoGift[]> {
+  const k = `gifts:${username.toLowerCase()}`;
+  const cached = cacheGet<PosoGift[]>(k);
+  if (cached) return cached;
+
+  const owner = await getOwnerByUsername(username);
+  if (!owner) return [];
+
+  const result: PosoGift[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const offset = page * PAGE_LIMIT;
+    const path = `/api/gifts?slug=${COLLECTION_SLUG}&current_owner_id=${encodeURIComponent(owner.id)}&limit=${PAGE_LIMIT}&offset=${offset}`;
+    const list = await fetchJson<PosoListResponse<PosoGiftRaw> | PosoGiftRaw[]>(path);
+    if (!list) break;
+    const items: PosoGiftRaw[] = Array.isArray(list) ? list : (list.data ?? list.items ?? []);
+    if (items.length === 0) break;
+    for (const it of items) {
+      const norm = normalize(it);
+      if (norm) result.push({ ...norm, owner_username: username });
+    }
+    if (items.length < PAGE_LIMIT) break;
+  }
+
+  cacheSet(k, result);
+  return result;
+}
+
+export async function fetchGiftBySlug(fullSlug: string): Promise<PosoGift | null> {
+  const m = fullSlug.match(/^([A-Za-z]+)-?(\d+)$/);
+  if (!m) return null;
+  const collection = m[1];
+  const num = Number(m[2]);
+  if (collection.toLowerCase() !== COLLECTION_SLUG.toLowerCase()) return null;
+
+  const k = `gift:${collection}-${num}`;
+  const cached = cacheGet<PosoGift>(k);
+  if (cached) return cached;
+
+  const data = await fetchJson<PosoGiftRaw>(`/api/gift?slug=${collection}&num=${num}`);
+  if (!data) return null;
+  const norm = normalize(data);
+  if (norm) cacheSet(k, norm);
+  return norm;
 }
