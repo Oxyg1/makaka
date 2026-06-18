@@ -1,24 +1,26 @@
-# SWAMP holders userbot
+# SWAMP holders userbot (Telethon / MTProto)
 
-Демон на Telethon, который раз в день собирает всех **KissedFrog** с владельцами
-и отдаёт их в бэкенд SWAMP. Так топ-холдеров мы держим у себя в БД (быстро и
-стабильно), а не дёргаем сторонний API на каждом открытии экрана.
+Демон, который берёт данные **напрямую из Telegram** (MTProto, без сторонних API),
+собирает всех KissedFrog с владельцами и отдаёт снимок в бэкенд SWAMP. Так
+топ-холдеров мы держим у себя в БД — быстро и стабильно.
 
-## Как это работает
+## Как работает
 
-1. `sync.py` постранично тянет `GET {POSO_BASE}/api/gifts?slug=KissedFrog`
-   (публичный see.tg) — все лягушки с владельцами.
-2. Агрегирует холдеров (сколько лягушек у кого) и берёт топ `TOP_WHALES`.
-3. Опционально обогащает топ через Telethon (username / имя / аватар).
-4. Шлёт снимок в бэкенд:
-   - `POST /api/ingest/whales` — топ-холдеры (полная замена списка);
-   - `POST /api/ingest/frogs` — каталог лягушек батчами (upsert) — заодно
-     наполняет фильтры и реальные данные карточек.
+Два режима (`MODE` в `.env`):
+- **full** (по умолчанию) — перебор `KissedFrog-1..MAX_NUM` через
+  `payments.GetUniqueStarGiftRequest`. Возвращает каждую существующую лягушку с
+  атрибутами (модель/фон/узор + цвета + редкость) и **владельцем** (`owner_id`).
+  Это режим для холдеров. ~15 000 запросов × `DELAY_SECONDS` ≈ пара часов.
+- **fast** — `payments.GetResaleStarGiftsRequest`: только то, что сейчас на
+  продаже (быстро, с ценами).
 
-> Почему Telethon не тянет коллекцию сам: MTProto отдаёт гифты **конкретного**
-> пользователя, но глобального индекса «все владельцы коллекции» в Telegram нет.
-> Поэтому список берём из see.tg, а Telethon-аккаунт — это раннер и обогатитель.
-> Источник в `fetch_all_frogs()` легко заменить на свой.
+Каждый прогон:
+1. собирает лягушки (`gift_to_frog`);
+2. агрегирует холдеров по `owner_id` (PeerUser → telegram_id);
+3. обогащает топ-`TOP_WHALES` через `get_entity` (username/имя), аватар — по
+   `see.tg/api/avatar/{username}`;
+4. шлёт в бэкенд: `POST /api/ingest/whales` (полная замена) и
+   `POST /api/ingest/frogs` (каталог батчами).
 
 ## Установка
 
@@ -26,46 +28,56 @@
 cd userbot
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env      # заполни значения
+cp .env.example .env        # заполни значения
 ```
 
-`INGEST_SECRET` в `userbot/.env` должен совпадать с `INGEST_SECRET` в `backend/.env`.
+`INGEST_SECRET` тут и в `backend/.env` должны совпадать.
 
-Telethon-обогащение необязательно — без `TG_*` скрипт работает (username/аватар
-возьмутся из данных see.tg, насколько они там есть). Чтобы включить:
-
-```bash
-# 1. API_ID/API_HASH: https://my.telegram.org → API development tools
-# 2. получить session string (один раз, попросит телефон + код):
-python session_string.py
-# 3. вставить TG_SESSION_STRING в .env
-```
+Вход в Telegram — один из двух способов:
+- указать `PHONE_NUMBER` (на первом запуске спросит код), или
+- получить session-строку и положить в `TG_SESSION_STRING`:
+  ```bash
+  python session_string.py
+  ```
 
 ## Запуск
 
-Разовый прогон (для проверки / cron):
 ```bash
-SYNC_INTERVAL_HOURS=0 python sync.py
+SYNC_INTERVAL_HOURS=0 python sync.py     # разовый прогон (для проверки/cron)
+python sync.py                            # демон: прогон + сон сутки
 ```
 
-Демоном (сам спит сутки между прогонами):
-```bash
-python sync.py
-# или под pm2:
-pm2 start "python sync.py" --name swamp-sync --interpreter none
-```
-
-Либо через cron (раз в день в 5 утра), без внутреннего цикла:
+cron (раз в день, full ночью):
 ```cron
-0 5 * * *  cd /var/www/swamp/userbot && SYNC_INTERVAL_HOURS=0 .venv/bin/python sync.py >> sync.log 2>&1
+0 4 * * *  cd /var/www/swamp/userbot && SYNC_INTERVAL_HOURS=0 .venv/bin/python sync.py >> sync.log 2>&1
 ```
+
+## Куда ещё можно деть эти данные (идеи)
+
+Парсинг через MTProto даёт богатый набор — не только холдеров. Что из этого
+можно выжать (готов реализовать по запросу):
+
+1. **Настоящие цены / floor на карточках.** `resell_amount` (режим fast) — цена в
+   TON. Можно показывать «на продаже за X TON», бейдж и сортировку по цене, а из
+   `Холдеров` сделать полноценный маркет с флором.
+2. **Свой словарь цветов фонов.** Из `starGiftAttributeBackdrop` приходят
+   `center/edge/pattern/text_color` — это авторитетные цвета прямо из Telegram.
+   Можно хранить их у себя и отдавать в preload вместо зависимости от changes.tg
+   (сейчас бэкенд эти `colors` в payload игнорирует — поле уже шлётся, осталось
+   добавить таблицу + отдачу).
+3. **Бейджи редкости.** `rarity_permille` для модели/фона/узора → «rare / epic /
+   legendary» прямо на карточке и в детали.
+4. **Лидерборд по стоимости портфеля.** Кол-во × floor = ценность коллекции
+   холдера, отдельная сортировка китов.
+5. **Авто-подбор обменов.** Раз у нас есть полные коллекции всех — можно
+   подсказывать «у кого есть то, что ты хочешь, и кто хочет то, что есть у тебя».
 
 ## Важно
 
-- Скрипт **не протестирован на живом API** из этой среды — точные имена полей в
-  ответе `/api/gifts` (особенно объект владельца) могут чуть отличаться. Парсинг
-  сделан защитным (`extract_owner` / `normalize_frog`); при первом прогоне глянь
-  лог и при необходимости поправь имена ключей.
-- Пока userbot не прогонялся, бэкенд отдаёт холдеров live-фоллбэком с poso.
+- На первом прогоне глянь лог: имена классов атрибутов и поля владельца берутся
+  по эталону (`Model`/`Backdrop`/`Pattern`, `owner_id.user_id`), но если Telegram
+  что-то переименует — парсинг (`extract_attributes`/`extract_owner_tg`) правится
+  в одном месте.
+- Пока userbot не отработал, бэкенд отдаёт холдеров live-фоллбэком с poso.
 
-thanks to @GiftChanges (api.changes.tg) and poso.see.tg for the gift data.
+thanks to @GiftChanges (api.changes.tg) for the in-app gift visuals.

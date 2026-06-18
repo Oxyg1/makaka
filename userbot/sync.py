@@ -1,32 +1,33 @@
 #!/usr/bin/env python3
 """
-SWAMP holders sync — userbot на Telethon.
+SWAMP holders sync — Telethon-userbot, данные напрямую из Telegram (MTProto).
 
-Что делает:
-  1. Собирает ВСЕ гифты коллекции KissedFrog с владельцами
-     (источник — публичный see.tg /api/gifts, постранично).
-  2. Агрегирует холдеров: считает сколько лягушек у каждого владельца.
-  3. (опционально) Обогащает топ-холдеров username/аватаркой через Telethon.
+Источник истины — сам Telegram, без сторонних API:
+  • FULL  — перебор slug KissedFrog-1..MAX_NUM через GetUniqueStarGiftRequest.
+            Даёт ВСЕ существующие лягушки с владельцами, атрибутами и цветами.
+            Это режим для холдеров (по умолчанию).
+  • FAST  — GetResaleStarGiftsRequest: только то, что на продаже (быстро, цены).
+
+Что делает каждый прогон:
+  1. Собирает лягушки (slug, num, модель, фон, узор, цвета, редкость, владелец).
+  2. Агрегирует холдеров (сколько лягушек у каждого telegram-владельца).
+  3. Обогащает топ-холдеров username/именем (get_entity), аватар — через see.tg.
   4. Шлёт снимок в бэкенд SWAMP:
         POST /api/ingest/whales  — топ-холдеры (полная замена)
         POST /api/ingest/frogs   — каталог лягушек (батчами, upsert)
 
-Запуск раз в день: переменная SYNC_INTERVAL_HOURS (0 = один прогон и выход).
+Запуск:
+  python sync.py            # демон: прогон + сон SYNC_INTERVAL_HOURS
+  SYNC_INTERVAL_HOURS=0 python sync.py        # один прогон (для cron)
+  MODE=fast python sync.py                    # только то, что на продаже
 
-Почему Telethon не тянет коллекцию напрямую:
-  MTProto умеет отдавать гифты КОНКРЕТНОГО пользователя, но не «всех владельцев
-  коллекции» — глобального индекса в Telegram нет. Поэтому список берём из see.tg,
-  а Telethon-аккаунт используем как демон-раннер и для обогащения (username/аватар).
-  Источник данных в fetch_all_frogs() можно заменить на свой.
-
-thanks to @GiftChanges (api.changes.tg) and poso.see.tg for the gift data.
+thanks to @GiftChanges (api.changes.tg) — за визуалки в самом мини-аппе.
 """
 
 import asyncio
 import os
 import sys
 from collections import defaultdict
-from typing import Any
 
 import httpx
 
@@ -36,209 +37,252 @@ try:
 except ImportError:
     pass
 
+from telethon import TelegramClient, functions
+from telethon.sessions import StringSession
+from telethon.errors import FloodWaitError
+
+# ── Конфиг ───────────────────────────────────────────────────────────────────
+API_ID = int(os.getenv("TG_API_ID", "0"))
+API_HASH = os.getenv("TG_API_HASH", "")
+PHONE_NUMBER = os.getenv("PHONE_NUMBER", "")
+SESSION_STRING = os.getenv("TG_SESSION_STRING", "").strip()
+SESSION_NAME = os.getenv("SESSION_NAME", "swamp_session")
+
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3001").rstrip("/")
 INGEST_SECRET = os.getenv("INGEST_SECRET", "")
 POSO_BASE = os.getenv("POSO_BASE", "https://poso.see.tg").rstrip("/")
-COLLECTION_SLUG = os.getenv("COLLECTION_SLUG", "KissedFrog")
+
+COLLECTION_PREFIX = os.getenv("COLLECTION_SLUG", "KissedFrog")
+MAX_NUM = int(os.getenv("MAX_NUM", "15000"))
+MODE = os.getenv("MODE", "full").lower()
+DELAY_SECONDS = float(os.getenv("DELAY_SECONDS", "0.6"))
 TOP_WHALES = int(os.getenv("TOP_WHALES", "100"))
 SYNC_INTERVAL_HOURS = float(os.getenv("SYNC_INTERVAL_HOURS", "24"))
-PAGE_LIMIT = 50  # see.tg максимум
-
-TG_API_ID = os.getenv("TG_API_ID", "").strip()
-TG_API_HASH = os.getenv("TG_API_HASH", "").strip()
-TG_SESSION_STRING = os.getenv("TG_SESSION_STRING", "").strip()
+BATCH = 500
 
 
 def log(msg: str) -> None:
     print(f"[swamp-sync] {msg}", flush=True)
 
 
-def first(d: dict, *keys, default=None):
-    for k in keys:
-        v = d.get(k)
-        if v not in (None, ""):
-            return v
-    return default
-
-
-def extract_owner(gift: dict) -> dict | None:
-    """Достаём владельца из объекта гифта. Возвращаем dict или None (скрытый/маркет)."""
-    owner = gift.get("owner") or gift.get("current_owner")
-    if isinstance(owner, dict):
-        tg = first(owner, "telegram_id", "tg_id")
-        if tg is None:
-            return None
-        return {
-            "telegram_id": str(tg),
-            "username": first(owner, "username"),
-            "name": first(owner, "name", "first_name", "title"),
-            "photo_url": first(owner, "photo_url", "avatar"),
-        }
-    # иногда владелец приходит плоскими полями
-    tg = first(gift, "current_owner_telegram_id", "owner_telegram_id")
-    if tg is not None:
-        return {
-            "telegram_id": str(tg),
-            "username": first(gift, "owner_username"),
-            "name": first(gift, "owner_name"),
-            "photo_url": None,
-        }
-    return None
-
-
-def normalize_frog(gift: dict, owner: dict | None) -> dict | None:
-    gift_id = first(gift, "gift_id", "id")
-    num = first(gift, "num", "number")
-    slug = first(gift, "slug")
-    model = first(gift, "model_name", "model")
-    backdrop = first(gift, "backdrop_name", "backdrop")
-    pattern = first(gift, "pattern_name", "pattern", "symbol_name")
-    if not (gift_id and num is not None and model and backdrop and pattern):
+def _color_hex(color_int) -> str | None:
+    if not color_int:
         return None
-    if not slug:
-        slug = f"{COLLECTION_SLUG}-{num}"
+    return f"#{int(color_int) & 0xFFFFFF:06X}"
+
+
+def _permille_to_fraction(p) -> float | None:
+    """rarity_permille (0..1000) → доля (0..1), как хранит бэкенд."""
+    if p is None:
+        return None
+    try:
+        return round(float(p) / 1000.0, 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def extract_attributes(gift) -> dict:
+    """Модель/фон/узор из gift.attributes (по имени класса, как в эталоне)."""
+    attrs = getattr(gift, "attributes", None) or []
+    out = {
+        "model": None, "model_rarity": None,
+        "backdrop": None, "backdrop_rarity": None,
+        "pattern": None, "pattern_rarity": None,
+        "center_color": None, "edge_color": None,
+        "pattern_color": None, "text_color": None,
+    }
+    for a in attrs:
+        cls = type(a).__name__
+        name = getattr(a, "name", None)
+        rar = _permille_to_fraction(getattr(a, "rarity_permille", None))
+        if "Model" in cls:
+            out["model"], out["model_rarity"] = name, rar
+        elif "Backdrop" in cls:
+            out["backdrop"], out["backdrop_rarity"] = name, rar
+            out["center_color"] = _color_hex(getattr(a, "center_color", 0))
+            out["edge_color"] = _color_hex(getattr(a, "edge_color", 0))
+            out["pattern_color"] = _color_hex(getattr(a, "pattern_color", 0))
+            out["text_color"] = _color_hex(getattr(a, "text_color", 0))
+        elif "Pattern" in cls:
+            out["pattern"], out["pattern_rarity"] = name, rar
+    return out
+
+
+def extract_owner_tg(gift) -> int | None:
+    """telegram_id владельца, если это реальный пользователь (PeerUser)."""
+    peer = getattr(gift, "owner_id", None)
+    if peer is None:
+        return None
+    uid = getattr(peer, "user_id", None)
+    return int(uid) if uid else None
+
+
+def gift_to_frog(gift) -> dict | None:
+    """StarGiftUnique → запись каталога для /api/ingest/frogs."""
+    slug = getattr(gift, "slug", None)
+    num = getattr(gift, "num", None)
+    if not slug or num is None:
+        return None
+    a = extract_attributes(gift)
+    if not (a["model"] and a["backdrop"] and a["pattern"]):
+        return None
+    owner_tg = extract_owner_tg(gift)
     return {
-        "gift_id": str(gift_id),
+        "gift_id": str(getattr(gift, "id", "") or f"{slug}"),
         "slug": str(slug),
         "number": int(num),
-        "model": str(model),
-        "backdrop": str(backdrop),
-        "pattern": str(pattern),
-        "model_rarity": gift.get("model_rarity"),
-        "backdrop_rarity": gift.get("backdrop_rarity"),
-        "pattern_rarity": gift.get("pattern_rarity"),
-        "image_url": first(gift, "image_url", "image"),
-        "owner_username": owner.get("username") if owner else None,
-        "owner_telegram_id": owner.get("telegram_id") if owner else None,
+        "model": a["model"],
+        "backdrop": a["backdrop"],
+        "pattern": a["pattern"],
+        "model_rarity": a["model_rarity"],
+        "backdrop_rarity": a["backdrop_rarity"],
+        "pattern_rarity": a["pattern_rarity"],
+        "image_url": None,
+        "owner_username": None,
+        "owner_telegram_id": str(owner_tg) if owner_tg else None,
+        # бонус-данные (бэкенд пока игнорирует, но пригодятся — см. README):
+        "colors": {k: a[k] for k in ("center_color", "edge_color", "pattern_color", "text_color")},
     }
 
 
-async def fetch_all_frogs(client: httpx.AsyncClient) -> tuple[list[dict], dict[str, dict]]:
-    """Постранично тянем все гифты коллекции. Возвращаем (frogs, holders_by_tg)."""
+# ── FULL: перебор всех slug ──────────────────────────────────────────────────
+async def fetch_one(client, slug: str):
+    try:
+        res = await client(functions.payments.GetUniqueStarGiftRequest(slug=slug))
+        return res.gift
+    except FloodWaitError as e:
+        log(f"FloodWait {e.seconds}s")
+        await asyncio.sleep(e.seconds + 2)
+        return await fetch_one(client, slug)
+    except Exception as e:  # noqa: BLE001
+        msg = str(e).upper()
+        if "NOT_FOUND" in msg or "INVALID" in msg or "SLUG" in msg:
+            return None
+        log(f"{slug}: {e}")
+        return None
+
+
+async def scan_full(client) -> list[dict]:
+    log(f"FULL: перебор {COLLECTION_PREFIX}-1..{MAX_NUM}")
     frogs: list[dict] = []
-    holders: dict[str, dict] = {}
-    offset = 0
-    while True:
-        params = {
-            "slug": COLLECTION_SLUG,
-            "limit": PAGE_LIMIT,
-            "offset": offset,
-            "sort_by": "num",
-            "order": "asc",
-        }
-        r = await client.get(f"{POSO_BASE}/api/gifts", params=params, timeout=30)
-        if r.status_code != 200:
-            log(f"gifts {r.status_code} at offset {offset}, stop")
-            break
-        data: Any = r.json()
-        page = data if isinstance(data, list) else first(
-            data, "results", "items", "gifts", "data", default=[]
-        )
-        if not page:
-            break
-        for gift in page:
-            if not isinstance(gift, dict):
-                continue
-            owner = extract_owner(gift)
-            frog = normalize_frog(gift, owner)
+    for num in range(1, MAX_NUM + 1):
+        gift = await fetch_one(client, f"{COLLECTION_PREFIX}-{num}")
+        if gift is not None:
+            frog = gift_to_frog(gift)
             if frog:
                 frogs.append(frog)
-            if owner and owner["telegram_id"]:
-                tg = owner["telegram_id"]
-                h = holders.get(tg)
-                if h is None:
-                    holders[tg] = {**owner, "gifts_count": 1}
-                else:
-                    h["gifts_count"] += 1
-                    # подхватываем более полные данные, если появились
-                    for k in ("username", "name", "photo_url"):
-                        if not h.get(k) and owner.get(k):
-                            h[k] = owner[k]
-        offset += PAGE_LIMIT
-        if len(page) < PAGE_LIMIT:
-            break
-        if offset % 500 == 0:
-            log(f"...{offset} gifts scanned, {len(holders)} holders so far")
-    log(f"collected {len(frogs)} frogs / {len(holders)} holders")
-    return frogs, holders
+        if num % 500 == 0:
+            log(f"...{num}/{MAX_NUM}, найдено {len(frogs)}")
+        await asyncio.sleep(DELAY_SECONDS)
+    log(f"FULL готово: {len(frogs)} лягушек")
+    return frogs
 
 
-async def enrich_with_telethon(holders: list[dict]) -> None:
-    """Опционально: дозаполняем username/name/photo_url топ-холдеров через Telethon."""
-    if not (TG_API_ID and TG_API_HASH and TG_SESSION_STRING):
-        return
-    try:
-        from telethon import TelegramClient
-        from telethon.sessions import StringSession
-    except ImportError:
-        log("telethon не установлен — пропускаю обогащение")
-        return
-
-    client = TelegramClient(StringSession(TG_SESSION_STRING), int(TG_API_ID), TG_API_HASH)
-    await client.start()
-    log("telethon: обогащаю топ-холдеров")
-    for h in holders:
-        if h.get("username") and h.get("photo_url"):
+# ── FAST: только на продаже ──────────────────────────────────────────────────
+async def scan_fast(client) -> list[dict]:
+    log("FAST: GetResaleStarGiftsRequest (только на продаже)")
+    # gift_id коллекции достаём из любого известного slug
+    gift_id = None
+    for s in (f"{COLLECTION_PREFIX}-1", f"{COLLECTION_PREFIX}-100", f"{COLLECTION_PREFIX}-1000"):
+        g = await fetch_one(client, s)
+        if g is not None:
+            gift_id = getattr(g, "gift_id", None) or getattr(g, "id", None)
+            if gift_id:
+                break
+    if not gift_id:
+        log("не удалось определить gift_id коллекции")
+        return []
+    frogs: list[dict] = []
+    offset = ""
+    while True:
+        try:
+            res = await client(functions.payments.GetResaleStarGiftsRequest(
+                gift_id=gift_id, offset=offset, limit=100, sort_by_price=True,
+            ))
+        except FloodWaitError as e:
+            await asyncio.sleep(e.seconds + 2)
             continue
+        for gift in getattr(res, "gifts", []):
+            frog = gift_to_frog(gift)
+            if frog:
+                frogs.append(frog)
+        offset = getattr(res, "next_offset", None)
+        if not offset:
+            break
+        await asyncio.sleep(DELAY_SECONDS)
+    log(f"FAST готово: {len(frogs)} на продаже")
+    return frogs
+
+
+# ── Холдеры + обогащение ─────────────────────────────────────────────────────
+async def build_holders(client, frogs: list[dict]) -> list[dict]:
+    counts: dict[str, int] = defaultdict(int)
+    for f in frogs:
+        tg = f.get("owner_telegram_id")
+        if tg:
+            counts[tg] += 1
+    holders = [{"telegram_id": tg, "gifts_count": c} for tg, c in counts.items()]
+    holders.sort(key=lambda h: h["gifts_count"], reverse=True)
+    top = holders[:TOP_WHALES]
+
+    log(f"обогащаю {len(top)} топ-холдеров")
+    for h in top:
         try:
             ent = await client.get_entity(int(h["telegram_id"]))
-            if not h.get("username") and getattr(ent, "username", None):
+            if getattr(ent, "username", None):
                 h["username"] = ent.username
-            if not h.get("name"):
-                nm = " ".join(x for x in [getattr(ent, "first_name", None), getattr(ent, "last_name", None)] if x)
-                if nm:
-                    h["name"] = nm
+                h["photo_url"] = f"{POSO_BASE}/api/avatar/{ent.username}"
+            nm = " ".join(x for x in [getattr(ent, "first_name", None), getattr(ent, "last_name", None)] if x)
+            if nm:
+                h["name"] = nm
         except Exception as e:  # noqa: BLE001
-            log(f"  enrich {h['telegram_id']} failed: {e}")
-    await client.disconnect()
-
-    # фоллбэк-аватар через see.tg, если username есть, а фото нет
-    for h in holders:
-        if not h.get("photo_url") and h.get("username"):
-            h["photo_url"] = f"{POSO_BASE}/api/avatar/{h['username']}"
+            log(f"  enrich {h['telegram_id']}: {e}")
+        await asyncio.sleep(0.2)
+    return top
 
 
-async def post_ingest(client: httpx.AsyncClient, path: str, payload: dict) -> None:
-    r = await client.post(
-        f"{BACKEND_URL}/api/ingest/{path}",
-        json=payload,
-        headers={"X-Ingest-Secret": INGEST_SECRET},
-        timeout=60,
+# ── Отправка в бэкенд ────────────────────────────────────────────────────────
+async def post_ingest(http: httpx.AsyncClient, path: str, payload: dict) -> None:
+    r = await http.post(
+        f"{BACKEND_URL}/api/ingest/{path}", json=payload,
+        headers={"X-Ingest-Secret": INGEST_SECRET}, timeout=60,
     )
-    if r.status_code == 200:
-        log(f"ingest/{path} -> {r.json()}")
-    else:
-        log(f"ingest/{path} FAILED {r.status_code}: {r.text[:200]}")
+    log(f"ingest/{path} -> {r.status_code} {r.text[:160]}")
 
 
-async def run_once() -> None:
+async def run_once(client) -> None:
     if not INGEST_SECRET:
-        log("ОШИБКА: задай INGEST_SECRET (такой же, как в backend/.env)")
+        log("ОШИБКА: задай INGEST_SECRET (как в backend/.env)")
         return
-    async with httpx.AsyncClient(headers={"Accept": "application/json"}) as client:
-        frogs, holders_map = await fetch_all_frogs(client)
-        holders = sorted(holders_map.values(), key=lambda h: h["gifts_count"], reverse=True)
-        top = holders[:TOP_WHALES]
-        await enrich_with_telethon(top)
-
-        await post_ingest(client, "whales", {"holders": top})
-        # каталог лягушек — батчами по 500
-        for i in range(0, len(frogs), 500):
-            await post_ingest(client, "frogs", {"frogs": frogs[i:i + 500]})
+    frogs = await (scan_fast(client) if MODE == "fast" else scan_full(client))
+    holders = await build_holders(client, frogs)
+    async with httpx.AsyncClient() as http:
+        await post_ingest(http, "whales", {"holders": holders})
+        for i in range(0, len(frogs), BATCH):
+            await post_ingest(http, "frogs", {"frogs": frogs[i:i + BATCH]})
     log("sync done")
 
 
 async def main() -> None:
-    await run_once()
-    if SYNC_INTERVAL_HOURS <= 0:
-        return
-    while True:
-        log(f"sleep {SYNC_INTERVAL_HOURS}h")
-        await asyncio.sleep(SYNC_INTERVAL_HOURS * 3600)
-        try:
-            await run_once()
-        except Exception as e:  # noqa: BLE001
-            log(f"run failed: {e}")
+    if not (API_ID and API_HASH):
+        log("нет TG_API_ID/TG_API_HASH — заполни .env"); return
+    if SESSION_STRING:
+        client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
+    else:
+        client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+    await client.start(phone=PHONE_NUMBER or None)
+    log("Telegram авторизация ок")
+
+    await run_once(client)
+    if SYNC_INTERVAL_HOURS > 0:
+        while True:
+            log(f"сон {SYNC_INTERVAL_HOURS}ч")
+            await asyncio.sleep(SYNC_INTERVAL_HOURS * 3600)
+            try:
+                await run_once(client)
+            except Exception as e:  # noqa: BLE001
+                log(f"run failed: {e}")
+    await client.disconnect()
 
 
 if __name__ == "__main__":

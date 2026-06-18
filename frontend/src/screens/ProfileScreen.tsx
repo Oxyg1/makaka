@@ -136,9 +136,13 @@ export default function ProfileScreen({ user, config, onNotificationsRead, onCha
         {!invLoading && items.length > 0 && (
           <div className="inv__grid">
             {items.map(f => (
-              <div key={f.id} onClick={() => { hapticImpact('light'); setViewFrog(f.id); }}>
-                <FrogCard frog={f} size="md" badge={f.active_order_id ? 'на обмене' : undefined} />
-              </div>
+              <FrogCard
+                key={f.id}
+                frog={f}
+                size="md"
+                badge={f.active_order_id ? 'на обмене' : undefined}
+                onClick={() => { hapticImpact('light'); setViewFrog(f.id); }}
+              />
             ))}
           </div>
         )}
