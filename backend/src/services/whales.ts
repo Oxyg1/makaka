@@ -1,6 +1,10 @@
-// Топ-холдеры KissedFrog. Берём с poso.see.tg, кэшируем 10 минут.
+// Топ-холдеры KissedFrog.
+// Основной источник — таблица `whales` в БД, которую раз в день наполняет
+// userbot через /api/ingest/whales. Если таблица пустая (userbot ещё не
+// прогонялся) — откатываемся на live-запрос к poso.see.tg.
 
 import { logger } from '../logger';
+import { db } from '../db';
 
 const BASE = (process.env.POSO_API_BASE ?? 'https://poso.see.tg').replace(/\/+$/, '');
 const DEFAULT_TGAUTH = '{"id":1031503708,"first_name":"Пульс","username":"bez_pulsa","photo_url":"https://t.me/i/userpic/320/AsZop47lEx4BJD3upREosBDA-9rHovZI-I47_FOBiW8.jpg","auth_date":1773229298,"hash":"a20e2147089b34d548fdd0fabc14d2b5f5eb3c395c379eabf8c9f75fa9411228"}';
@@ -39,6 +43,68 @@ interface PosoOwnerRaw {
   first_name?: string;
   photo_url?: string;
   gifts_count?: number;
+}
+
+// ── Хранилище холдеров в БД (наполняется ingest'ом) ──────────────
+interface WhaleRow {
+  telegram_id: string;
+  username: string | null;
+  name: string | null;
+  photo_url: string | null;
+  gifts_count: number;
+}
+
+export function hasStoredWhales(): boolean {
+  const r = db.prepare(`SELECT COUNT(*) AS c FROM whales`).get() as { c: number };
+  return r.c > 0;
+}
+
+export function getStoredWhales(limit = 100): Whale[] {
+  const rows = db.prepare(
+    `SELECT telegram_id, username, name, photo_url, gifts_count
+     FROM whales WHERE gifts_count > 0 ORDER BY gifts_count DESC LIMIT ?`,
+  ).all(limit) as WhaleRow[];
+  return rows.map(r => ({
+    id: r.telegram_id,
+    telegram_id: r.telegram_id,
+    username: r.username ?? undefined,
+    name: r.name ?? undefined,
+    photo_url: r.photo_url ?? undefined,
+    gifts_count: r.gifts_count,
+  }));
+}
+
+export interface IncomingWhale {
+  telegram_id: string | number;
+  username?: string | null;
+  name?: string | null;
+  photo_url?: string | null;
+  gifts_count: number;
+}
+
+// Полная замена списка холдеров (ingest присылает свежий снимок целиком).
+export function replaceWhales(list: IncomingWhale[]): number {
+  const up = db.prepare(
+    `INSERT INTO whales (telegram_id, username, name, photo_url, gifts_count, updated_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(telegram_id) DO UPDATE SET
+       username = excluded.username,
+       name = excluded.name,
+       photo_url = excluded.photo_url,
+       gifts_count = excluded.gifts_count,
+       updated_at = datetime('now')`,
+  );
+  let n = 0;
+  const tx = db.transaction((items: IncomingWhale[]) => {
+    db.prepare(`DELETE FROM whales`).run();
+    for (const w of items) {
+      if (w.telegram_id === undefined || w.telegram_id === null || w.telegram_id === '') continue;
+      up.run(String(w.telegram_id), w.username ?? null, w.name ?? null, w.photo_url ?? null, Math.max(0, Math.trunc(Number(w.gifts_count) || 0)));
+      n++;
+    }
+  });
+  tx(list);
+  return n;
 }
 
 let cache: { at: number; v: Whale[] } | null = null;

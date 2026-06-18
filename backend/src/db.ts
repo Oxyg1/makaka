@@ -78,6 +78,16 @@ db.exec(`
     read INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  -- Топ-холдеры KissedFrog. Наполняется ingest'ом (userbot раз в день).
+  CREATE TABLE IF NOT EXISTS whales (
+    telegram_id TEXT PRIMARY KEY,
+    username TEXT,
+    name TEXT,
+    photo_url TEXT,
+    gifts_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // 2. Миграции — добавляем недостающие колонки в старых БД.
@@ -101,4 +111,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_offers_from ON offers(from_user_id, status);
 
   CREATE INDEX IF NOT EXISTS idx_notifs_user ON notifications(user_id, read);
+
+  CREATE INDEX IF NOT EXISTS idx_whales_count ON whales(gifts_count DESC);
 `);

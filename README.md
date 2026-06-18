@@ -37,4 +37,12 @@ BOT_TOKEN=...                   # для верификации initData
 POSO_API_BASE=https://poso.see.tg/api
 ESCROW_USERNAME=kissedfrog      # юзернейм бот-аккаунта, куда отправляются лягушки
 FRONTEND_URL=http://localhost:5173
+INGEST_SECRET=...               # секрет для приёма данных от userbot (см. ниже)
 ```
+
+## Топ-холдеры (userbot)
+
+Список холдеров KissedFrog бэкенд держит у себя в БД (таблица `whales`),
+а наполняет её внешний демон `userbot/` (Telethon) раз в день через
+`POST /api/ingest/whales`. Подробности — в [`userbot/README.md`](userbot/README.md).
+Пока userbot не прогонялся, `/api/users/whales` отдаёт live-фоллбэком с poso.

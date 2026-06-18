@@ -14,6 +14,7 @@ import usersRouter from './routes/users';
 import configRouter from './routes/config';
 import debugRouter from './routes/debug';
 import visualsRouter from './routes/visuals';
+import ingestRouter from './routes/ingest';
 import { warmup as visualsWarmup } from './services/visuals';
 
 const app = express();
@@ -21,7 +22,7 @@ const PORT = process.env.PORT ?? 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 app.use(cors({ origin: FRONTEND_URL }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // ingest батчи бывают крупными
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.on('finish', () => {
@@ -45,6 +46,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/config', configRouter);
 app.use('/api/debug', debugRouter);
 app.use('/api/visuals', visualsRouter);
+app.use('/api/ingest', ingestRouter);
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : String(err);

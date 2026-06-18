@@ -5,12 +5,15 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
 import { fetchUserGifts } from '../services/poso';
 import { upsertFrog } from '../services/frogs';
-import { getWhales } from '../services/whales';
+import { getWhales, getStoredWhales, hasStoredWhales } from '../services/whales';
 
 const router = Router();
 
 // Топ-холдеры KissedFrog (киты).
+// Если userbot уже наполнил таблицу — отдаём из БД (быстро, стабильно).
+// Иначе — live-фоллбэк на poso.see.tg.
 router.get('/whales', authMiddleware, async (_req: AuthRequest, res) => {
+  if (hasStoredWhales()) { res.json(getStoredWhales()); return; }
   res.json(await getWhales());
 });
 
