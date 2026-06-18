@@ -21,6 +21,9 @@ export default function WhalesScreen({ myUserId, config }: Props) {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState('');
 
+  const top3 = whales.slice(0, 3);
+  const rest = whales.slice(3);
+
   useEffect(() => {
     getWhales().then(setWhales).catch(() => setWhales([])).finally(() => setLoading(false));
   }, []);
@@ -72,28 +75,61 @@ export default function WhalesScreen({ myUserId, config }: Props) {
           </div>
         )}
 
-        <div className="whales__list">
-          {whales.map((w, i) => (
-            <button
-              key={w.id}
-              className="whale-row"
-              onClick={() => { hapticImpact('light'); setOpenWhale(w); }}
-            >
-              <div className="whale-row__rank">#{i + 1}</div>
-              <div className="whale-row__avatar">
-                {w.photo_url ? <img src={w.photo_url} alt="" /> : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
+        {!loading && whales.length > 0 && (
+          <>
+            {top3.length > 0 && (
+              <div className="podium">
+                {top3.map((w, i) => (
+                  <button
+                    key={w.id}
+                    className={`podium__item podium__item--${i}`}
+                    style={{ '--i': i } as React.CSSProperties}
+                    onClick={() => { hapticImpact('light'); setOpenWhale(w); }}
+                  >
+                    {i === 0 && <span className="podium__crown">👑</span>}
+                    <div className="podium__photo-wrap">
+                      <div className="podium__photo">
+                        {w.photo_url
+                          ? <img src={w.photo_url} alt="" />
+                          : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
+                      </div>
+                      <span className="podium__rank">{i + 1}</span>
+                    </div>
+                    <span className="podium__name">{w.name ?? w.username ?? '—'}</span>
+                    <span className="podium__count">🐸 {w.gifts_count}</span>
+                    <span className="podium__pedestal" />
+                  </button>
+                ))}
               </div>
-              <div className="whale-row__info">
-                <div className="whale-row__name">{w.name ?? w.username ?? '—'}</div>
-                {w.username && <div className="whale-row__un">@{w.username}</div>}
+            )}
+
+            {rest.length > 0 && (
+              <div className="whales__list">
+                {rest.map((w, i) => (
+                  <button
+                    key={w.id}
+                    className="whale-row"
+                    style={{ '--i': i } as React.CSSProperties}
+                    onClick={() => { hapticImpact('light'); setOpenWhale(w); }}
+                  >
+                    <div className="whale-row__rank">{i + 4}</div>
+                    <div className="whale-row__avatar">
+                      {w.photo_url ? <img src={w.photo_url} alt="" /> : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
+                    </div>
+                    <div className="whale-row__info">
+                      <div className="whale-row__name">{w.name ?? w.username ?? '—'}</div>
+                      {w.username && <div className="whale-row__un">@{w.username}</div>}
+                    </div>
+                    <div className="whale-row__count">
+                      <div className="whale-row__count-value">{w.gifts_count}</div>
+                      <div className="whale-row__count-label">🐸</div>
+                    </div>
+                  </button>
+                ))}
               </div>
-              <div className="whale-row__count">
-                <div className="whale-row__count-value">{w.gifts_count}</div>
-                <div className="whale-row__count-label">🐸</div>
-              </div>
-            </button>
-          ))}
-        </div>
+            )}
+          </>
+        )}
       </div>
 
       {openWhale && (
