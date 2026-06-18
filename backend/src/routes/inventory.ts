@@ -18,24 +18,25 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
   res.json(rows);
 });
 
-// Синк с poso.see.tg.
+// Синк с poso.see.tg по telegram_id (надёжнее username).
 router.post('/sync', authMiddleware, async (req: AuthRequest, res) => {
-  const user = db.prepare(`SELECT id, username FROM users WHERE id = ?`).get(req.userId) as { id: number; username: string | null } | undefined;
+  const user = db.prepare(`SELECT id, telegram_id, username FROM users WHERE id = ?`)
+    .get(req.userId) as { id: number; telegram_id: string; username: string | null } | undefined;
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-  if (!user.username) { res.status(400).json({ error: 'У вас не задан username в Telegram. Установите его и попробуйте снова.' }); return; }
 
-  const gifts = await fetchUserGifts(user.username);
+  const gifts = await fetchUserGifts({
+    telegramId: user.telegram_id,
+    username: user.username ?? undefined,
+  });
 
   const tx = db.transaction(() => {
-    // Снимаем владение со старых, потом проставим заново только для актуальных.
     db.prepare(`UPDATE frogs SET owner_id = NULL WHERE owner_id = ?`).run(user.id);
     for (const g of gifts) upsertFrog(g, user.id);
     db.prepare(`UPDATE users SET last_synced_at = datetime('now') WHERE id = ?`).run(user.id);
   });
   tx();
 
-  const added = gifts.length;
-  res.json({ added, gifts });
+  res.json({ added: gifts.length, gifts });
 });
 
 export default router;

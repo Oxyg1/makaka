@@ -1,20 +1,37 @@
 import { Router } from 'express';
-import { fetchGiftBySlug, fetchUserGifts } from '../services/poso';
+import { fetchGiftBySlug, fetchOwnerByTelegramId, fetchOwnerByUsername, fetchUserGifts } from '../services/poso';
 
 const router = Router();
 
-// Простой smoke-test poso без авторизации, чтобы можно было curl-ом проверить.
-// Включается только если выставлен DEBUG=1.
-router.get('/poso/gifts/:username', async (req, res) => {
-  if (process.env.DEBUG !== '1') { res.status(404).end(); return; }
-  const gifts = await fetchUserGifts(req.params.username);
+function guard(): boolean { return process.env.DEBUG === '1'; }
+
+// curl https://host/api/debug/poso/owner/by-id/123
+router.get('/poso/owner/by-id/:tg', async (req, res) => {
+  if (!guard()) { res.status(404).end(); return; }
+  res.json(await fetchOwnerByTelegramId(req.params.tg));
+});
+
+router.get('/poso/owner/by-name/:un', async (req, res) => {
+  if (!guard()) { res.status(404).end(); return; }
+  res.json(await fetchOwnerByUsername(req.params.un));
+});
+
+// curl https://host/api/debug/poso/gifts/by-id/123
+router.get('/poso/gifts/by-id/:tg', async (req, res) => {
+  if (!guard()) { res.status(404).end(); return; }
+  const gifts = await fetchUserGifts({ telegramId: req.params.tg });
+  res.json({ count: gifts.length, gifts });
+});
+
+router.get('/poso/gifts/by-name/:un', async (req, res) => {
+  if (!guard()) { res.status(404).end(); return; }
+  const gifts = await fetchUserGifts({ username: req.params.un });
   res.json({ count: gifts.length, gifts });
 });
 
 router.get('/poso/gift/:slug', async (req, res) => {
-  if (process.env.DEBUG !== '1') { res.status(404).end(); return; }
-  const g = await fetchGiftBySlug(req.params.slug);
-  res.json(g);
+  if (!guard()) { res.status(404).end(); return; }
+  res.json(await fetchGiftBySlug(req.params.slug));
 });
 
 export default router;
