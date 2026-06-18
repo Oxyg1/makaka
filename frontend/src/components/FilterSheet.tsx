@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Attributes } from '../types';
 import { getAttributes } from '../api';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import './FilterSheet.css';
 
 export interface FilterValue {
@@ -37,6 +38,7 @@ export default function FilterSheet({ value, onClose, onApply }: Props) {
   const [attrs, setAttrs] = useState<Attributes | null>(null);
   const [draft, setDraft] = useState<FilterValue>(value);
   const [tab, setTab] = useState<Tab>('offer');
+  const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => { getAttributes().then(setAttrs).catch(() => {}); }, []);
 
@@ -60,8 +62,8 @@ export default function FilterSheet({ value, onClose, onApply }: Props) {
   const P = `${prefix}_patterns` as keyof FilterValue;
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-sheet">
+    <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-sheet" ref={sheetRef} {...swipeHandlers}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={reset}>Сброс</button>
@@ -69,15 +71,16 @@ export default function FilterSheet({ value, onClose, onApply }: Props) {
           <button className="modal-sheet__action" onClick={() => onApply(draft)}>Готово</button>
         </div>
         <div className="modal-sheet__scroll">
-          <div className="filter__tabs">
+          <div className="filter__tabs seg" style={{ '--seg-idx': tab === 'offer' ? 0 : 1, '--seg-n': 2 } as React.CSSProperties}>
+            <span className="seg__indicator" />
             <button
-              className={`filter__tab${tab === 'offer' ? ' filter__tab--active' : ''}`}
+              className={`filter__tab seg__btn${tab === 'offer' ? ' seg__btn--active' : ''}`}
               onClick={() => setTab('offer')}
             >
               Отдают {offerCount > 0 && <span className="filter__tab-badge">{offerCount}</span>}
             </button>
             <button
-              className={`filter__tab${tab === 'wants' ? ' filter__tab--active' : ''}`}
+              className={`filter__tab seg__btn${tab === 'wants' ? ' seg__btn--active' : ''}`}
               onClick={() => setTab('wants')}
             >
               Хотят {wantsCount > 0 && <span className="filter__tab-badge">{wantsCount}</span>}

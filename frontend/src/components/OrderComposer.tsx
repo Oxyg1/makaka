@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Attributes, Frog } from '../types';
 import { createOrder, getAttributes } from '../api';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import FrogCard from './FrogCard';
 import './OrderComposer.css';
 
@@ -18,6 +19,7 @@ export default function OrderComposer({ frog, onClose, onCreated }: Props) {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => { getAttributes().then(setAttrs).catch(() => {}); }, []);
 
@@ -48,8 +50,8 @@ export default function OrderComposer({ frog, onClose, onCreated }: Props) {
   }
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-sheet">
+    <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-sheet" ref={sheetRef} {...swipeHandlers}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Отмена</button>

@@ -1,6 +1,7 @@
 .filter__tabs {
-  display: flex; gap: 4px;
+  display: flex; gap: 0;
   padding: 5px;
+  --seg-pad: 5px;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: 99em;
@@ -29,7 +30,7 @@
   font-size: 11px; font-weight: 800;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.filter__tab:not(.filter__tab--active) .filter__tab-badge {
+.seg__btn:not(.seg__btn--active) .filter__tab-badge {
   background: var(--primary);
   color: #0d1410;
 }

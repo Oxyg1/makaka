@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Frog } from '../types';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import FrogCard from './FrogCard';
 import './OfferComposer.css';
 
@@ -19,6 +20,7 @@ export default function OfferComposer({ toFrog, orderId, onClose, onSent, onErro
   const [chosen, setChosen] = useState<Frog | null>(null);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => {
     fetchMyInventory()
@@ -47,8 +49,8 @@ export default function OfferComposer({ toFrog, orderId, onClose, onSent, onErro
   };
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-sheet">
+    <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-sheet" ref={sheetRef} {...swipeHandlers}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Отмена</button>

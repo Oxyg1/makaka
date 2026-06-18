@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { authUser, getConfig, getInventory, getNotifications, getOffers } from './api';
 import { loadPreload } from './utils/changes';
 import type { AppConfig, User } from './types';
@@ -25,6 +25,21 @@ function show(active: boolean): React.CSSProperties {
   return active
     ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }
     : { display: 'none' };
+}
+
+/** Обёртка вкладки: при активации перезапускает анимацию pane-in,
+ *  не размонтируя экран (состояние и скролл сохраняются). */
+function TabPane({ active, children }: { active: boolean; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (active && el) {
+      el.classList.remove('pane-in');
+      void el.offsetWidth; // форсируем reflow, чтобы анимация запустилась заново
+      el.classList.add('pane-in');
+    }
+  }, [active]);
+  return <div ref={ref} className="tab-pane" style={show(active)}>{children}</div>;
 }
 
 export default function App() {
@@ -90,19 +105,19 @@ export default function App() {
   return (
     <div className="app">
       <main className="app__content">
-        <div style={show(activeTab === 'market')}>
+        <TabPane active={activeTab === 'market'}>
           <MarketScreen myUserId={user?.id ?? null} config={config} refreshKey={marketKey} />
-        </div>
-        <div style={show(activeTab === 'inventory')}>
+        </TabPane>
+        <TabPane active={activeTab === 'inventory'}>
           <InventoryScreen user={user} config={config} refreshKey={inventoryKey} onChanged={refreshBadges} />
-        </div>
-        <div style={show(activeTab === 'whales')}>
+        </TabPane>
+        <TabPane active={activeTab === 'whales'}>
           <WhalesScreen myUserId={user?.id ?? null} config={config} />
-        </div>
-        <div style={show(activeTab === 'trades')}>
+        </TabPane>
+        <TabPane active={activeTab === 'trades'}>
           <TradesScreen myUserId={user?.id ?? null} refreshKey={tradesKey} onChanged={refreshBadges} />
-        </div>
-        <div style={show(activeTab === 'profile')}>
+        </TabPane>
+        <TabPane active={activeTab === 'profile'}>
           <ProfileScreen
             user={user}
             inventoryCount={inventoryCount}
@@ -110,7 +125,7 @@ export default function App() {
             onNotificationsRead={() => setUnreadNotifs(0)}
             refreshKey={profileKey}
           />
-        </div>
+        </TabPane>
       </main>
       <BottomNav activeTab={activeTab} onTabChange={changeTab} unreadOffers={unreadOffers} unreadNotifs={unreadNotifs} />
     </div>

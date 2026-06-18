@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { acceptOffer, cancelOffer, declineOffer, getOffers } from '../api';
 import type { OfferDirection } from '../types';
 import FrogCard from '../components/FrogCard';
-import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
+import { hapticImpact, hapticSuccess, hapticError, hapticSelection } from '../utils/haptics';
 import './TradesScreen.css';
 
 interface Props { myUserId: number | null; refreshKey?: number; onChanged: () => void; }
@@ -33,9 +33,10 @@ export default function TradesScreen({ myUserId, refreshKey, onChanged }: Props)
       <header className="trades__header">
         <h1 className="screen__title">Сделки</h1>
         <p className="screen__subtitle">Запросы на обмен — входящие и исходящие</p>
-        <div className="trades__tabs">
-          <button className={`trades__tab${tab === 'in' ? ' trades__tab--active' : ''}`} onClick={() => setTab('in')}>Входящие</button>
-          <button className={`trades__tab${tab === 'out' ? ' trades__tab--active' : ''}`} onClick={() => setTab('out')}>Исходящие</button>
+        <div className="trades__tabs seg" style={{ '--seg-idx': tab === 'in' ? 0 : 1, '--seg-n': 2 } as React.CSSProperties}>
+          <span className="seg__indicator" />
+          <button className={`trades__tab seg__btn${tab === 'in' ? ' seg__btn--active' : ''}`} onClick={() => { hapticSelection(); setTab('in'); }}>Входящие</button>
+          <button className={`trades__tab seg__btn${tab === 'out' ? ' seg__btn--active' : ''}`} onClick={() => { hapticSelection(); setTab('out'); }}>Исходящие</button>
         </div>
       </header>
 

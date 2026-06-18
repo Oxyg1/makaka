@@ -4,6 +4,7 @@ import type { AppConfig, Frog, Whale } from '../types';
 import FrogCard from '../components/FrogCard';
 import FrogDetailModal from '../components/FrogDetailModal';
 import { hapticImpact, hapticError } from '../utils/haptics';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import './WhalesScreen.css';
 
 interface Props {
@@ -155,6 +156,7 @@ export default function WhalesScreen({ myUserId, config }: Props) {
 function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: () => void; onPick: (id: number) => void }) {
   const [frogs, setFrogs] = useState<Frog[]>([]);
   const [loading, setLoading] = useState(true);
+  const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => {
     if (!whale.telegram_id) { setLoading(false); return; }
@@ -165,8 +167,8 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
   }, [whale.telegram_id]);
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-sheet">
+    <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-sheet" ref={sheetRef} {...swipeHandlers}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Назад</button>

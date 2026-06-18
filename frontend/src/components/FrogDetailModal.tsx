@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Frog, AppConfig } from '../types';
 import { getFrog, getInventory, createOffer } from '../api';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
+import { useSheetSwipe } from '../utils/useSheetSwipe';
 import FrogCard from './FrogCard';
 import OfferComposer from './OfferComposer';
 import OrderComposer from './OrderComposer';
@@ -33,6 +34,7 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
   const [loading, setLoading] = useState(true);
   const [showOffer, setShowOffer] = useState(false);
   const [showOrder, setShowOrder] = useState(false);
+  const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => { getFrog(frogId).then(setFrog).catch(() => setFrog(null)).finally(() => setLoading(false)); }, [frogId]);
 
@@ -47,8 +49,8 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
   }
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-sheet">
+    <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-sheet" ref={sheetRef} {...swipeHandlers}>
         <div className="modal-sheet__handle" />
         <div className="modal-sheet__header">
           <button className="modal-sheet__close" onClick={onClose}>Закрыть</button>

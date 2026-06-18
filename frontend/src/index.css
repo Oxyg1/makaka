@@ -190,3 +190,57 @@ textarea.field { min-height: 80px; resize: none; }
 .rarity-mark--leg { color: var(--warn); }
 
 .star-icon { color: var(--warn); flex-shrink: 0; }
+
+/* ── Сегмент-контрол со скользящим индикатором (iOS) ──────
+   Индикатор едет на transform → GPU, плавно. Используется
+   в фильтрах и на экране «Сделки». */
+.seg { position: relative; isolation: isolate; }
+.seg__indicator {
+  position: absolute; z-index: 0;
+  top: var(--seg-pad, 4px); left: var(--seg-pad, 4px);
+  width: calc((100% - var(--seg-pad, 4px) * 2) / var(--seg-n, 2));
+  height: calc(100% - var(--seg-pad, 4px) * 2);
+  border-radius: 99em;
+  background: var(--primary);
+  box-shadow: 0 2px 12px rgba(74,222,128,0.32), var(--glass-shadow-indicator);
+  transform: translateX(calc(var(--seg-idx, 0) * 100%));
+  transition: transform 0.34s cubic-bezier(0.34, 1.4, 0.5, 1);
+  will-change: transform;
+}
+.seg__btn {
+  position: relative; z-index: 1;
+  transition: color 0.2s;
+}
+.seg__btn--active { color: #0d1410 !important; }
+
+/* ── Плавная смена вкладок ────────────────────────────── */
+.tab-pane.pane-in {
+  animation: pane-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes pane-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.992); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Stagger появления карточек в сетках/списках ───────── */
+.inv__grid > *, .whales__grid > *, .market__list > * {
+  animation: card-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.inv__grid > *:nth-child(2), .whales__grid > *:nth-child(2), .market__list > *:nth-child(2) { animation-delay: 0.04s; }
+.inv__grid > *:nth-child(3), .whales__grid > *:nth-child(3), .market__list > *:nth-child(3) { animation-delay: 0.08s; }
+.inv__grid > *:nth-child(4), .whales__grid > *:nth-child(4), .market__list > *:nth-child(4) { animation-delay: 0.12s; }
+.inv__grid > *:nth-child(5), .whales__grid > *:nth-child(5), .market__list > *:nth-child(5) { animation-delay: 0.16s; }
+.inv__grid > *:nth-child(6), .whales__grid > *:nth-child(6), .market__list > *:nth-child(6) { animation-delay: 0.20s; }
+.inv__grid > *:nth-child(7), .whales__grid > *:nth-child(7), .market__list > *:nth-child(7) { animation-delay: 0.24s; }
+.inv__grid > *:nth-child(n+8), .whales__grid > *:nth-child(n+8), .market__list > *:nth-child(n+8) { animation-delay: 0.28s; }
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-pane.pane-in,
+  .inv__grid > *, .whales__grid > *, .market__list > * { animation: none !important; }
+  .seg__indicator, .modal-sheet { transition: none !important; }
+  .modal-sheet { animation: none !important; }
+}

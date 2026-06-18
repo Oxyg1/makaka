@@ -8,7 +8,7 @@
 }
 
 .trades__tabs {
-  display: flex; gap: 4px;
+  display: flex; gap: 0;
   padding: 4px;
   background: var(--bg-input);
   border: 1px solid var(--border);
