@@ -10,6 +10,11 @@ Telegram mini-app для обмена NFT-подарками KissedFrog внут
 - Поиск — найти конкретную лягушку по ссылке или по фильтрам, предложить обмен даже если ордера нет.
 - Сделки — входящие и исходящие офферы; обмен через эскроу на аккаунте `kissedfrog`-бота.
 
+## Благодарности
+
+- **[@GiftChanges](https://t.me/GiftChanges)** ([api.changes.tg](https://api.changes.tg)) — визуалки моделей, фонов и узоров для подарков.
+- **[poso.see.tg](https://poso.see.tg)** — данные о владельцах и подарках.
+
 ## Стек
 
 - **Backend**: Node + Express + SQLite (`better-sqlite3`), TG init-data auth.

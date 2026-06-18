@@ -111,6 +111,18 @@ export default function ProfileScreen({ user, inventoryCount, onOpenInventory, o
             />
           </label>
         </div>
+
+        <div className="profile__credits">
+          Powered by{' '}
+          <a href="https://t.me/GiftChanges" target="_blank" rel="noreferrer">
+            @GiftChanges
+          </a>{' '}
+          (<a href="https://api.changes.tg" target="_blank" rel="noreferrer">api.changes.tg</a>)
+          {' — '}визуалки подарков
+          <br />
+          Данные подарков —{' '}
+          <a href="https://poso.see.tg" target="_blank" rel="noreferrer">poso.see.tg</a>
+        </div>
       </div>
     </div>
   );

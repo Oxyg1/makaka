@@ -98,3 +98,16 @@ button.profile__stat:active { background: var(--bg-elev); }
   font-size: 14px; font-weight: 600;
 }
 .profile__setting input { transform: scale(1.15); accent-color: var(--primary); }
+
+.profile__credits {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.profile__credits a {
+  color: var(--primary);
+  text-decoration: none;
+}
+.profile__credits a:active { opacity: 0.7; }

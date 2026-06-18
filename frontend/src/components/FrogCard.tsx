@@ -1,8 +1,10 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { Frog } from '../types';
+import { getBackdropInfo, modelImageUrl, patternImageUrl } from '../utils/changes';
 import './FrogCard.css';
 
-const BACKDROP_GRADIENTS: Record<string, string> = {
+// Запасные градиенты на случай если backdrop ещё не загрузился или API недоступен.
+const FALLBACK_GRADIENTS: Record<string, string> = {
   Mint:     'linear-gradient(135deg,#a7f3d0 0%,#34d399 100%)',
   Lagoon:   'linear-gradient(135deg,#6ee7b7 0%,#0e7490 100%)',
   Sunset:   'linear-gradient(135deg,#fdba74 0%,#ec4899 100%)',
@@ -12,10 +14,6 @@ const BACKDROP_GRADIENTS: Record<string, string> = {
   Coral:    'linear-gradient(135deg,#fda4af 0%,#f59e0b 100%)',
   Obsidian: 'linear-gradient(135deg,#1f2937 0%,#0f172a 100%)',
 };
-
-function backdropStyle(name: string): CSSProperties {
-  return { background: BACKDROP_GRADIENTS[name] ?? 'linear-gradient(135deg,#4ade80 0%,#16a34a 100%)' };
-}
 
 function FrogFace({ size = 64 }: { size?: number }) {
   return (
@@ -46,12 +44,49 @@ interface Props {
 }
 
 export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
+  const [bd, setBd] = useState<{ center?: string; edge?: string; pattern?: string }>({});
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getBackdropInfo(frog.backdrop).then(info => {
+      if (!alive || !info) return;
+      setBd({ center: info.centerColor, edge: info.edgeColor, pattern: info.patternColor });
+    });
+    return () => { alive = false; };
+  }, [frog.backdrop]);
+
+  const artStyle: CSSProperties = bd.center
+    ? { background: `radial-gradient(circle at 50% 35%, ${bd.center} 0%, ${bd.edge ?? bd.center} 100%)` }
+    : { background: FALLBACK_GRADIENTS[frog.backdrop] ?? 'linear-gradient(135deg,#4ade80 0%,#16a34a 100%)' };
+
+  const patternStyle: CSSProperties = {
+    backgroundImage: `url(${patternImageUrl(frog.pattern, 256)})`,
+    backgroundSize: size === 'sm' ? '40px 40px' : size === 'lg' ? '64px 64px' : '52px 52px',
+    backgroundRepeat: 'repeat',
+    opacity: 0.18,
+    filter: bd.pattern ? undefined : 'brightness(1.4) contrast(1.1)',
+  };
+
+  const modelSize = size === 'lg' ? 512 : size === 'sm' ? 128 : 256;
   const cls = `frog-card frog-card--${size}${onClick ? ' frog-card--btn' : ''}`;
+
   return (
     <button className={cls} onClick={onClick} type="button" disabled={!onClick}>
-      <div className="frog-card__art" style={backdropStyle(frog.backdrop)}>
-        <PatternOverlay name={frog.pattern} />
-        {frog.image_url ? <img src={frog.image_url} alt={frog.model} /> : <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />}
+      <div className="frog-card__art" style={artStyle}>
+        <div className="frog-card__pattern" style={patternStyle} />
+        {frog.image_url && !imgError ? (
+          <img src={frog.image_url} alt={frog.model} onError={() => setImgError(true)} />
+        ) : (
+          <img
+            src={modelImageUrl(frog.model, modelSize)}
+            alt={frog.model}
+            onError={() => setImgError(true)}
+            className="frog-card__model-img"
+            style={imgError ? { display: 'none' } : undefined}
+          />
+        )}
+        {imgError && <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />}
         {badge && <span className="frog-card__badge">{badge}</span>}
       </div>
       <div className="frog-card__body">
@@ -64,24 +99,4 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
       </div>
     </button>
   );
-}
-
-function PatternOverlay({ name }: { name: string }) {
-  switch (name) {
-    case 'Dots':
-      return <div className="frog-card__pattern" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.18) 1.5px, transparent 1.5px)', backgroundSize: '14px 14px' }} />;
-    case 'Stripes':
-      return <div className="frog-card__pattern" style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0 6px, transparent 6px 14px)' }} />;
-    case 'Camo':
-      return <div className="frog-card__pattern" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 6px, transparent 7px), radial-gradient(rgba(0,0,0,0.15) 5px, transparent 6px)', backgroundSize: '24px 24px, 30px 30px', backgroundPosition: '0 0, 12px 12px' }} />;
-    case 'Stars':
-      return <div className="frog-card__pattern frog-card__pattern--stars" />;
-    case 'Vines':
-      return <div className="frog-card__pattern" style={{ backgroundImage: 'repeating-linear-gradient(-45deg, rgba(34,197,94,0.18) 0 3px, transparent 3px 22px)' }} />;
-    case 'Glyphs':
-      return <div className="frog-card__pattern" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 18px), repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 18px)' }} />;
-    case 'Lotus':
-      return <div className="frog-card__pattern" style={{ backgroundImage: 'radial-gradient(ellipse 22px 12px at center, rgba(255,255,255,0.10), transparent 70%)', backgroundSize: '40px 40px' }} />;
-    default: return null;
-  }
 }
