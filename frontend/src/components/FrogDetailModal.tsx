@@ -39,6 +39,7 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
   useEffect(() => { getFrog(frogId).then(setFrog).catch(() => setFrog(null)).finally(() => setLoading(false)); }, [frogId]);
 
   const isMine = !!frog && frog.owner_id === myUserId;
+  const isMarket = !!frog?.owner_is_market;
 
   function openChat(username: string) {
     hapticImpact('medium');
@@ -67,6 +68,16 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
               </div>
               <h2 className="frog-detail__name">{frog.model}</h2>
               <p className="frog-detail__sub">#{frog.number}</p>
+
+              {isMarket && (
+                <div className="frog-detail__market">
+                  <span className="frog-detail__market-icon">🏪</span>
+                  <div>
+                    <b>На маркете{frog.owner_market_name ? ` ${frog.owner_market_name}` : ''}</b>
+                    <div>Эта лягушка лежит в хранилище маркета — обменять её здесь нельзя.</div>
+                  </div>
+                </div>
+              )}
 
               <div className="frog-detail__attrs">
                 <Attr label="Модель" value={frog.model} rarity={frog.model_rarity} />
@@ -107,7 +118,9 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
 
         {frog && !loading && (
           <div className="modal-sheet__footer">
-            {isMine ? (
+            {isMarket ? (
+              <button className="btn-ghost" disabled>На маркете — обмен недоступен</button>
+            ) : isMine ? (
               frog.active_order_id ? (
                 <button className="btn-ghost" disabled>На обмене</button>
               ) : (

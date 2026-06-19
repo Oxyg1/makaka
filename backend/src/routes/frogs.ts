@@ -7,6 +7,17 @@ import { getPreload } from '../services/visuals';
 
 const router = Router();
 
+// Помечаем лягушку «на маркете», если её владелец — аккаунт-маркет/хранилище.
+function withMarket<T extends { owner_telegram_id?: string | null } | undefined>(row: T): T {
+  if (!row) return row;
+  const m = row.owner_telegram_id
+    ? (db.prepare(`SELECT name FROM markets WHERE telegram_id = ?`).get(String(row.owner_telegram_id)) as { name: string } | undefined)
+    : undefined;
+  (row as Record<string, unknown>).owner_is_market = m ? 1 : 0;
+  (row as Record<string, unknown>).owner_market_name = m?.name ?? null;
+  return row;
+}
+
 // Счётчики по колонке (model/backdrop/pattern) из локальной БД.
 function dbCounts(col: 'model' | 'backdrop' | 'pattern'): Map<string, number> {
   const rows = db.prepare(`SELECT ${col} AS v, COUNT(*) AS c FROM frogs GROUP BY ${col}`).all() as { v: string; c: number }[];
@@ -67,7 +78,7 @@ router.get('/lookup', authMiddleware, async (req: AuthRequest, res) => {
       WHERE f.slug = ?
     `).get(slug);
   }
-  res.json(row);
+  res.json(withMarket(row as { owner_telegram_id?: string | null }));
 });
 
 // Подробности по конкретной лягушке.
@@ -80,7 +91,7 @@ router.get('/:id', authMiddleware, (req: AuthRequest, res) => {
     WHERE f.id = ?
   `).get(id);
   if (!row) { res.status(404).end(); return; }
-  res.json(row);
+  res.json(withMarket(row as { owner_telegram_id?: string | null }));
 });
 
 export default router;

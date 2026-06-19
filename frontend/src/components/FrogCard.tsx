@@ -104,36 +104,38 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
   return (
     <button className={cls} onClick={onClick} type="button" disabled={!onClick}>
       <div className="frog-card__art" style={artStyle}>
-        {/* Сами символы — как в TG, через CSS mask покрашены в patternColor */}
-        {SYMBOLS.map((s, i) => (
-          <span
-            key={i}
-            className="frog-card__symbol"
-            style={{
-              top: `${s.top}%`,
-              left: `${s.left}%`,
-              width: `${s.size}%`,
-              height: `${s.size}%`,
-              opacity: s.opacity,
-              transform: `rotate(${s.rot}deg)`,
-              background: symbolColor,
-              WebkitMaskImage: symbolMaskUrl,
-              maskImage: symbolMaskUrl,
-            }}
-          />
-        ))}
-        {!imgError ? (
-          <img
-            src={modelImageUrl(frog.model, modelSize)}
-            alt={frog.model}
-            onError={() => setImgError(true)}
-            className="frog-card__model-img"
-            loading="lazy"
-          />
-        ) : (
-          <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
-        )}
-        {badge && <span className="frog-card__badge">{badge}</span>}
+        <div className="frog-card__art-fill">
+          {/* Символы паттерна — позиции в % считаются от квадрата */}
+          {SYMBOLS.map((s, i) => (
+            <span
+              key={i}
+              className="frog-card__symbol"
+              style={{
+                top: `${s.top}%`,
+                left: `${s.left}%`,
+                width: `${s.size}%`,
+                height: `${s.size}%`,
+                opacity: s.opacity,
+                transform: `rotate(${s.rot}deg)`,
+                background: symbolColor,
+                WebkitMaskImage: symbolMaskUrl,
+                maskImage: symbolMaskUrl,
+              }}
+            />
+          ))}
+          {!imgError ? (
+            <img
+              src={modelImageUrl(frog.model, modelSize)}
+              alt={frog.model}
+              onError={() => setImgError(true)}
+              className="frog-card__model-img"
+              loading="lazy"
+            />
+          ) : (
+            <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
+          )}
+          {badge && <span className="frog-card__badge">{badge}</span>}
+        </div>
       </div>
       <div className="frog-card__body">
         <div className="frog-card__model">{frog.model}</div>

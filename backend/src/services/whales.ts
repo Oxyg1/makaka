@@ -5,6 +5,7 @@
 
 import { logger } from '../logger';
 import { db } from '../db';
+import { isMarketAccount } from './markets';
 
 const BASE = (process.env.POSO_API_BASE ?? 'https://poso.see.tg').replace(/\/+$/, '');
 const DEFAULT_TGAUTH = '{"id":1031503708,"first_name":"Пульс","username":"bez_pulsa","photo_url":"https://t.me/i/userpic/320/AsZop47lEx4BJD3upREosBDA-9rHovZI-I47_FOBiW8.jpg","auth_date":1773229298,"hash":"a20e2147089b34d548fdd0fabc14d2b5f5eb3c395c379eabf8c9f75fa9411228"}';
@@ -60,18 +61,23 @@ export function hasStoredWhales(): boolean {
 }
 
 export function getStoredWhales(limit = 100): Whale[] {
+  // Берём с запасом и на чтении ещё раз отсеиваем маркеты — на случай,
+  // если в таблицу попали со старого прогона.
   const rows = db.prepare(
     `SELECT telegram_id, username, name, photo_url, gifts_count
      FROM whales WHERE gifts_count > 0 ORDER BY gifts_count DESC LIMIT ?`,
-  ).all(limit) as WhaleRow[];
-  return rows.map(r => ({
-    id: r.telegram_id,
-    telegram_id: r.telegram_id,
-    username: r.username ?? undefined,
-    name: r.name ?? undefined,
-    photo_url: r.photo_url ?? undefined,
-    gifts_count: r.gifts_count,
-  }));
+  ).all(limit * 2) as WhaleRow[];
+  return rows
+    .filter(r => !isMarketAccount(r.name, r.username))
+    .slice(0, limit)
+    .map(r => ({
+      id: r.telegram_id,
+      telegram_id: r.telegram_id,
+      username: r.username ?? undefined,
+      name: r.name ?? undefined,
+      photo_url: r.photo_url ?? undefined,
+      gifts_count: r.gifts_count,
+    }));
 }
 
 export interface IncomingWhale {
@@ -94,12 +100,22 @@ export function replaceWhales(list: IncomingWhale[]): number {
        gifts_count = excluded.gifts_count,
        updated_at = datetime('now')`,
   );
+  const upMarket = db.prepare(
+    `INSERT INTO markets (telegram_id, name, updated_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(telegram_id) DO UPDATE SET name = excluded.name, updated_at = datetime('now')`,
+  );
   let n = 0;
   const tx = db.transaction((items: IncomingWhale[]) => {
     db.prepare(`DELETE FROM whales`).run();
     for (const w of items) {
       if (w.telegram_id === undefined || w.telegram_id === null || w.telegram_id === '') continue;
-      up.run(String(w.telegram_id), w.username ?? null, w.name ?? null, w.photo_url ?? null, Math.max(0, Math.trunc(Number(w.gifts_count) || 0)));
+      const tg = String(w.telegram_id);
+      // Маркеты/хранилища — в отдельную таблицу, в холдеры не кладём.
+      if (isMarketAccount(w.name, w.username)) {
+        upMarket.run(tg, w.name ?? w.username ?? null);
+        continue;
+      }
+      up.run(tg, w.username ?? null, w.name ?? null, w.photo_url ?? null, Math.max(0, Math.trunc(Number(w.gifts_count) || 0)));
       n++;
     }
   });

@@ -10,6 +10,7 @@
 // thanks to @GiftChanges (api.changes.tg) for the gift visuals.
 
 import { logger } from '../logger';
+import { db } from '../db';
 
 const BASE = 'https://api.changes.tg';
 const COLLECTION = 'KissedFrog';
@@ -139,6 +140,58 @@ export async function fetchImage(
     logger.warn(`changes.tg img fetch failed`, { kind, name, e: String(e) });
     return null;
   }
+}
+
+// ── Цвета фонов из парсера (Telegram) — источник истины, не зависит от changes.tg ──
+export interface IncomingBackdrop {
+  name: string;
+  center_color?: string | null;
+  edge_color?: string | null;
+  pattern_color?: string | null;
+  text_color?: string | null;
+}
+
+export function replaceBackdrops(list: IncomingBackdrop[]): number {
+  const up = db.prepare(
+    `INSERT INTO backdrops (name, center_color, edge_color, pattern_color, text_color, updated_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(name) DO UPDATE SET
+       center_color = excluded.center_color,
+       edge_color = excluded.edge_color,
+       pattern_color = excluded.pattern_color,
+       text_color = excluded.text_color,
+       updated_at = datetime('now')`,
+  );
+  let n = 0;
+  const tx = db.transaction((items: IncomingBackdrop[]) => {
+    for (const b of items) {
+      if (!b.name) continue;
+      up.run(b.name, b.center_color ?? null, b.edge_color ?? null, b.pattern_color ?? null, b.text_color ?? null);
+      n++;
+    }
+  });
+  tx(list);
+  return n;
+}
+
+// Цвета фонов из БД в формате фронта (camelCase) — подмешиваются в preload.
+export function getStoredBackdrops(): Record<string, BackdropInfo> {
+  const rows = db.prepare(`SELECT * FROM backdrops`).all() as Array<{
+    name: string; center_color: string | null; edge_color: string | null;
+    pattern_color: string | null; text_color: string | null;
+  }>;
+  const out: Record<string, BackdropInfo> = {};
+  for (const r of rows) {
+    out[r.name] = {
+      name: r.name,
+      centerColor: r.center_color ?? undefined,
+      edgeColor: r.edge_color ?? r.center_color ?? undefined,
+      patternColor: r.pattern_color ?? undefined,
+      textColor: r.text_color ?? undefined,
+      hex: r.center_color ?? undefined,
+    };
+  }
+  return out;
 }
 
 // Прогрев на старте бекенда. Без await чтобы не задерживать listen.

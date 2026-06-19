@@ -33,7 +33,7 @@ export interface PreloadData {
   fetched_at: string;
 }
 
-const LS_KEY = 'visuals.preload.v1';
+const LS_KEY = 'visuals.preload.v2';
 const LS_TTL = 24 * 60 * 60 * 1000;
 
 let memory: PreloadData | null = null;

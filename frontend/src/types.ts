@@ -28,6 +28,8 @@ export interface Frog {
   owner_un?: string | null;
   owner_photo?: string | null;
   active_order_id?: number | null;
+  owner_is_market?: number;
+  owner_market_name?: string | null;
 }
 
 export interface Order {

@@ -14,15 +14,19 @@
 }
 .frog-card--btn:active { transform: scale(0.98); border-color: var(--border-strong); }
 
-.frog-card__art {
-  position: relative; aspect-ratio: 1; width: 100%;
+/* Квадрат без зависимости от aspect-ratio (надёжно в TG WebView):
+   распорка ::before задаёт высоту = ширине, контент лежит абсолютно. */
+.frog-card__art { position: relative; width: 100%; }
+.frog-card__art::before { content: ''; display: block; padding-top: 100%; }
+.frog-card__art-fill {
+  position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   isolation: isolate;
 }
 
 /* Лёгкий глянец чтобы фон не выглядел плоско, но без перебора */
-.frog-card__art::after {
+.frog-card__art-fill::after {
   content: '';
   position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0) 65%, rgba(0,0,0,0.18) 100%);

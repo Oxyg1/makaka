@@ -10,6 +10,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { replaceWhales, type IncomingWhale } from '../services/whales';
+import { replaceBackdrops, type IncomingBackdrop } from '../services/visuals';
 import { upsertFrog } from '../services/frogs';
 import type { PosoGift } from '../services/poso';
 import { logger } from '../logger';
@@ -62,6 +63,19 @@ router.post('/frogs', guard, (req: Request, res: Response) => {
     const message = e instanceof Error ? e.message : String(e);
     logger.error(`ingest /frogs failed: ${message}`);
     res.status(500).json({ ok: false, error: message, count });
+  }
+});
+
+router.post('/backdrops', guard, (req: Request, res: Response) => {
+  try {
+    const backdrops: IncomingBackdrop[] = Array.isArray(req.body?.backdrops) ? req.body.backdrops : [];
+    const count = replaceBackdrops(backdrops);
+    logger.info(`ingest: stored ${count} backdrop palettes`);
+    res.json({ ok: true, count });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    logger.error(`ingest /backdrops failed: ${message}`);
+    res.status(500).json({ ok: false, error: message });
   }
 });
 

@@ -88,6 +88,24 @@ db.exec(`
     gifts_count INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT DEFAULT (datetime('now'))
   );
+
+  -- Цвета фонов из Telegram (парсер). Источник истины для палитры карточек.
+  CREATE TABLE IF NOT EXISTS backdrops (
+    name TEXT PRIMARY KEY,
+    center_color TEXT,
+    edge_color TEXT,
+    pattern_color TEXT,
+    text_color TEXT,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Аккаунты-маркеты/хранилища (Portals, MRKT, *Relayer и т.п.).
+  -- Их прячем из холдеров и помечаем лягушек «на маркете».
+  CREATE TABLE IF NOT EXISTS markets (
+    telegram_id TEXT PRIMARY KEY,
+    name TEXT,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // 2. Миграции — добавляем недостающие колонки в старых БД.

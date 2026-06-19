@@ -1,12 +1,16 @@
 import { Router, Request, Response } from 'express';
-import { fetchImage, getPreload } from '../services/visuals';
+import { fetchImage, getPreload, getStoredBackdrops } from '../services/visuals';
 
 const router = Router();
 
 router.get('/preload', async (_req: Request, res: Response) => {
   const data = await getPreload();
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.json(data);
+  // Цвета из нашей БД (парсер, Telegram) приоритетнее и не зависят от changes.tg,
+  // который на части серверов отдаёт 403 → отсюда «все фоны зелёные».
+  const dbBackdrops = getStoredBackdrops();
+  const merged = { ...data, backdrops: { ...data.backdrops, ...dbBackdrops } };
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.json(merged);
 });
 
 router.get('/:kind/:name.png', async (req: Request, res: Response) => {
