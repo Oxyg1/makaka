@@ -17,6 +17,12 @@ import { logger } from '../logger';
 const router = Router();
 const SECRET = process.env.INGEST_SECRET ?? '';
 
+// Без секрета — чтобы одной командой проверить, что бэкенд с НОВЫМ кодом:
+//   curl localhost:3001/api/ingest/ping   → {"ok":true,...} (а не 404)
+router.get('/ping', (_req: Request, res: Response) => {
+  res.json({ ok: true, route: 'ingest', secret_set: !!SECRET, ts: Date.now() });
+});
+
 function guard(req: Request, res: Response, next: NextFunction) {
   if (!SECRET) { res.status(503).json({ error: 'ingest disabled: set INGEST_SECRET' }); return; }
   if (req.header('X-Ingest-Secret') !== SECRET) { res.status(401).json({ error: 'bad secret' }); return; }
