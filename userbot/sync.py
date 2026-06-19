@@ -254,6 +254,13 @@ async def run_once(client) -> None:
     if not INGEST_SECRET:
         log("ОШИБКА: задай INGEST_SECRET (как в backend/.env)")
         return
+    try:
+        INGEST_SECRET.encode("ascii")
+    except UnicodeEncodeError:
+        log("ОШИБКА: INGEST_SECRET содержит не-ASCII (кириллицу?). "
+            "HTTP-заголовок должен быть из латиницы/цифр. "
+            "Сгенерируй `openssl rand -hex 24` и пропиши одинаково в backend/.env и userbot/.env.")
+        return
     frogs = await (scan_fast(client) if MODE == "fast" else scan_full(client))
     holders = await build_holders(client, frogs)
     async with httpx.AsyncClient() as http:
