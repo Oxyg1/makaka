@@ -188,7 +188,7 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
               <FrogCard
                 key={f.id}
                 frog={f}
-                size="md"
+                size="sm"
                 onClick={() => onPick(f.id)}
               />
             ))}

@@ -161,7 +161,7 @@ export default function ProfileScreen({ user, config, onNotificationsRead, onCha
                 <FrogCard
                   key={f.id}
                   frog={f}
-                  size="md"
+                  size="sm"
                   badge={f.active_order_id ? 'на обмене' : undefined}
                   onClick={() => { hapticImpact('light'); setViewFrog(f.id); }}
                 />

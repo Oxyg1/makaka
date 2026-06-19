@@ -12,23 +12,29 @@
   color: var(--text-muted); font-size: 14px;
 }
 
+/* Атрибуты — сгруппированный список, как в карточке подарка TG */
 .frog-detail__attrs {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
-  margin-bottom: 18px;
+  display: flex; flex-direction: column;
+  background: var(--glass-panel), var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--bevel);
+  overflow: hidden;
+  margin-bottom: 14px;
 }
 .frog-detail__attr {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
 }
+.frog-detail__attr:first-child { border-top: none; }
 .frog-detail__attr-label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.5px; color: var(--text-muted);
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  flex-shrink: 0;
 }
-.frog-detail__attr-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-top: 3px; }
+.frog-detail__attr-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
 .frog-detail__attr-value {
-  font-size: 13.5px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 

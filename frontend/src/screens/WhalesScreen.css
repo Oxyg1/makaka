@@ -202,5 +202,5 @@
 .whale-row__count-label { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 
 .whales__grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
 }
