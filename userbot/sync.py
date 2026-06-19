@@ -58,7 +58,7 @@ MODE = os.getenv("MODE", "full").lower()
 DELAY_SECONDS = float(os.getenv("DELAY_SECONDS", "0.6"))
 TOP_WHALES = int(os.getenv("TOP_WHALES", "100"))
 SYNC_INTERVAL_HOURS = float(os.getenv("SYNC_INTERVAL_HOURS", "24"))
-BATCH = 500
+BATCH = int(os.getenv("BATCH", "200"))
 
 
 def log(msg: str) -> None:
@@ -140,8 +140,6 @@ def gift_to_frog(gift) -> dict | None:
         "image_url": None,
         "owner_username": None,
         "owner_telegram_id": str(owner_tg) if owner_tg else None,
-        # бонус-данные (бэкенд пока игнорирует, но пригодятся — см. README):
-        "colors": {k: a[k] for k in ("center_color", "edge_color", "pattern_color", "text_color")},
     }
 
 
