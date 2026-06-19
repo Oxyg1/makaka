@@ -2,24 +2,20 @@
 """
 SWAMP holders sync — Telethon-userbot, данные напрямую из Telegram (MTProto).
 
-Источник истины — сам Telegram, без сторонних API:
-  • FULL  — перебор slug KissedFrog-1..MAX_NUM через GetUniqueStarGiftRequest.
-            Даёт ВСЕ существующие лягушки с владельцами, атрибутами и цветами.
-            Это режим для холдеров (по умолчанию).
-  • FAST  — GetResaleStarGiftsRequest: только то, что на продаже (быстро, цены).
+Быстрый режим работы (FULL):
+  • узнаём реальный тираж коллекции (availability_issued) — не сканируем лишнее;
+  • пул из CONCURRENCY воркеров с общим лимитом RATE_PER_SEC запросов/сек
+    (по умолчанию 25/с — под безопасный лимит Telegram);
+  • найденные лягушки отправляются в бэкенд батчами по ходу дела (не в конце);
+  • понятный прогресс в логе: сколько обработано/найдено/холдеров + ETA.
 
-Что делает каждый прогон:
-  1. Собирает лягушки (slug, num, модель, фон, узор, цвета, редкость, владелец).
-  2. Агрегирует холдеров (сколько лягушек у каждого telegram-владельца).
-  3. Обогащает топ-холдеров username/именем (get_entity), аватар — через see.tg.
-  4. Шлёт снимок в бэкенд SWAMP:
-        POST /api/ingest/whales  — топ-холдеры (полная замена)
-        POST /api/ingest/frogs   — каталог лягушек (батчами, upsert)
+Режимы (env MODE):
+  full  — все лягушки с владельцами (для холдеров). По умолчанию.
+  fast  — только то, что на продаже (GetResaleStarGiftsRequest, с ценами).
 
-Запуск:
-  python sync.py            # демон: прогон + сон SYNC_INTERVAL_HOURS
-  SYNC_INTERVAL_HOURS=0 python sync.py        # один прогон (для cron)
-  MODE=fast python sync.py                    # только то, что на продаже
+Отправка в бэкенд SWAMP:
+  POST /api/ingest/whales  — топ-холдеры (полная замена)
+  POST /api/ingest/frogs   — каталог лягушек (батчами, upsert)
 
 thanks to @GiftChanges (api.changes.tg) — за визуалки в самом мини-аппе.
 """
@@ -27,6 +23,7 @@ thanks to @GiftChanges (api.changes.tg) — за визуалки в самом 
 import asyncio
 import os
 import sys
+import time
 from collections import defaultdict
 
 import httpx
@@ -53,16 +50,32 @@ INGEST_SECRET = os.getenv("INGEST_SECRET", "")
 POSO_BASE = os.getenv("POSO_BASE", "https://poso.see.tg").rstrip("/")
 
 COLLECTION_PREFIX = os.getenv("COLLECTION_SLUG", "KissedFrog")
-MAX_NUM = int(os.getenv("MAX_NUM", "15000"))
+MAX_NUM = int(os.getenv("MAX_NUM", "20000"))        # жёсткий потолок перебора
 MODE = os.getenv("MODE", "full").lower()
-DELAY_SECONDS = float(os.getenv("DELAY_SECONDS", "0.6"))
+RATE_PER_SEC = float(os.getenv("RATE_PER_SEC", "25"))   # лимит запросов/сек
+CONCURRENCY = int(os.getenv("CONCURRENCY", "12"))       # параллельных воркеров
 TOP_WHALES = int(os.getenv("TOP_WHALES", "100"))
 SYNC_INTERVAL_HOURS = float(os.getenv("SYNC_INTERVAL_HOURS", "24"))
-BATCH = int(os.getenv("BATCH", "200"))
+BATCH = int(os.getenv("BATCH", "200"))              # лягушек в одном POST
+FLUSH_EVERY_SEC = 5.0
+
+# Глобальный backoff на FloodWait — паузит всех воркеров.
+_pause_until = 0.0
 
 
 def log(msg: str) -> None:
     print(f"[swamp-sync] {msg}", flush=True)
+
+
+def _trigger_flood(seconds: float) -> None:
+    global _pause_until
+    _pause_until = max(_pause_until, time.monotonic() + seconds + 1)
+
+
+async def _respect_flood() -> None:
+    now = time.monotonic()
+    if _pause_until > now:
+        await asyncio.sleep(_pause_until - now)
 
 
 def _color_hex(color_int) -> str | None:
@@ -72,7 +85,6 @@ def _color_hex(color_int) -> str | None:
 
 
 def _permille_to_fraction(p) -> float | None:
-    """rarity_permille (0..1000) → доля (0..1), как хранит бэкенд."""
     if p is None:
         return None
     try:
@@ -82,15 +94,9 @@ def _permille_to_fraction(p) -> float | None:
 
 
 def extract_attributes(gift) -> dict:
-    """Модель/фон/узор из gift.attributes (по имени класса, как в эталоне)."""
     attrs = getattr(gift, "attributes", None) or []
-    out = {
-        "model": None, "model_rarity": None,
-        "backdrop": None, "backdrop_rarity": None,
-        "pattern": None, "pattern_rarity": None,
-        "center_color": None, "edge_color": None,
-        "pattern_color": None, "text_color": None,
-    }
+    out = {"model": None, "model_rarity": None, "backdrop": None,
+           "backdrop_rarity": None, "pattern": None, "pattern_rarity": None}
     for a in attrs:
         cls = type(a).__name__
         name = getattr(a, "name", None)
@@ -99,26 +105,18 @@ def extract_attributes(gift) -> dict:
             out["model"], out["model_rarity"] = name, rar
         elif "Backdrop" in cls:
             out["backdrop"], out["backdrop_rarity"] = name, rar
-            out["center_color"] = _color_hex(getattr(a, "center_color", 0))
-            out["edge_color"] = _color_hex(getattr(a, "edge_color", 0))
-            out["pattern_color"] = _color_hex(getattr(a, "pattern_color", 0))
-            out["text_color"] = _color_hex(getattr(a, "text_color", 0))
         elif "Pattern" in cls:
             out["pattern"], out["pattern_rarity"] = name, rar
     return out
 
 
 def extract_owner_tg(gift) -> int | None:
-    """telegram_id владельца, если это реальный пользователь (PeerUser)."""
     peer = getattr(gift, "owner_id", None)
-    if peer is None:
-        return None
-    uid = getattr(peer, "user_id", None)
+    uid = getattr(peer, "user_id", None) if peer is not None else None
     return int(uid) if uid else None
 
 
 def gift_to_frog(gift) -> dict | None:
-    """StarGiftUnique → запись каталога для /api/ingest/frogs."""
     slug = getattr(gift, "slug", None)
     num = getattr(gift, "num", None)
     if not slug or num is None:
@@ -128,12 +126,10 @@ def gift_to_frog(gift) -> dict | None:
         return None
     owner_tg = extract_owner_tg(gift)
     return {
-        "gift_id": str(getattr(gift, "id", "") or f"{slug}"),
+        "gift_id": str(getattr(gift, "id", "") or slug),
         "slug": str(slug),
         "number": int(num),
-        "model": a["model"],
-        "backdrop": a["backdrop"],
-        "pattern": a["pattern"],
+        "model": a["model"], "backdrop": a["backdrop"], "pattern": a["pattern"],
         "model_rarity": a["model_rarity"],
         "backdrop_rarity": a["backdrop_rarity"],
         "pattern_rarity": a["pattern_rarity"],
@@ -143,14 +139,15 @@ def gift_to_frog(gift) -> dict | None:
     }
 
 
-# ── FULL: перебор всех slug ──────────────────────────────────────────────────
 async def fetch_one(client, slug: str):
+    await _respect_flood()
     try:
         res = await client(functions.payments.GetUniqueStarGiftRequest(slug=slug))
         return res.gift
     except FloodWaitError as e:
-        log(f"FloodWait {e.seconds}s")
-        await asyncio.sleep(e.seconds + 2)
+        log(f"FloodWait {e.seconds}s — притормаживаю всех")
+        _trigger_flood(e.seconds)
+        await asyncio.sleep(e.seconds + 1)
         return await fetch_one(client, slug)
     except Exception as e:  # noqa: BLE001
         msg = str(e).upper()
@@ -160,26 +157,113 @@ async def fetch_one(client, slug: str):
         return None
 
 
-async def scan_full(client) -> list[dict]:
-    log(f"FULL: перебор {COLLECTION_PREFIX}-1..{MAX_NUM}")
-    frogs: list[dict] = []
-    for num in range(1, MAX_NUM + 1):
-        gift = await fetch_one(client, f"{COLLECTION_PREFIX}-{num}")
-        if gift is not None:
-            frog = gift_to_frog(gift)
-            if frog:
-                frogs.append(frog)
-        if num % 500 == 0:
-            log(f"...{num}/{MAX_NUM}, найдено {len(frogs)}")
-        await asyncio.sleep(DELAY_SECONDS)
-    log(f"FULL готово: {len(frogs)} лягушек")
-    return frogs
+# ── Состояние прогона ────────────────────────────────────────────────────────
+class State:
+    def __init__(self, total: int):
+        self.total = total
+        self.processed = 0
+        self.found = 0
+        self.frogs: list[dict] = []
+        self.flushed = 0
+        self.holders: dict[str, int] = defaultdict(int)
+        self.lock = asyncio.Lock()
+        self.done = False
+        self.started = time.monotonic()
+
+
+async def post_ingest(http: httpx.AsyncClient, path: str, payload: dict) -> None:
+    try:
+        r = await http.post(
+            f"{BACKEND_URL}/api/ingest/{path}", json=payload,
+            headers={"X-Ingest-Secret": INGEST_SECRET}, timeout=60,
+        )
+        log(f"→ ingest/{path}: {r.status_code} {r.text[:140]}")
+    except Exception as e:  # noqa: BLE001
+        log(f"→ ingest/{path} ОШИБКА: {e}")
+
+
+async def flush_frogs(state: State, http: httpx.AsyncClient) -> None:
+    async with state.lock:
+        pending = state.frogs[state.flushed:]
+        state.flushed = len(state.frogs)
+    for i in range(0, len(pending), BATCH):
+        await post_ingest(http, "frogs", {"frogs": pending[i:i + BATCH]})
+
+
+async def flusher(state: State, http: httpx.AsyncClient) -> None:
+    while not state.done:
+        await asyncio.sleep(FLUSH_EVERY_SEC)
+        await flush_frogs(state, http)
+
+
+async def worker(name: int, queue: "asyncio.Queue[int]", client, state: State) -> None:
+    delay = CONCURRENCY / RATE_PER_SEC  # суммарно ≈ RATE_PER_SEC запросов/сек
+    while True:
+        num = await queue.get()
+        try:
+            if num is None:
+                return
+            gift = await fetch_one(client, f"{COLLECTION_PREFIX}-{num}")
+            if gift is not None:
+                frog = gift_to_frog(gift)
+                if frog:
+                    async with state.lock:
+                        state.frogs.append(frog)
+                        tg = frog["owner_telegram_id"]
+                        if tg:
+                            state.holders[tg] += 1
+                    state.found += 1
+            state.processed += 1
+            if state.processed % 500 == 0:
+                el = time.monotonic() - state.started
+                rate = state.processed / el if el else 0
+                eta = (state.total - state.processed) / rate if rate else 0
+                log(f"...{state.processed}/{state.total} | найдено {state.found} | "
+                    f"холдеров {len(state.holders)} | {rate:.0f}/с | ETA {eta/60:.1f} мин")
+            await asyncio.sleep(delay)
+        finally:
+            queue.task_done()
+
+
+async def get_issued_count(client) -> int:
+    for s in (f"{COLLECTION_PREFIX}-1", f"{COLLECTION_PREFIX}-2", f"{COLLECTION_PREFIX}-100"):
+        g = await fetch_one(client, s)
+        if g is not None:
+            n = getattr(g, "availability_issued", None) or getattr(g, "availability_total", None)
+            if n:
+                return int(n)
+    return MAX_NUM
+
+
+async def scan_full(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[str, int]]:
+    issued = await get_issued_count(client)
+    total = min(issued, MAX_NUM)
+    est = total / RATE_PER_SEC / 60
+    log(f"FULL: тираж ~{issued}, сканирую {total} slug при {RATE_PER_SEC:.0f}/с "
+        f"({CONCURRENCY} воркеров) ≈ {est:.1f} мин")
+
+    state = State(total)
+    queue: asyncio.Queue[int] = asyncio.Queue()
+    for n in range(1, total + 1):
+        queue.put_nowait(n)
+    for _ in range(CONCURRENCY):
+        queue.put_nowait(None)  # стоп-сигналы
+
+    flush_task = asyncio.create_task(flusher(state, http))
+    workers = [asyncio.create_task(worker(i, queue, client, state)) for i in range(CONCURRENCY)]
+    await asyncio.gather(*workers)
+    state.done = True
+    await flush_task
+    await flush_frogs(state, http)  # финальный добор
+
+    log(f"FULL готово: {state.found} лягушек, {len(state.holders)} холдеров, "
+        f"{(time.monotonic() - state.started)/60:.1f} мин")
+    return state.frogs, dict(state.holders)
 
 
 # ── FAST: только на продаже ──────────────────────────────────────────────────
-async def scan_fast(client) -> list[dict]:
+async def scan_fast(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[str, int]]:
     log("FAST: GetResaleStarGiftsRequest (только на продаже)")
-    # gift_id коллекции достаём из любого известного slug
     gift_id = None
     for s in (f"{COLLECTION_PREFIX}-1", f"{COLLECTION_PREFIX}-100", f"{COLLECTION_PREFIX}-1000"):
         g = await fetch_one(client, s)
@@ -189,41 +273,40 @@ async def scan_fast(client) -> list[dict]:
                 break
     if not gift_id:
         log("не удалось определить gift_id коллекции")
-        return []
+        return [], {}
     frogs: list[dict] = []
+    holders: dict[str, int] = defaultdict(int)
     offset = ""
     while True:
+        await _respect_flood()
         try:
             res = await client(functions.payments.GetResaleStarGiftsRequest(
-                gift_id=gift_id, offset=offset, limit=100, sort_by_price=True,
-            ))
+                gift_id=gift_id, offset=offset, limit=100, sort_by_price=True))
         except FloodWaitError as e:
-            await asyncio.sleep(e.seconds + 2)
+            _trigger_flood(e.seconds)
+            await asyncio.sleep(e.seconds + 1)
             continue
         for gift in getattr(res, "gifts", []):
             frog = gift_to_frog(gift)
             if frog:
                 frogs.append(frog)
+                if frog["owner_telegram_id"]:
+                    holders[frog["owner_telegram_id"]] += 1
         offset = getattr(res, "next_offset", None)
         if not offset:
             break
-        await asyncio.sleep(DELAY_SECONDS)
+        await asyncio.sleep(CONCURRENCY / RATE_PER_SEC)
+    for i in range(0, len(frogs), BATCH):
+        await post_ingest(http, "frogs", {"frogs": frogs[i:i + BATCH]})
     log(f"FAST готово: {len(frogs)} на продаже")
-    return frogs
+    return frogs, dict(holders)
 
 
-# ── Холдеры + обогащение ─────────────────────────────────────────────────────
-async def build_holders(client, frogs: list[dict]) -> list[dict]:
-    counts: dict[str, int] = defaultdict(int)
-    for f in frogs:
-        tg = f.get("owner_telegram_id")
-        if tg:
-            counts[tg] += 1
-    holders = [{"telegram_id": tg, "gifts_count": c} for tg, c in counts.items()]
-    holders.sort(key=lambda h: h["gifts_count"], reverse=True)
-    top = holders[:TOP_WHALES]
-
-    log(f"обогащаю {len(top)} топ-холдеров")
+# ── Холдеры: топ + обогащение ────────────────────────────────────────────────
+async def build_and_post_whales(client, http: httpx.AsyncClient, holders: dict[str, int]) -> None:
+    top = sorted(({"telegram_id": tg, "gifts_count": c} for tg, c in holders.items()),
+                 key=lambda h: h["gifts_count"], reverse=True)[:TOP_WHALES]
+    log(f"обогащаю {len(top)} топ-холдеров (username/имя)")
     for h in top:
         try:
             ent = await client.get_entity(int(h["telegram_id"]))
@@ -236,16 +319,7 @@ async def build_holders(client, frogs: list[dict]) -> list[dict]:
         except Exception as e:  # noqa: BLE001
             log(f"  enrich {h['telegram_id']}: {e}")
         await asyncio.sleep(0.2)
-    return top
-
-
-# ── Отправка в бэкенд ────────────────────────────────────────────────────────
-async def post_ingest(http: httpx.AsyncClient, path: str, payload: dict) -> None:
-    r = await http.post(
-        f"{BACKEND_URL}/api/ingest/{path}", json=payload,
-        headers={"X-Ingest-Secret": INGEST_SECRET}, timeout=60,
-    )
-    log(f"ingest/{path} -> {r.status_code} {r.text[:160]}")
+    await post_ingest(http, "whales", {"holders": top})
 
 
 async def run_once(client) -> None:
@@ -256,15 +330,14 @@ async def run_once(client) -> None:
         INGEST_SECRET.encode("ascii")
     except UnicodeEncodeError:
         log("ОШИБКА: INGEST_SECRET содержит не-ASCII (кириллицу?). "
-            "HTTP-заголовок должен быть из латиницы/цифр. "
             "Сгенерируй `openssl rand -hex 24` и пропиши одинаково в backend/.env и userbot/.env.")
         return
-    frogs = await (scan_fast(client) if MODE == "fast" else scan_full(client))
-    holders = await build_holders(client, frogs)
     async with httpx.AsyncClient() as http:
-        await post_ingest(http, "whales", {"holders": holders})
-        for i in range(0, len(frogs), BATCH):
-            await post_ingest(http, "frogs", {"frogs": frogs[i:i + BATCH]})
+        if MODE == "fast":
+            _, holders = await scan_fast(client, http)
+        else:
+            _, holders = await scan_full(client, http)
+        await build_and_post_whales(client, http, holders)
     log("sync done")
 
 
