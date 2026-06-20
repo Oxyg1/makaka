@@ -78,3 +78,10 @@
   height: 36px; padding: 0 14px; font-size: 12.5px;
   flex-shrink: 0;
 }
+
+.frog-detail__links {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+.frog-detail__links .btn-ghost {
+  flex: 1; height: 44px; font-size: 13.5px; padding: 0 12px;
+}

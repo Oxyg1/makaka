@@ -99,7 +99,7 @@ function TradeCard({ offer: o, tab, myUserId, onAccept, onDecline, onCancel }: {
       <div className="trade-card__exchange">
         <div className="trade-card__side">
           <div className="trade-card__side-label">{tab === 'in' ? 'Вам отдают' : 'Вы отдаёте'}</div>
-          <FrogCard frog={{ id: o.from_frog_id, number: o.from_number, model: o.from_model, backdrop: o.from_backdrop, pattern: o.from_pattern, image_url: null }} size="sm" />
+          <FrogCard frog={{ id: o.from_frog_id, number: o.from_number, model: o.from_model, backdrop: o.from_backdrop, pattern: o.from_pattern, image_url: null, center_color: o.from_center_color, edge_color: o.from_edge_color, pattern_color: o.from_pattern_color }} size="sm" hideLabel />
         </div>
 
         <div className="trade-card__arrow">
@@ -110,7 +110,7 @@ function TradeCard({ offer: o, tab, myUserId, onAccept, onDecline, onCancel }: {
 
         <div className="trade-card__side">
           <div className="trade-card__side-label">{tab === 'in' ? 'Берут у вас' : 'Вы хотите'}</div>
-          <FrogCard frog={{ id: o.to_frog_id, number: o.to_number, model: o.to_model, backdrop: o.to_backdrop, pattern: o.to_pattern, image_url: null }} size="sm" />
+          <FrogCard frog={{ id: o.to_frog_id, number: o.to_number, model: o.to_model, backdrop: o.to_backdrop, pattern: o.to_pattern, image_url: null, center_color: o.to_center_color, edge_color: o.to_edge_color, pattern_color: o.to_pattern_color }} size="sm" hideLabel />
         </div>
       </div>
 

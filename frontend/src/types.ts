@@ -100,6 +100,13 @@ export interface OfferDirection {
   to_backdrop: string;
   to_pattern: string;
 
+  from_center_color?: string | null;
+  from_edge_color?: string | null;
+  from_pattern_color?: string | null;
+  to_center_color?: string | null;
+  to_edge_color?: string | null;
+  to_pattern_color?: string | null;
+
   from_name: string;
   from_username: string | null;
   from_photo: string | null;

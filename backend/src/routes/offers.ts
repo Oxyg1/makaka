@@ -57,11 +57,15 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
       o.message, o.status, o.accepted_at, o.created_at,
       ff.slug AS from_slug, ff.number AS from_number, ff.model AS from_model, ff.backdrop AS from_backdrop, ff.pattern AS from_pattern,
       tf.slug AS to_slug, tf.number AS to_number, tf.model AS to_model, tf.backdrop AS to_backdrop, tf.pattern AS to_pattern,
+      fb.center_color AS from_center_color, fb.edge_color AS from_edge_color, fb.pattern_color AS from_pattern_color,
+      tb.center_color AS to_center_color, tb.edge_color AS to_edge_color, tb.pattern_color AS to_pattern_color,
       fu.first_name AS from_name, fu.username AS from_username, fu.photo_url AS from_photo,
       tu.first_name AS to_name, tu.username AS to_username, tu.photo_url AS to_photo
     FROM offers o
     JOIN frogs ff ON ff.id = o.from_frog_id
     JOIN frogs tf ON tf.id = o.to_frog_id
+    LEFT JOIN backdrops fb ON fb.name = ff.backdrop COLLATE NOCASE
+    LEFT JOIN backdrops tb ON tb.name = tf.backdrop COLLATE NOCASE
     JOIN users fu ON fu.id = o.from_user_id
     JOIN users tu ON tu.id = o.to_user_id
     WHERE o.${dir} = ?

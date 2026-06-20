@@ -157,8 +157,9 @@ function OrderRow({ order: o, onOpen }: { order: MarketEntry; onOpen: () => void
         <div className="order-row__side">
           <div className="order-row__side-label">Отдаёт</div>
           <FrogCard
-            frog={{ id: o.frog_id, number: o.number, model: o.model, backdrop: o.backdrop, pattern: o.pattern, image_url: o.image_url }}
+            frog={{ id: o.frog_id, number: o.number, model: o.model, backdrop: o.backdrop, pattern: o.pattern, image_url: o.image_url, center_color: o.center_color, edge_color: o.edge_color, pattern_color: o.pattern_color }}
             size="sm"
+            hideLabel
           />
         </div>
 

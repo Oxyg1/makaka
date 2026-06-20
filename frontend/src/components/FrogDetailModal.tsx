@@ -41,13 +41,14 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
   const isMine = !!frog && frog.owner_id === myUserId;
   const isMarket = !!frog?.owner_is_market;
 
-  function openChat(username: string) {
+  function openLink(url: string) {
     hapticImpact('medium');
-    const url = `https://t.me/${username}`;
     const tg = (window as unknown as { Telegram?: { WebApp?: { openTelegramLink?: (u: string) => void } } }).Telegram?.WebApp;
     if (tg?.openTelegramLink) tg.openTelegramLink(url);
     else window.open(url, '_blank');
   }
+
+  const ownerUsername = frog?.owner_un ?? frog?.owner_username ?? null;
 
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -92,11 +93,6 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
                       <div className="frog-detail__owner-name">{frog.owner_name}</div>
                       {frog.owner_un && <div className="frog-detail__owner-un">@{frog.owner_un}</div>}
                     </div>
-                    {frog.owner_un && !isMine && (
-                      <button className="btn-ghost frog-detail__chat-btn" onClick={() => openChat(frog.owner_un!)}>
-                        Чат
-                      </button>
-                    )}
                   </div>
                 ) : frog.owner_username ? (
                   <div className="frog-detail__owner-row">
@@ -108,6 +104,17 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
                   </div>
                 ) : (
                   <div className="frog-detail__owner-un">Владелец неизвестен</div>
+                )}
+              </div>
+
+              <div className="frog-detail__links">
+                <button className="btn-ghost" onClick={() => openLink(`https://t.me/nft/${frog.slug}`)}>
+                  Открыть в Telegram
+                </button>
+                {ownerUsername && !isMine && (
+                  <button className="btn-ghost" onClick={() => openLink(`https://t.me/${ownerUsername}`)}>
+                    Написать владельцу
+                  </button>
                 )}
               </div>
             </>

@@ -100,8 +100,10 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
   const symbolColor = frog.pattern_color ?? info?.patternColor ?? 'rgba(255,255,255,0.85)';
 
   // TG-стиль: база = edge-цвет, сверху радиальный «halo» из center-цвета.
+  // TG-стиль: ровный радиальный градиент из центра (center→edge), центр по
+  // центру карточки — за стикером, как в Telegram.
   const artStyle: CSSProperties = center
-    ? { background: `radial-gradient(125% 90% at 50% 16%, ${center} 0%, ${edge!} 62%)`, backgroundColor: edge! }
+    ? { background: `radial-gradient(100% 100% at 50% 42%, ${center} 0%, ${edge!} 78%)`, backgroundColor: edge! }
     : { background: FALLBACK_GRADIENTS[frog.backdrop] ?? 'linear-gradient(135deg,#4ade80 0%,#16a34a 100%)' };
 
   const symbolMaskUrl = `url(${patternImageUrl(frog.pattern, size === 'lg' ? 128 : 64)})`;
