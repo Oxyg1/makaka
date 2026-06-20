@@ -156,6 +156,8 @@ export default function WhalesScreen({ myUserId, config }: Props) {
 function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: () => void; onPick: (id: number) => void }) {
   const [frogs, setFrogs] = useState<Frog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [model, setModel] = useState<string | null>(null);
   const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => {
@@ -166,6 +168,14 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
       .finally(() => setLoading(false));
   }, [whale.telegram_id]);
 
+  const models = Array.from(frogs.reduce((m, f) => m.set(f.model, (m.get(f.model) ?? 0) + 1), new Map<string, number>()))
+    .sort((a, b) => b[1] - a[1]);
+  const q = query.trim().toLowerCase();
+  const filtered = frogs.filter(f =>
+    (!model || f.model === model) &&
+    (!q || f.model.toLowerCase().includes(q) || String(f.number).includes(q) || f.backdrop.toLowerCase().includes(q)),
+  );
+
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-sheet" ref={sheetRef} {...swipeHandlers}>
@@ -175,6 +185,24 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
           <span className="modal-sheet__title">{whale.name ?? whale.username ?? 'Коллекция'}</span>
           <span style={{ width: 60 }} />
         </div>
+        {!loading && frogs.length > 0 && (
+          <div className="coll__filter">
+            <input
+              className="field"
+              placeholder="Поиск: модель, #номер, фон"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            <div className="coll__chips">
+              <button className={`coll__chip${!model ? ' coll__chip--active' : ''}`} onClick={() => setModel(null)}>Все · {frogs.length}</button>
+              {models.map(([m, c]) => (
+                <button key={m} className={`coll__chip${model === m ? ' coll__chip--active' : ''}`} onClick={() => setModel(model === m ? null : m)}>
+                  {m} · {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="modal-sheet__scroll">
           {!whale.telegram_id && (
             <div className="empty"><p>У этого холдера нет публичного telegram_id, коллекция недоступна.</p></div>
@@ -183,8 +211,11 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
           {!loading && frogs.length === 0 && whale.telegram_id && (
             <div className="empty"><p>Не удалось загрузить коллекцию.<br />Возможно, холдер скрыл подарки.</p></div>
           )}
+          {!loading && filtered.length === 0 && frogs.length > 0 && (
+            <div className="empty" style={{ padding: 24 }}><p>Ничего не найдено.</p></div>
+          )}
           <div className="whales__grid">
-            {frogs.map(f => (
+            {filtered.map(f => (
               <FrogCard
                 key={f.id}
                 frog={f}

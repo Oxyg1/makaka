@@ -204,3 +204,31 @@
 .whales__grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
 }
+
+/* Фильтры в коллекции холдера */
+.coll__filter {
+  flex-shrink: 0;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.coll__chips {
+  display: flex; gap: 6px; margin-top: 8px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.coll__chips::-webkit-scrollbar { display: none; }
+.coll__chip {
+  flex-shrink: 0;
+  background: var(--glass-panel), rgba(255,255,255,0.04);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--bevel);
+  color: var(--text-soft);
+  padding: 6px 12px; border-radius: 99em;
+  font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s cubic-bezier(0.34,1.4,0.5,1);
+}
+.coll__chip:active { transform: scale(0.95); }
+.coll__chip--active {
+  background: var(--primary-gradient); color: #0d1410;
+  border-color: transparent; font-weight: 700;
+}
