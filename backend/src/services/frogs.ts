@@ -1,5 +1,6 @@
 import { db } from '../db';
 import type { PosoGift } from './poso';
+import { normAddr } from './tonaddr';
 
 export interface FrogRow {
   id: number;
@@ -22,7 +23,7 @@ export interface FrogRow {
 export function upsertFrog(g: PosoGift, ownerId: number | null): FrogRow {
   const ownerUn = g.owner_username ?? null;
   const ownerTg = g.owner_telegram_id ?? null;
-  const ownerAddr = (g as PosoGift & { owner_address?: string | null }).owner_address ?? null;
+  const ownerAddr = normAddr((g as PosoGift & { owner_address?: string | null }).owner_address ?? null);
 
   db.prepare(`DELETE FROM frogs WHERE gift_id = ? AND slug <> ?`).run(g.gift_id, g.slug);
 

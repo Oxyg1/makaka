@@ -1,0 +1,19 @@
+.wallet-link { display: flex; flex-direction: column; gap: 8px; }
+.wallet-link__row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  background: var(--glass-panel), var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--bevel);
+}
+.wallet-link__icon { font-size: 18px; }
+.wallet-link__addr { flex: 1; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wallet-link__remove {
+  background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3);
+  color: var(--danger); width: 28px; height: 28px; border-radius: 50%;
+  font-size: 18px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.wallet-link__msg { font-size: 13px; color: var(--text-soft); }
+.wallet-link__msg--err { color: var(--danger); }
+.wallet-link__hint { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text-muted); }

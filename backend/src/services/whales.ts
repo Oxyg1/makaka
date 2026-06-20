@@ -6,6 +6,7 @@
 import { logger } from '../logger';
 import { db } from '../db';
 import { isMarketAccount } from './markets';
+import { normAddr } from './tonaddr';
 
 const BASE = (process.env.POSO_API_BASE ?? 'https://poso.see.tg').replace(/\/+$/, '');
 const DEFAULT_TGAUTH = '{"id":1031503708,"first_name":"Пульс","username":"bez_pulsa","photo_url":"https://t.me/i/userpic/320/AsZop47lEx4BJD3upREosBDA-9rHovZI-I47_FOBiW8.jpg","auth_date":1773229298,"hash":"a20e2147089b34d548fdd0fabc14d2b5f5eb3c395c379eabf8c9f75fa9411228"}';
@@ -148,7 +149,7 @@ export function replaceWhales(list: IncomingWhale[]): number {
       const count = Math.max(0, Math.trunc(Number(w.gifts_count) || 0));
       // Кошелёк-холдер (без telegram-аккаунта).
       if ((w.kind === 'wallet' || !w.telegram_id) && w.address) {
-        upWallet.run(String(w.address), count);
+        upWallet.run(normAddr(String(w.address)), count);
         n++;
         continue;
       }

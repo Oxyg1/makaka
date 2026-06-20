@@ -98,5 +98,19 @@ export function getWalletFrogs(address: string): Promise<Frog[]> {
   return request<Frog[]>(`/api/users/by-addr/${encodeURIComponent(address)}/frogs`);
 }
 
+// ── Привязка кошелька (TON Connect) ──
+export function getWalletChallenge(): Promise<{ payload: string }> {
+  return request<{ payload: string }>('/api/users/wallet/challenge');
+}
+export function getLinkedWallets(): Promise<{ address: string }[]> {
+  return request<{ address: string }[]>('/api/users/wallet');
+}
+export function linkWallet(body: unknown): Promise<{ ok: boolean; address: string }> {
+  return request<{ ok: boolean; address: string }>('/api/users/wallet/link', { method: 'POST', body: JSON.stringify(body) });
+}
+export function unlinkWallet(address: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/api/users/wallet?address=${encodeURIComponent(address)}`, { method: 'DELETE' });
+}
+
 export function getNotifications(): Promise<Notification[]> { return request<Notification[]>('/api/notifications'); }
 export function markNotificationsRead() { return request<{ success: boolean }>('/api/notifications/read', { method: 'POST' }); }

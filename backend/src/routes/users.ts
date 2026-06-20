@@ -3,12 +3,59 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
+import { randomBytes } from 'crypto';
 import { fetchUserGifts } from '../services/poso';
 import { upsertFrog } from '../services/frogs';
 import { getWhales, getStoredWhales, hasStoredWhales } from '../services/whales';
 import { attachColors } from '../services/colors';
+import { verifyTonProof, type IncomingProof } from '../services/tonproof';
 
 const router = Router();
+
+// in-memory челленджи на привязку кошелька (payload, который кошелёк подпишет)
+const challenges = new Map<number, { payload: string; exp: number }>();
+
+function userTg(userId?: number): string | null {
+  const u = db.prepare(`SELECT telegram_id FROM users WHERE id = ?`).get(userId) as { telegram_id: string } | undefined;
+  return u?.telegram_id ?? null;
+}
+
+// Выдать nonce для ton_proof.
+router.get('/wallet/challenge', authMiddleware, (req: AuthRequest, res) => {
+  const payload = randomBytes(32).toString('hex');
+  challenges.set(req.userId!, { payload, exp: Date.now() + 15 * 60 * 1000 });
+  res.json({ payload });
+});
+
+// Список привязанных кошельков.
+router.get('/wallet', authMiddleware, (req: AuthRequest, res) => {
+  const tg = userTg(req.userId);
+  const rows = tg ? db.prepare(`SELECT address FROM wallet_links WHERE telegram_id = ?`).all(tg) : [];
+  res.json(rows);
+});
+
+// Привязать кошелёк по ton_proof.
+router.post('/wallet/link', authMiddleware, (req: AuthRequest, res) => {
+  const ch = challenges.get(req.userId!);
+  if (!ch || ch.exp < Date.now()) { res.status(400).json({ error: 'Сессия истекла, попробуйте снова' }); return; }
+  const r = verifyTonProof(req.body as IncomingProof, ch.payload);
+  if (!r.ok || !r.address) { res.status(400).json({ error: `Кошелёк не подтверждён: ${r.error}` }); return; }
+  challenges.delete(req.userId!);
+  const tg = userTg(req.userId);
+  if (!tg) { res.status(404).json({ error: 'Пользователь не найден' }); return; }
+  db.prepare(`INSERT INTO wallet_links (address, telegram_id) VALUES (?, ?)
+    ON CONFLICT(address) DO UPDATE SET telegram_id = excluded.telegram_id, created_at = datetime('now')`)
+    .run(r.address, tg);
+  res.json({ ok: true, address: r.address });
+});
+
+// Отвязать кошелёк.
+router.delete('/wallet', authMiddleware, (req: AuthRequest, res) => {
+  const tg = userTg(req.userId);
+  const addr = typeof req.query.address === 'string' ? req.query.address : null;
+  if (tg && addr) db.prepare(`DELETE FROM wallet_links WHERE address = ? AND telegram_id = ?`).run(addr, tg);
+  res.json({ ok: true });
+});
 
 // Топ-холдеры KissedFrog (киты).
 // Если userbot уже наполнил таблицу — отдаём из БД (быстро, стабильно).

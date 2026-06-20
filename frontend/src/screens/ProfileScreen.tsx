@@ -6,6 +6,7 @@ import {
 import type { AppConfig, Frog, Notification, Order, User } from '../types';
 import FrogCard from '../components/FrogCard';
 import FrogDetailModal from '../components/FrogDetailModal';
+import WalletLink from '../components/WalletLink';
 import { hapticImpact, hapticSuccess, hapticError, hapticSelection } from '../utils/haptics';
 import { isHapticsEnabled, setHapticsEnabled } from '../utils/haptics';
 import './ProfileScreen.css';
@@ -213,6 +214,10 @@ export default function ProfileScreen({ user, config, onNotificationsRead, onCha
             ))}
           </div>
         )}
+
+        {/* ── Кошельки ────────────────────────────── */}
+        <div className="section-title">Кошельки TON</div>
+        <WalletLink />
 
         {/* ── Настройки ───────────────────────────── */}
         <div className="section-title">Настройки</div>
