@@ -106,16 +106,32 @@ db.exec(`
     name TEXT,
     updated_at TEXT DEFAULT (datetime('now'))
   );
+
+  -- Холдеры-кошельки (владелец = TON-адрес, не telegram-аккаунт).
+  CREATE TABLE IF NOT EXISTS wallet_holders (
+    address TEXT PRIMARY KEY,
+    gifts_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Привязки кошельков к юзерам (после доказательства владения, TON Connect).
+  CREATE TABLE IF NOT EXISTS wallet_links (
+    address TEXT PRIMARY KEY,
+    telegram_id TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // 2. Миграции — добавляем недостающие колонки в старых БД.
 function safeAlter(sql: string) { try { db.exec(sql); } catch { /* column exists */ } }
 safeAlter(`ALTER TABLE frogs ADD COLUMN owner_telegram_id TEXT`);
+safeAlter(`ALTER TABLE frogs ADD COLUMN owner_address TEXT`);
 
 // 3. Создаём индексы (после того как все колонки точно на месте).
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_frogs_owner ON frogs(owner_id);
   CREATE INDEX IF NOT EXISTS idx_frogs_owner_tg ON frogs(owner_telegram_id);
+  CREATE INDEX IF NOT EXISTS idx_frogs_owner_addr ON frogs(owner_address);
   CREATE INDEX IF NOT EXISTS idx_frogs_model ON frogs(model);
   CREATE INDEX IF NOT EXISTS idx_frogs_backdrop ON frogs(backdrop);
   CREATE INDEX IF NOT EXISTS idx_frogs_pattern ON frogs(pattern);

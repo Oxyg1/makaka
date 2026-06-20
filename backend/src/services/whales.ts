@@ -29,6 +29,12 @@ export interface Whale {
   name?: string;
   photo_url?: string;
   gifts_count: number;
+  kind?: 'user' | 'wallet';
+  address?: string;
+}
+
+function shortAddr(a: string): string {
+  return a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a;
 }
 
 interface PosoLeaderboardRaw {
@@ -56,36 +62,62 @@ interface WhaleRow {
 }
 
 export function hasStoredWhales(): boolean {
-  const r = db.prepare(`SELECT COUNT(*) AS c FROM whales`).get() as { c: number };
+  const r = db.prepare(`SELECT
+    (SELECT COUNT(*) FROM whales) + (SELECT COUNT(*) FROM wallet_holders) AS c`).get() as { c: number };
   return r.c > 0;
 }
 
 export function getStoredWhales(limit = 100): Whale[] {
-  // Берём с запасом и на чтении ещё раз отсеиваем маркеты — на случай,
-  // если в таблицу попали со старого прогона.
-  const rows = db.prepare(
+  // Юзеры-холдеры (без маркетов)…
+  const userRows = (db.prepare(
     `SELECT telegram_id, username, name, photo_url, gifts_count
      FROM whales WHERE gifts_count > 0 ORDER BY gifts_count DESC LIMIT ?`,
-  ).all(limit * 2) as WhaleRow[];
-  return rows
+  ).all(limit * 2) as WhaleRow[])
     .filter(r => !isMarketAccount(r.name, r.username))
-    .slice(0, limit)
-    .map(r => ({
+    .map<Whale>(r => ({
       id: r.telegram_id,
       telegram_id: r.telegram_id,
       username: r.username ?? undefined,
       name: r.name ?? undefined,
       photo_url: r.photo_url ?? undefined,
       gifts_count: r.gifts_count,
+      kind: 'user',
     }));
+
+  // …и холдеры-кошельки. Если кошелёк привязан к юзеру — показываем профиль.
+  const walletRows = db.prepare(
+    `SELECT w.address, w.gifts_count, l.telegram_id AS linked_tg,
+            u.first_name AS u_name, u.username AS u_un, u.photo_url AS u_photo
+     FROM wallet_holders w
+     LEFT JOIN wallet_links l ON l.address = w.address
+     LEFT JOIN users u ON u.telegram_id = l.telegram_id
+     WHERE w.gifts_count > 0 ORDER BY w.gifts_count DESC LIMIT ?`,
+  ).all(limit * 2) as Array<{ address: string; gifts_count: number; linked_tg: string | null; u_name: string | null; u_un: string | null; u_photo: string | null }>;
+
+  const wallets = walletRows.map<Whale>(w => w.linked_tg
+    ? {
+        id: w.linked_tg, telegram_id: w.linked_tg,
+        username: w.u_un ?? undefined, name: w.u_name ?? undefined, photo_url: w.u_photo ?? undefined,
+        gifts_count: w.gifts_count, kind: 'user', address: w.address,
+      }
+    : {
+        id: `wallet:${w.address}`, name: shortAddr(w.address),
+        gifts_count: w.gifts_count, kind: 'wallet', address: w.address,
+      });
+
+  return [...userRows, ...wallets]
+    .sort((a, b) => b.gifts_count - a.gifts_count)
+    .slice(0, limit);
 }
 
 export interface IncomingWhale {
-  telegram_id: string | number;
+  telegram_id?: string | number | null;
   username?: string | null;
   name?: string | null;
   photo_url?: string | null;
   gifts_count: number;
+  kind?: 'user' | 'wallet';
+  address?: string | null;
 }
 
 // Полная замена списка холдеров (ingest присылает свежий снимок целиком).
@@ -104,10 +136,22 @@ export function replaceWhales(list: IncomingWhale[]): number {
     `INSERT INTO markets (telegram_id, name, updated_at) VALUES (?, ?, datetime('now'))
      ON CONFLICT(telegram_id) DO UPDATE SET name = excluded.name, updated_at = datetime('now')`,
   );
+  const upWallet = db.prepare(
+    `INSERT INTO wallet_holders (address, gifts_count, updated_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(address) DO UPDATE SET gifts_count = excluded.gifts_count, updated_at = datetime('now')`,
+  );
   let n = 0;
   const tx = db.transaction((items: IncomingWhale[]) => {
     db.prepare(`DELETE FROM whales`).run();
+    db.prepare(`DELETE FROM wallet_holders`).run();
     for (const w of items) {
+      const count = Math.max(0, Math.trunc(Number(w.gifts_count) || 0));
+      // Кошелёк-холдер (без telegram-аккаунта).
+      if ((w.kind === 'wallet' || !w.telegram_id) && w.address) {
+        upWallet.run(String(w.address), count);
+        n++;
+        continue;
+      }
       if (w.telegram_id === undefined || w.telegram_id === null || w.telegram_id === '') continue;
       const tg = String(w.telegram_id);
       // Маркеты/хранилища — в отдельную таблицу, в холдеры не кладём.
@@ -115,7 +159,7 @@ export function replaceWhales(list: IncomingWhale[]): number {
         upMarket.run(tg, w.name ?? w.username ?? null);
         continue;
       }
-      up.run(tg, w.username ?? null, w.name ?? null, w.photo_url ?? null, Math.max(0, Math.trunc(Number(w.gifts_count) || 0)));
+      up.run(tg, w.username ?? null, w.name ?? null, w.photo_url ?? null, count);
       n++;
     }
   });

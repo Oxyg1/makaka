@@ -148,4 +148,6 @@ export interface Whale {
   name?: string;
   photo_url?: string;
   gifts_count: number;
+  kind?: 'user' | 'wallet';
+  address?: string;
 }

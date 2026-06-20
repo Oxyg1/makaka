@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getUserFrogs, getWhales, lookupFrog } from '../api';
+import { getUserFrogs, getWalletFrogs, getWhales, lookupFrog } from '../api';
 import type { AppConfig, Frog, Whale } from '../types';
 import FrogCard from '../components/FrogCard';
 import FrogDetailModal from '../components/FrogDetailModal';
@@ -90,9 +90,11 @@ export default function WhalesScreen({ myUserId, config }: Props) {
                     {i === 0 && <span className="podium__crown">👑</span>}
                     <div className="podium__photo-wrap">
                       <div className="podium__photo">
-                        {w.photo_url
-                          ? <img src={w.photo_url} alt="" />
-                          : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
+                        {w.kind === 'wallet'
+                          ? <span>👛</span>
+                          : w.photo_url
+                            ? <img src={w.photo_url} alt="" />
+                            : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
                       </div>
                       <span className="podium__rank">{i + 1}</span>
                     </div>
@@ -115,11 +117,13 @@ export default function WhalesScreen({ myUserId, config }: Props) {
                   >
                     <div className="whale-row__rank">{i + 4}</div>
                     <div className="whale-row__avatar">
-                      {w.photo_url ? <img src={w.photo_url} alt="" /> : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
+                      {w.kind === 'wallet'
+                        ? <span>👛</span>
+                        : w.photo_url ? <img src={w.photo_url} alt="" /> : <span>{(w.name ?? w.username ?? '?')[0]?.toUpperCase()}</span>}
                     </div>
                     <div className="whale-row__info">
                       <div className="whale-row__name">{w.name ?? w.username ?? '—'}</div>
-                      {w.username && <div className="whale-row__un">@{w.username}</div>}
+                      {w.username ? <div className="whale-row__un">@{w.username}</div> : w.kind === 'wallet' && <div className="whale-row__un">кошелёк</div>}
                     </div>
                     <div className="whale-row__count">
                       <div className="whale-row__count-value">{w.gifts_count}</div>
@@ -161,12 +165,11 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
   const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
 
   useEffect(() => {
-    if (!whale.telegram_id) { setLoading(false); return; }
-    getUserFrogs(whale.telegram_id)
-      .then(setFrogs)
-      .catch(() => setFrogs([]))
-      .finally(() => setLoading(false));
-  }, [whale.telegram_id]);
+    const p = whale.telegram_id ? getUserFrogs(whale.telegram_id)
+      : whale.address ? getWalletFrogs(whale.address) : null;
+    if (!p) { setLoading(false); return; }
+    p.then(setFrogs).catch(() => setFrogs([])).finally(() => setLoading(false));
+  }, [whale.telegram_id, whale.address]);
 
   const models = Array.from(frogs.reduce((m, f) => m.set(f.model, (m.get(f.model) ?? 0) + 1), new Map<string, number>()))
     .sort((a, b) => b[1] - a[1]);
@@ -204,11 +207,11 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
           </div>
         )}
         <div className="modal-sheet__scroll">
-          {!whale.telegram_id && (
-            <div className="empty"><p>У этого холдера нет публичного telegram_id, коллекция недоступна.</p></div>
+          {!whale.telegram_id && !whale.address && (
+            <div className="empty"><p>У этого холдера нет публичного идентификатора, коллекция недоступна.</p></div>
           )}
           {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
-          {!loading && frogs.length === 0 && whale.telegram_id && (
+          {!loading && frogs.length === 0 && (whale.telegram_id || whale.address) && (
             <div className="empty"><p>Не удалось загрузить коллекцию.<br />Возможно, холдер скрыл подарки.</p></div>
           )}
           {!loading && filtered.length === 0 && frogs.length > 0 && (

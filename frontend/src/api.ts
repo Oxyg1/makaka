@@ -94,6 +94,9 @@ export function getWhales(): Promise<Whale[]> { return request<Whale[]>('/api/us
 export function getUserFrogs(telegramId: string): Promise<Frog[]> {
   return request<Frog[]>(`/api/users/by-tg/${encodeURIComponent(telegramId)}/frogs`);
 }
+export function getWalletFrogs(address: string): Promise<Frog[]> {
+  return request<Frog[]>(`/api/users/by-addr/${encodeURIComponent(address)}/frogs`);
+}
 
 export function getNotifications(): Promise<Notification[]> { return request<Notification[]>('/api/notifications'); }
 export function markNotificationsRead() { return request<{ success: boolean }>('/api/notifications/read', { method: 'POST' }); }

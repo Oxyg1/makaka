@@ -52,4 +52,15 @@ router.get('/by-tg/:tg/frogs', authMiddleware, async (req: AuthRequest, res) => 
   res.json(attachColors(existing as unknown as Record<string, unknown>[]));
 });
 
+// Коллекция кошелька (холдер без telegram-аккаунта) — по TON-адресу.
+router.get('/by-addr/:addr/frogs', authMiddleware, (req: AuthRequest, res) => {
+  const addr = Array.isArray(req.params.addr) ? req.params.addr[0] : req.params.addr;
+  const rows = db.prepare(`
+    SELECT id, slug, number, model, backdrop, pattern, image_url, owner_username, owner_telegram_id, owner_address
+    FROM frogs WHERE owner_address = ?
+    ORDER BY number DESC
+  `).all(addr) as Record<string, unknown>[];
+  res.json(attachColors(rows));
+});
+
 export default router;

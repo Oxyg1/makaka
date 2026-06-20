@@ -132,10 +132,16 @@ def backdrop_palette(gift):
     return None, None
 
 
-def extract_owner_tg(gift) -> int | None:
+def extract_owner(gift) -> tuple[str | None, str | None]:
+    """(telegram_id, wallet_address). Один из двух или оба None."""
     peer = getattr(gift, "owner_id", None)
     uid = getattr(peer, "user_id", None) if peer is not None else None
-    return int(uid) if uid else None
+    if uid:
+        return str(uid), None
+    addr = getattr(gift, "owner_address", None)
+    if addr:
+        return None, str(addr)
+    return None, None
 
 
 def gift_to_frog(gift) -> dict | None:
@@ -146,7 +152,7 @@ def gift_to_frog(gift) -> dict | None:
     a = extract_attributes(gift)
     if not (a["model"] and a["backdrop"] and a["pattern"]):
         return None
-    owner_tg = extract_owner_tg(gift)
+    owner_tg, owner_addr = extract_owner(gift)
     return {
         "gift_id": str(getattr(gift, "id", "") or slug),
         "slug": str(slug),
@@ -157,7 +163,8 @@ def gift_to_frog(gift) -> dict | None:
         "pattern_rarity": a["pattern_rarity"],
         "image_url": None,
         "owner_username": None,
-        "owner_telegram_id": str(owner_tg) if owner_tg else None,
+        "owner_telegram_id": owner_tg,
+        "owner_address": owner_addr,
     }
 
 
@@ -188,6 +195,7 @@ class State:
         self.frogs: list[dict] = []
         self.flushed = 0
         self.holders: dict[str, int] = defaultdict(int)
+        self.wallet_holders: dict[str, int] = defaultdict(int)
         self.backdrops: dict[str, dict] = {}
         self.lock = asyncio.Lock()
         self.done = False
@@ -235,6 +243,8 @@ async def worker(name: int, queue: "asyncio.Queue[int]", client, state: State) -
                         tg = frog["owner_telegram_id"]
                         if tg:
                             state.holders[tg] += 1
+                        elif frog.get("owner_address"):
+                            state.wallet_holders[frog["owner_address"]] += 1
                         bname = frog["backdrop"]
                         if bname not in state.backdrops:
                             pal = backdrop_palette(gift)[1]
@@ -263,7 +273,7 @@ async def get_issued_count(client) -> int:
     return MAX_NUM
 
 
-async def scan_full(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[str, int], dict[str, dict]]:
+async def scan_full(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[str, int], dict[str, int], dict[str, dict]]:
     issued = await get_issued_count(client)
     total = min(issued, MAX_NUM)
     est = total / RATE_PER_SEC / 60
@@ -285,12 +295,13 @@ async def scan_full(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[s
     await flush_frogs(state, http)  # финальный добор
 
     log(f"FULL готово: {state.found} лягушек, {len(state.holders)} холдеров, "
-        f"{len(state.backdrops)} фонов, {(time.monotonic() - state.started)/60:.1f} мин")
-    return state.frogs, dict(state.holders), dict(state.backdrops)
+        f"{len(state.wallet_holders)} кошельков, {len(state.backdrops)} фонов, "
+        f"{(time.monotonic() - state.started)/60:.1f} мин")
+    return state.frogs, dict(state.holders), dict(state.wallet_holders), dict(state.backdrops)
 
 
 # ── FAST: только на продаже ──────────────────────────────────────────────────
-async def scan_fast(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[str, int], dict[str, dict]]:
+async def scan_fast(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[str, int], dict[str, int], dict[str, dict]]:
     log("FAST: GetResaleStarGiftsRequest (только на продаже)")
     gift_id = None
     for s in (f"{COLLECTION_PREFIX}-1", f"{COLLECTION_PREFIX}-100", f"{COLLECTION_PREFIX}-1000"):
@@ -301,9 +312,10 @@ async def scan_fast(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[s
                 break
     if not gift_id:
         log("не удалось определить gift_id коллекции")
-        return [], {}, {}
+        return [], {}, {}, {}
     frogs: list[dict] = []
     holders: dict[str, int] = defaultdict(int)
+    wallet_holders: dict[str, int] = defaultdict(int)
     backdrops: dict[str, dict] = {}
     offset = ""
     while True:
@@ -321,6 +333,8 @@ async def scan_fast(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[s
                 frogs.append(frog)
                 if frog["owner_telegram_id"]:
                     holders[frog["owner_telegram_id"]] += 1
+                elif frog.get("owner_address"):
+                    wallet_holders[frog["owner_address"]] += 1
                 if frog["backdrop"] not in backdrops:
                     pal = backdrop_palette(gift)[1]
                     if pal:
@@ -332,16 +346,20 @@ async def scan_fast(client, http: httpx.AsyncClient) -> tuple[list[dict], dict[s
     for i in range(0, len(frogs), BATCH):
         await post_ingest(http, "frogs", {"frogs": frogs[i:i + BATCH]})
     log(f"FAST готово: {len(frogs)} на продаже")
-    return frogs, dict(holders), dict(backdrops)
+    return frogs, dict(holders), dict(wallet_holders), dict(backdrops)
 
 
-# ── Холдеры: топ + обогащение ────────────────────────────────────────────────
-async def build_and_post_whales(client, http: httpx.AsyncClient, holders: dict[str, int]) -> None:
-    # Шлём с запасом (+50): бэкенд отсеет маркеты и оставит топ реальных людей.
-    top = sorted(({"telegram_id": tg, "gifts_count": c} for tg, c in holders.items()),
-                 key=lambda h: h["gifts_count"], reverse=True)[:TOP_WHALES + 50]
-    log(f"обогащаю {len(top)} топ-холдеров (username/имя)")
-    for h in top:
+# ── Холдеры: топ (юзеры + кошельки) + обогащение ─────────────────────────────
+async def build_and_post_whales(client, http: httpx.AsyncClient,
+                                holders: dict[str, int], wallet_holders: dict[str, int]) -> None:
+    combined: list[dict] = [{"telegram_id": tg, "gifts_count": c, "kind": "user"} for tg, c in holders.items()]
+    combined += [{"address": a, "gifts_count": c, "kind": "wallet"} for a, c in wallet_holders.items()]
+    combined.sort(key=lambda h: h["gifts_count"], reverse=True)
+    # +50 с запасом: бэкенд отсеет маркеты и оставит топ.
+    top = combined[:TOP_WHALES + 50]
+    users = [h for h in top if h.get("kind") == "user"]
+    log(f"обогащаю {len(users)} топ-холдеров (username/имя), кошельков в топе: {len(top) - len(users)}")
+    for h in users:
         try:
             ent = await client.get_entity(int(h["telegram_id"]))
             if getattr(ent, "username", None):
@@ -469,13 +487,13 @@ async def run_once(client) -> None:
         return
     async with httpx.AsyncClient() as http:
         if MODE == "fast":
-            frogs, holders, backdrops = await scan_fast(client, http)
+            frogs, holders, wallet_holders, backdrops = await scan_fast(client, http)
         else:
-            frogs, holders, backdrops = await scan_full(client, http)
+            frogs, holders, wallet_holders, backdrops = await scan_full(client, http)
         if backdrops:
             await post_ingest(http, "backdrops",
                               {"backdrops": [{"name": n, **c} for n, c in backdrops.items()]})
-        await build_and_post_whales(client, http, holders)
+        await build_and_post_whales(client, http, holders, wallet_holders)
         if MODE != "fast":
             try:
                 await post_owner_changes(client, http, frogs)
