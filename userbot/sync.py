@@ -21,6 +21,7 @@ thanks to @GiftChanges (api.changes.tg) — за визуалки в самом 
 """
 
 import asyncio
+import json
 import os
 import sys
 import time
@@ -58,6 +59,14 @@ TOP_WHALES = int(os.getenv("TOP_WHALES", "100"))
 SYNC_INTERVAL_HOURS = float(os.getenv("SYNC_INTERVAL_HOURS", "24"))
 BATCH = int(os.getenv("BATCH", "200"))              # лягушек в одном POST
 FLUSH_EVERY_SEC = 5.0
+
+# Дайджесты смен владельцев в канал (#7)
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+CHANNEL_ID = os.getenv("CHANNEL_ID", "").strip()      # напр. -1004345157016
+POST_CHANGES = os.getenv("POST_CHANGES", "1") == "1"
+SNAPSHOT_FILE = os.getenv("SNAPSHOT_FILE", os.path.join(os.path.dirname(__file__), "owners_snapshot.json"))
+MAX_TRANSFERS = int(os.getenv("MAX_TRANSFERS", "150"))  # потолок переходов в посте за прогон
+PER_MSG = int(os.getenv("PER_MSG", "15"))              # переходов в одном сообщении
 
 # Глобальный backoff на FloodWait — паузит всех воркеров.
 _pause_until = 0.0
@@ -347,6 +356,107 @@ async def build_and_post_whales(client, http: httpx.AsyncClient, holders: dict[s
     await post_ingest(http, "whales", {"holders": top})
 
 
+# ── Дайджест смен владельцев в канал (#7) ────────────────────────────────────
+def load_snapshot() -> dict[str, str]:
+    try:
+        with open(SNAPSHOT_FILE, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def save_snapshot(m: dict[str, str]) -> None:
+    try:
+        with open(SNAPSHOT_FILE, "w", encoding="utf-8") as fh:
+            json.dump(m, fh)
+    except Exception as e:  # noqa: BLE001
+        log(f"snapshot save failed: {e}")
+
+
+def esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+async def tg_send(http: httpx.AsyncClient, text: str) -> None:
+    while True:
+        r = await http.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={"chat_id": CHANNEL_ID, "text": text, "parse_mode": "HTML",
+                  "disable_web_page_preview": True},
+            timeout=30,
+        )
+        if r.status_code == 429:
+            retry = r.json().get("parameters", {}).get("retry_after", 5)
+            log(f"channel 429 — жду {retry}s")
+            await asyncio.sleep(retry + 1)
+            continue
+        if r.status_code != 200:
+            log(f"channel send {r.status_code}: {r.text[:160]}")
+        return
+
+
+async def resolve_names(client, ids: set[str]) -> dict[str, str]:
+    names: dict[str, str] = {}
+    for tg in list(ids)[:2 * MAX_TRANSFERS]:
+        try:
+            ent = await client.get_entity(int(tg))
+            if getattr(ent, "username", None):
+                names[tg] = f"@{ent.username}"
+            else:
+                nm = " ".join(x for x in [getattr(ent, "first_name", None), getattr(ent, "last_name", None)] if x)
+                names[tg] = esc(nm) if nm else f"id{tg}"
+        except Exception:  # noqa: BLE001
+            names[tg] = f"id{tg}"
+        await asyncio.sleep(0.15)
+    return names
+
+
+async def post_owner_changes(client, http: httpx.AsyncClient, frogs: list[dict]) -> None:
+    cur = {f["slug"]: f["owner_telegram_id"] for f in frogs if f.get("owner_telegram_id")}
+    if not (POST_CHANGES and BOT_TOKEN and CHANNEL_ID):
+        save_snapshot(cur)
+        return
+    prev = load_snapshot()
+    if not prev:
+        log("снимок владельцев базовый — посты не шлём, сохраняю baseline")
+        save_snapshot(cur)
+        return
+
+    fmap = {f["slug"]: f for f in frogs}
+    changes = []
+    for slug, new in cur.items():
+        old = prev.get(slug)
+        if old and new and old != new:
+            f = fmap[slug]
+            changes.append((slug, str(f.get("model", "?")), f.get("number", ""), old, new))
+    if not changes:
+        log("смен владельцев нет")
+        save_snapshot(cur)
+        return
+
+    log(f"смен владельцев: {len(changes)} — шлю дайджест в канал")
+    shown = changes[:MAX_TRANSFERS]
+    extra = len(changes) - len(shown)
+    ids: set[str] = set()
+    for _slug, _m, _n, o, n in shown:
+        ids.add(o); ids.add(n)
+    names = await resolve_names(client, ids)
+
+    for i in range(0, len(shown), PER_MSG):
+        chunk = shown[i:i + PER_MSG]
+        lines = ["🐸 <b>Переходы KissedFrog</b>\n"]
+        for slug, model, num, o, n in chunk:
+            on = names.get(o, f"id{o}")
+            nn = names.get(n, f"id{n}")
+            lines.append(f'🔄 <a href="https://t.me/nft/{slug}">{esc(model)} #{num}</a>\n   {on} → {nn}')
+        await tg_send(http, "\n".join(lines))
+        await asyncio.sleep(3)  # пауза между постами — анти-рейтлимит
+    if extra > 0:
+        await tg_send(http, f"…и ещё <b>{extra}</b> переходов за период.")
+
+    save_snapshot(cur)
+
+
 async def run_once(client) -> None:
     if not INGEST_SECRET:
         log("ОШИБКА: задай INGEST_SECRET (как в backend/.env)")
@@ -359,13 +469,18 @@ async def run_once(client) -> None:
         return
     async with httpx.AsyncClient() as http:
         if MODE == "fast":
-            _, holders, backdrops = await scan_fast(client, http)
+            frogs, holders, backdrops = await scan_fast(client, http)
         else:
-            _, holders, backdrops = await scan_full(client, http)
+            frogs, holders, backdrops = await scan_full(client, http)
         if backdrops:
             await post_ingest(http, "backdrops",
                               {"backdrops": [{"name": n, **c} for n, c in backdrops.items()]})
         await build_and_post_whales(client, http, holders)
+        if MODE != "fast":
+            try:
+                await post_owner_changes(client, http, frogs)
+            except Exception as e:  # noqa: BLE001
+                log(f"owner-changes failed: {e}")
     log("sync done")
 
 
