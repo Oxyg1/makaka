@@ -5,6 +5,7 @@ import FrogCard from '../components/FrogCard';
 import FilterSheet, { EMPTY_FILTER, isEmptyFilter, type FilterValue } from '../components/FilterSheet';
 import FrogDetailModal from '../components/FrogDetailModal';
 import { hapticImpact } from '../utils/haptics';
+import { getBackdropInfoSync, loadPreload, modelImageUrl, type BackdropInfo } from '../utils/changes';
 import './MarketScreen.css';
 
 interface Props {
@@ -171,19 +172,57 @@ function OrderRow({ order: o, onOpen }: { order: MarketEntry; onOpen: () => void
 
         <div className="order-row__wants">
           <div className="order-row__side-label">Хочет</div>
-          <div className="order-row__wants-list">
-            {wantsM.map(v => <span key={`m-${v}`} className="chip chip--primary">{v}</span>)}
-            {wantsB.map(v => <span key={`b-${v}`} className="chip">{v}</span>)}
-            {wantsP.map(v => <span key={`p-${v}`} className="chip chip--ghost">{v}</span>)}
-            {wantsM.length + wantsB.length + wantsP.length === 0 && (
-              <span className="order-row__wants-empty">любую</span>
-            )}
-          </div>
+          <WantPortrait models={wantsM} backdrops={wantsB} patterns={wantsP} />
         </div>
       </div>
 
       {o.note && <div className="order-row__note">«{o.note}»</div>}
     </article>
+  );
+}
+
+// «Портрет» желаемого: миниатюра модели (на её фоне, если задан) + подпись
+// с тем, что не важно («любой фон / узор»). Если важна только модель —
+// показываем просто модель без фона.
+function WantPortrait({ models, backdrops, patterns }: { models: string[]; backdrops: string[]; patterns: string[] }) {
+  const model = models[0] ?? null;
+  const backdrop = backdrops[0] ?? null;
+  const [info, setInfo] = useState<BackdropInfo | null>(() => (backdrop ? getBackdropInfoSync(backdrop) : null));
+
+  useEffect(() => {
+    if (!backdrop) { setInfo(null); return; }
+    const sync = getBackdropInfoSync(backdrop);
+    if (sync) { setInfo(sync); return; }
+    let alive = true;
+    loadPreload().then(() => { if (alive) setInfo(getBackdropInfoSync(backdrop)); }).catch(() => {});
+    return () => { alive = false; };
+  }, [backdrop]);
+
+  const center = info?.centerColor ?? null;
+  const edge = info?.edgeColor ?? center;
+  const artBg = center
+    ? `radial-gradient(100% 100% at 50% 42%, ${center} 0%, ${edge} 80%)`
+    : backdrop ? 'var(--bg-elev)' : 'rgba(255,255,255,0.03)';
+
+  const title = model ?? backdrop ?? patterns[0] ?? 'Любую лягушку';
+  const hints: string[] = [];
+  if (models.length > 1) hints.push(`+${models.length - 1} модель`);
+  if (!models.length) hints.push('любая модель');
+  if (!backdrops.length) hints.push('любой фон');
+  if (!patterns.length) hints.push('любой узор');
+
+  return (
+    <div className="want-portrait">
+      <div className="want-portrait__art" style={{ background: artBg }}>
+        {model
+          ? <img src={modelImageUrl(model, 256)} alt={model} className="want-portrait__img" loading="lazy" />
+          : <span className="want-portrait__q">{backdrop ? '🎨' : '?'}</span>}
+      </div>
+      <div className="want-portrait__cap">
+        <div className="want-portrait__title">{title}</div>
+        {hints.length > 0 && <div className="want-portrait__hint">{hints.join(' · ')}</div>}
+      </div>
+    </div>
   );
 }
 

@@ -23,27 +23,26 @@ const FALLBACK_GRADIENTS: Record<string, string> = {
 //   - 8 мелких в промежутках для плотности
 // Симбол отрисовываем через CSS mask + цвет patternColor — получаем
 // настоящий монохромный паттерн, а не «плитку».
-const SYMBOLS: { top: number; left: number; size: number; opacity: number; rot: number }[] = [
-  // 4 крупных по углам
-  { top: 6,  left: 6,  size: 18, opacity: 0.55, rot: -30 },
-  { top: 6,  left: 76, size: 18, opacity: 0.55, rot: 30 },
-  { top: 76, left: 6,  size: 18, opacity: 0.55, rot: -150 },
-  { top: 76, left: 76, size: 18, opacity: 0.55, rot: 150 },
-  // 4 средних по сторонам
-  { top: 2,  left: 41, size: 14, opacity: 0.45, rot: 0 },
-  { top: 84, left: 41, size: 14, opacity: 0.45, rot: 180 },
-  { top: 41, left: 2,  size: 14, opacity: 0.45, rot: -90 },
-  { top: 41, left: 84, size: 14, opacity: 0.45, rot: 90 },
-  // 8 мелких заполняющих
-  { top: 22, left: 22, size: 9, opacity: 0.35, rot: -15 },
-  { top: 22, left: 69, size: 9, opacity: 0.35, rot: 15 },
-  { top: 69, left: 22, size: 9, opacity: 0.35, rot: -165 },
-  { top: 69, left: 69, size: 9, opacity: 0.35, rot: 165 },
-  { top: 17, left: 47, size: 7, opacity: 0.3,  rot: 0 },
-  { top: 76, left: 47, size: 7, opacity: 0.3,  rot: 180 },
-  { top: 47, left: 17, size: 7, opacity: 0.3,  rot: -90 },
-  { top: 47, left: 76, size: 7, opacity: 0.3,  rot: 90 },
-];
+// TG-стиль: ровная симметричная «плитка» символов (прямые, без поворота),
+// со смещением чётных рядов и затуханием к центру, чтобы стикер читался.
+function buildSymbols() {
+  const out: { top: number; left: number; size: number; opacity: number; rot: number }[] = [];
+  const cols = 4, rows = 5;
+  const cellW = 100 / cols, cellH = 100 / rows;
+  const size = 13;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cx = cellW * (c + 0.5) + (r % 2 ? cellW / 2 : -cellW / 2 * 0);
+      const cy = cellH * (r + 0.5);
+      if (cx > 97 || cx < 3) continue;
+      const dist = Math.hypot(cx - 50, cy - 50);
+      const opacity = dist < 20 ? 0.14 : dist < 38 ? 0.26 : 0.4;
+      out.push({ top: cy - size / 2, left: cx - size / 2, size, opacity, rot: 0 });
+    }
+  }
+  return out;
+}
+const SYMBOLS = buildSymbols();
 
 function FrogFace({ size = 64 }: { size?: number }) {
   return (

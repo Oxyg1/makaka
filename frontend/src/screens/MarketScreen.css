@@ -126,8 +126,22 @@
   color: var(--primary);
 }
 .order-row__wants { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.order-row__wants-list { display: flex; flex-wrap: wrap; gap: 5px; }
-.order-row__wants-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+.want-portrait { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.want-portrait__art {
+  width: 56px; height: 56px; border-radius: 13px;
+  flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--bevel);
+}
+.want-portrait__img { width: 80%; height: 80%; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.35)); }
+.want-portrait__q { font-size: 22px; opacity: 0.6; }
+.want-portrait__cap { min-width: 0; }
+.want-portrait__title {
+  font-size: 14px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.want-portrait__hint { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
 
 .order-row__note {
   margin-top: 12px;
