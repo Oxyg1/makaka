@@ -4,6 +4,7 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
+import { attachColors } from '../services/colors';
 
 const router = Router();
 
@@ -73,8 +74,8 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
     WHERE ${where.join(' AND ')}
     ORDER BY ${order}
     LIMIT ? OFFSET ?
-  `).all(...params, f.limit!, f.offset!);
-  res.json(rows);
+  `).all(...params, f.limit!, f.offset!) as Record<string, unknown>[];
+  res.json(attachColors(rows));
 });
 
 router.get('/my', authMiddleware, (req: AuthRequest, res) => {

@@ -3,6 +3,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { db } from '../db';
 import { fetchUserGifts } from '../services/poso';
 import { upsertFrog } from '../services/frogs';
+import { attachColors } from '../services/colors';
 
 const router = Router();
 
@@ -14,8 +15,8 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
     FROM frogs f
     WHERE f.owner_id = ?
     ORDER BY f.number DESC
-  `).all(req.userId);
-  res.json(rows);
+  `).all(req.userId) as Record<string, unknown>[];
+  res.json(attachColors(rows));
 });
 
 // Синк с poso.see.tg по telegram_id (надёжнее username).

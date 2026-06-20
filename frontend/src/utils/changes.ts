@@ -45,6 +45,9 @@ export function modelImageUrl(model: string, size: 64 | 128 | 256 | 512 | 1024 =
 export function patternImageUrl(pattern: string, size: 64 | 128 | 256 | 512 | 1024 = 128): string {
   return `${BASE}/symbol/${encodeURIComponent(pattern)}.png?size=${size}`;
 }
+export function modelLottieUrl(model: string): string {
+  return `${BASE}/model/${encodeURIComponent(model)}.json`;
+}
 
 function readLs(): PreloadData | null {
   try {

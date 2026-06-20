@@ -64,10 +64,8 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
           {frog && (
             <>
               <div className="frog-detail__hero">
-                <FrogCard frog={frog} size="lg" />
+                <FrogCard frog={frog} size="lg" animated />
               </div>
-              <h2 className="frog-detail__name">{frog.model}</h2>
-              <p className="frog-detail__sub">#{frog.number}</p>
 
               {isMarket && (
                 <div className="frog-detail__market">

@@ -4,6 +4,7 @@ import { db } from '../db';
 import { fetchGiftBySlug } from '../services/poso';
 import { upsertFrog } from '../services/frogs';
 import { getPreload } from '../services/visuals';
+import { attachColorsOne } from '../services/colors';
 
 const router = Router();
 
@@ -78,7 +79,7 @@ router.get('/lookup', authMiddleware, async (req: AuthRequest, res) => {
       WHERE f.slug = ?
     `).get(slug);
   }
-  res.json(withMarket(row as { owner_telegram_id?: string | null }));
+  res.json(attachColorsOne(withMarket(row as Record<string, unknown> & { owner_telegram_id?: string | null })));
 });
 
 // Подробности по конкретной лягушке.
@@ -91,7 +92,7 @@ router.get('/:id', authMiddleware, (req: AuthRequest, res) => {
     WHERE f.id = ?
   `).get(id);
   if (!row) { res.status(404).end(); return; }
-  res.json(withMarket(row as { owner_telegram_id?: string | null }));
+  res.json(attachColorsOne(withMarket(row as Record<string, unknown> & { owner_telegram_id?: string | null })));
 });
 
 export default router;

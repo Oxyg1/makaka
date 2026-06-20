@@ -1,6 +1,7 @@
 import { useState, useEffect, type CSSProperties } from 'react';
 import type { Frog } from '../types';
 import { getBackdropInfoSync, loadPreload, modelImageUrl, patternImageUrl, type BackdropInfo } from '../utils/changes';
+import LottieGift from './LottieGift';
 import './FrogCard.css';
 
 // Фоллбэк-градиенты пока preload не приехал.
@@ -66,20 +67,25 @@ function FrogFace({ size = 64 }: { size?: number }) {
 }
 
 interface Props {
-  frog: Pick<Frog, 'number' | 'model' | 'backdrop' | 'pattern' | 'image_url'> & { id?: number };
+  frog: Pick<Frog, 'number' | 'model' | 'backdrop' | 'pattern' | 'image_url' | 'center_color' | 'edge_color' | 'pattern_color'> & { id?: number };
   size?: 'sm' | 'md' | 'lg';
   badge?: string;
+  /** не показывать оверлей с названием (когда имя выводится отдельно) */
+  hideLabel?: boolean;
+  /** анимированный стикер (lottie) вместо PNG — только в детали */
+  animated?: boolean;
   onClick?: () => void;
 }
 
-export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
+export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated, onClick }: Props) {
   const [imgError, setImgError] = useState(false);
-  // Цвета фона приходят из preload (changes.tg). Карточка могла
-  // отрендериться раньше, чем preload догрузился, — поэтому держим
-  // info в state и обновляем, когда словарь приедет.
+  // Цвета фона: приоритет — данные самой лягушки (бэкенд, из парсера Telegram).
+  // Фоллбэк — preload (changes.tg), который на части серверов пустой.
+  const hasDataColor = !!frog.center_color;
   const [info, setInfo] = useState<BackdropInfo | null>(() => getBackdropInfoSync(frog.backdrop));
 
   useEffect(() => {
+    if (hasDataColor) return; // цвета уже есть в данных — preload не нужен
     const sync = getBackdropInfoSync(frog.backdrop);
     if (sync) { setInfo(sync); return; }
     let alive = true;
@@ -87,14 +93,15 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
       .then(() => { if (alive) setInfo(getBackdropInfoSync(frog.backdrop)); })
       .catch(() => {});
     return () => { alive = false; };
-  }, [frog.backdrop]);
+  }, [frog.backdrop, hasDataColor]);
 
-  const center = info?.centerColor ?? null;
-  const edge = info?.edgeColor ?? center;
-  const symbolColor = info?.patternColor ?? 'rgba(255,255,255,0.8)';
+  const center = frog.center_color ?? info?.centerColor ?? null;
+  const edge = frog.edge_color ?? info?.edgeColor ?? center;
+  const symbolColor = frog.pattern_color ?? info?.patternColor ?? 'rgba(255,255,255,0.85)';
 
+  // TG-стиль: база = edge-цвет, сверху радиальный «halo» из center-цвета.
   const artStyle: CSSProperties = center
-    ? { background: `radial-gradient(circle at 50% 38%, ${center} 0%, ${edge} 100%)` }
+    ? { background: `radial-gradient(125% 90% at 50% 16%, ${center} 0%, ${edge!} 62%)`, backgroundColor: edge! }
     : { background: FALLBACK_GRADIENTS[frog.backdrop] ?? 'linear-gradient(135deg,#4ade80 0%,#16a34a 100%)' };
 
   const symbolMaskUrl = `url(${patternImageUrl(frog.pattern, size === 'lg' ? 128 : 64)})`;
@@ -123,7 +130,9 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
               }}
             />
           ))}
-          {!imgError ? (
+          {animated ? (
+            <LottieGift model={frog.model} className="frog-card__model-img" />
+          ) : !imgError ? (
             <img
               src={modelImageUrl(frog.model, modelSize)}
               alt={frog.model}
@@ -135,14 +144,12 @@ export default function FrogCard({ frog, size = 'md', badge, onClick }: Props) {
             <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
           )}
           {badge && <span className="frog-card__badge">{badge}</span>}
-        </div>
-      </div>
-      <div className="frog-card__body">
-        <div className="frog-card__model">{frog.model}</div>
-        <div className="frog-card__meta">
-          <span className="frog-card__num">#{frog.number}</span>
-          <span className="frog-card__dot">·</span>
-          <span>{frog.backdrop}</span>
+          {!hideLabel && (
+            <div className="frog-card__overlay">
+              <span className="frog-card__overlay-name">{frog.model}</span>
+              <span className="frog-card__overlay-meta">#{frog.number} · {frog.backdrop}</span>
+            </div>
+          )}
         </div>
       </div>
     </button>

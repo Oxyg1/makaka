@@ -83,13 +83,15 @@ router.post('/backdrops', guard, (req: Request, res: Response) => {
 router.get('/stats', guard, (_req: Request, res: Response) => {
   const w = db.prepare(`SELECT COUNT(*) AS c FROM whales`).get() as { c: number };
   const f = db.prepare(`SELECT COUNT(*) AS c FROM frogs`).get() as { c: number };
+  const bd = db.prepare(`SELECT COUNT(*) AS c FROM backdrops`).get() as { c: number };
+  const mk = db.prepare(`SELECT COUNT(*) AS c FROM markets`).get() as { c: number };
   const topWhales = db.prepare(
     `SELECT telegram_id, username, name, gifts_count FROM whales ORDER BY gifts_count DESC LIMIT 10`,
   ).all();
   const sampleFrogs = db.prepare(
     `SELECT slug, model, backdrop, pattern, owner_telegram_id FROM frogs ORDER BY id DESC LIMIT 10`,
   ).all();
-  res.json({ whales: w.c, frogs: f.c, topWhales, sampleFrogs });
+  res.json({ whales: w.c, frogs: f.c, backdrops: bd.c, markets: mk.c, topWhales, sampleFrogs });
 });
 
 export default router;

@@ -194,6 +194,26 @@ export function getStoredBackdrops(): Record<string, BackdropInfo> {
   return out;
 }
 
+// ── Lottie (анимированный стикер) — проксируем decompressed JSON с changes.tg ──
+const lottieCache = new Map<string, { data: string; fetched_at: number }>();
+
+export async function fetchLottie(kind: 'model' | 'pattern' | 'symbol', name: string): Promise<string | null> {
+  const key = `${kind}:${name}`;
+  const hit = lottieCache.get(key);
+  if (hit && Date.now() - hit.fetched_at < IMG_TTL) return hit.data;
+  const url = `${BASE}/${kind}/${COLLECTION}/${encodeURIComponent(name)}.json`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { logger.warn(`changes.tg lottie ${r.status}: ${kind}/${name}`); return null; }
+    const text = await r.text();
+    lottieCache.set(key, { data: text, fetched_at: Date.now() });
+    return text;
+  } catch (e) {
+    logger.warn(`changes.tg lottie fetch failed`, { kind, name, e: String(e) });
+    return null;
+  }
+}
+
 // Прогрев на старте бекенда. Без await чтобы не задерживать listen.
 export function warmup() {
   getPreload().catch(() => {});

@@ -21,6 +21,9 @@ export interface Frog {
   pattern_rarity: number | null;
   image_url: string | null;
   lottie_url: string | null;
+  center_color?: string | null;
+  edge_color?: string | null;
+  pattern_color?: string | null;
   owner_id: number | null;
   owner_username: string | null;
   owner_telegram_id: string | null;
@@ -56,6 +59,9 @@ export interface MarketEntry {
   backdrop_rarity: number | null;
   pattern_rarity: number | null;
   image_url: string | null;
+  center_color?: string | null;
+  edge_color?: string | null;
+  pattern_color?: string | null;
   wants_models: string | null;
   wants_backdrops: string | null;
   wants_patterns: string | null;

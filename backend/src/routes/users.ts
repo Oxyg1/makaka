@@ -6,6 +6,7 @@ import { db } from '../db';
 import { fetchUserGifts } from '../services/poso';
 import { upsertFrog } from '../services/frogs';
 import { getWhales, getStoredWhales, hasStoredWhales } from '../services/whales';
+import { attachColors } from '../services/colors';
 
 const router = Router();
 
@@ -43,12 +44,12 @@ router.get('/by-tg/:tg/frogs', authMiddleware, async (req: AuthRequest, res) => 
         SELECT id, slug, number, model, backdrop, pattern, image_url, owner_username, owner_telegram_id
         FROM frogs WHERE owner_telegram_id = ?
         ORDER BY number DESC
-      `).all(tg);
-      res.json(refreshed);
+      `).all(tg) as Record<string, unknown>[];
+      res.json(attachColors(refreshed));
       return;
     }
   }
-  res.json(existing);
+  res.json(attachColors(existing as unknown as Record<string, unknown>[]));
 });
 
 export default router;
