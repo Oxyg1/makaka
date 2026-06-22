@@ -148,7 +148,10 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
           ) : (
             <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
           )}
-          <span className="frog-card__num">#{frog.number}</span>
+          <svg className="frog-card__ribbon" viewBox="0 0 56 56" preserveAspectRatio="xMaxYMin meet" aria-hidden="true">
+            <path d="M22.34 0 C24.71 0 26.99 0.96 28.64 2.66 L53.51 28.2 C55.11 29.84 56 32.04 56 34.34 V54.24 C56 55.17 55.48 55.48 52.99 55.48 L0.52 3.01 C-0.17 2.32 -0.17 1.21 0.52 0.52 C0.85 0.19 1.30 0 1.76 0 Z" fill="rgba(13,16,16,0.82)" />
+            <text x="33" y="21.5" textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="11" fontWeight="600" transform="rotate(45, 33, 23)">#{frog.number}</text>
+          </svg>
           {badge && <span className="frog-card__badge">{badge}</span>}
           {size === 'lg' && !hideLabel && (
             <div className="frog-card__overlay">

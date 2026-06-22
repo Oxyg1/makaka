@@ -2,7 +2,7 @@
   display: flex; flex-direction: column;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
   padding: 0;
   text-align: left;
@@ -34,6 +34,17 @@
   z-index: 3;
 }
 
+/* Шумовая текстура поверх фона (как у Gift Wiki) — едва заметное зерно */
+.frog-card__art-fill::before {
+  content: '';
+  position: absolute; inset: 0;
+  z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 130px 130px;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
+
 /* Символы паттерна, расставленные «звездой» вокруг модели как у TG.
    Каждый — span с CSS mask: PNG-символ из CDN + цвет patternColor. */
 .frog-card__symbol {
@@ -56,16 +67,13 @@
 }
 @keyframes img-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
 
-/* Номер — маленькой ленточкой в углу, как в TG/Gift Wiki */
-.frog-card__num {
-  position: absolute; top: 6px; right: 6px;
-  background: rgba(0,0,0,0.42); color: rgba(255,255,255,0.92);
-  padding: 2px 7px; border-radius: 99em;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.2px;
-  font-variant-numeric: tabular-nums;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  z-index: 5; pointer-events: none;
+/* Номер — диагональной лентой-уголком в правом верхнем углу (как в Gift Wiki) */
+.frog-card__ribbon {
+  position: absolute; top: -1px; right: -1px;
+  width: 40%; height: 40%;
+  z-index: 6; pointer-events: none;
 }
+.frog-card__ribbon text { font-variant-numeric: tabular-nums; }
 
 .frog-card__badge {
   position: absolute; top: 6px; left: 6px;
@@ -99,9 +107,9 @@
 
 /* sizes */
 .frog-card--sm .frog-card__model-img { width: 73%; height: 73%; }
-.frog-card--sm .frog-card__num { font-size: 9px; padding: 2px 6px; }
+.frog-card--sm .frog-card__ribbon { width: 44%; height: 44%; }
 .frog-card--lg .frog-card__model-img { width: 66%; height: 66%; }
-.frog-card--lg .frog-card__num { font-size: 12px; padding: 3px 9px; top: 10px; right: 10px; }
+.frog-card--lg .frog-card__ribbon { width: 30%; height: 30%; }
 .frog-card--lg .frog-card__overlay { padding: 30px 16px 14px; }
 .frog-card--lg .frog-card__overlay-name { font-size: 20px; }
 .frog-card--lg .frog-card__overlay-meta { font-size: 13px; }
