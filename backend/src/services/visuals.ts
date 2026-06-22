@@ -194,6 +194,25 @@ export function getStoredBackdrops(): Record<string, BackdropInfo> {
   return out;
 }
 
+// Оригинальная картинка коллекции (для иконки «лягушка» вместо эмодзи).
+export async function fetchOriginal(size: 64 | 128 | 256 | 512 | 1024): Promise<{ data: Buffer; contentType: string } | null> {
+  const key = `original:${COLLECTION}:${size}`;
+  const hit = imageCache.get(key);
+  if (hit && Date.now() - hit.fetched_at < IMG_TTL) return { data: hit.data, contentType: hit.contentType };
+  const url = `${BASE}/original/${encodeURIComponent(COLLECTION)}.png?size=${size}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { logger.warn(`changes.tg original ${r.status}`); return null; }
+    const buf = Buffer.from(await r.arrayBuffer());
+    const contentType = r.headers.get('content-type') ?? 'image/png';
+    imageCache.set(key, { data: buf, contentType, fetched_at: Date.now() });
+    return { data: buf, contentType };
+  } catch (e) {
+    logger.warn(`changes.tg original fetch failed`, { e: String(e) });
+    return null;
+  }
+}
+
 // ── Lottie (анимированный стикер) — проксируем decompressed JSON с changes.tg ──
 const lottieCache = new Map<string, { data: string; fetched_at: number }>();
 

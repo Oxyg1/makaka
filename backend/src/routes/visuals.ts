@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { fetchImage, fetchLottie, getPreload, getStoredBackdrops } from '../services/visuals';
+import { fetchImage, fetchLottie, fetchOriginal, getPreload, getStoredBackdrops } from '../services/visuals';
 
 const router = Router();
 
@@ -11,6 +11,18 @@ router.get('/preload', async (_req: Request, res: Response) => {
   const merged = { ...data, backdrops: { ...data.backdrops, ...dbBackdrops } };
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.json(merged);
+});
+
+// Иконка коллекции (оригинальная лягушка) — замена эмодзи 🐸.
+router.get('/frog.png', async (req: Request, res: Response) => {
+  const sizeRaw = Number(req.query.size ?? 64);
+  const allowed: (64 | 128 | 256 | 512 | 1024)[] = [64, 128, 256, 512, 1024];
+  const size = (allowed.includes(sizeRaw as 64) ? sizeRaw : 64) as 64 | 128 | 256 | 512 | 1024;
+  const img = await fetchOriginal(size);
+  if (!img) { res.status(404).end(); return; }
+  res.setHeader('Content-Type', img.contentType);
+  res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+  res.send(img.data);
 });
 
 // Анимированный стикер (lottie JSON) — для просмотра подарка в детали.

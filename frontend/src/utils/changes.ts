@@ -48,6 +48,9 @@ export function patternImageUrl(pattern: string, size: 64 | 128 | 256 | 512 | 10
 export function modelLottieUrl(model: string): string {
   return `${BASE}/model/${encodeURIComponent(model)}.json`;
 }
+export function frogIconUrl(size: 64 | 128 = 64): string {
+  return `${BASE}/frog.png?size=${size}`;
+}
 
 function readLs(): PreloadData | null {
   try {

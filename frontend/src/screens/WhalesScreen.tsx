@@ -5,6 +5,7 @@ import FrogCard from '../components/FrogCard';
 import FrogDetailModal from '../components/FrogDetailModal';
 import { hapticImpact, hapticError } from '../utils/haptics';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
+import { frogIconUrl } from '../utils/changes';
 import './WhalesScreen.css';
 
 interface Props {
@@ -99,7 +100,7 @@ export default function WhalesScreen({ myUserId, config }: Props) {
                       <span className="podium__rank">{i + 1}</span>
                     </div>
                     <span className="podium__name">{w.name ?? w.username ?? '—'}</span>
-                    <span className="podium__count">🐸 {w.gifts_count}</span>
+                    <span className="podium__count"><img className="frog-ico" src={frogIconUrl(64)} alt="" /> {w.gifts_count}</span>
                     <span className="podium__pedestal" />
                   </button>
                 ))}
@@ -127,7 +128,7 @@ export default function WhalesScreen({ myUserId, config }: Props) {
                     </div>
                     <div className="whale-row__count">
                       <div className="whale-row__count-value">{w.gifts_count}</div>
-                      <div className="whale-row__count-label">🐸</div>
+                      <div className="whale-row__count-label"><img className="frog-ico" src={frogIconUrl(64)} alt="лягушек" /></div>
                     </div>
                   </button>
                 ))}
@@ -162,7 +163,15 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [model, setModel] = useState<string | null>(null);
+  const [limit, setLimit] = useState(60); // ленивый рендер: коллекции бывают по 2000+
   const { sheetRef, overlayRef, swipeHandlers } = useSheetSwipe(onClose);
+
+  useEffect(() => { setLimit(60); }, [query, model]);
+
+  function onScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 600) setLimit(l => l + 60);
+  }
 
   useEffect(() => {
     const p = whale.telegram_id ? getUserFrogs(whale.telegram_id)
@@ -206,7 +215,7 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
             </div>
           </div>
         )}
-        <div className="modal-sheet__scroll">
+        <div className="modal-sheet__scroll" onScroll={onScroll}>
           {!whale.telegram_id && !whale.address && (
             <div className="empty"><p>У этого холдера нет публичного идентификатора, коллекция недоступна.</p></div>
           )}
@@ -218,7 +227,7 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
             <div className="empty" style={{ padding: 24 }}><p>Ничего не найдено.</p></div>
           )}
           <div className="whales__grid">
-            {filtered.map(f => (
+            {filtered.slice(0, limit).map(f => (
               <FrogCard
                 key={f.id}
                 frog={f}
@@ -227,6 +236,11 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
               />
             ))}
           </div>
+          {filtered.length > limit && (
+            <div style={{ textAlign: 'center', padding: '12px 0 4px', color: 'var(--text-muted)', fontSize: 12 }}>
+              показано {limit} из {filtered.length}
+            </div>
+          )}
         </div>
       </div>
     </div>

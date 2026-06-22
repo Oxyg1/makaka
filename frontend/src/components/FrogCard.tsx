@@ -23,26 +23,30 @@ const FALLBACK_GRADIENTS: Record<string, string> = {
 //   - 8 мелких в промежутках для плотности
 // Симбол отрисовываем через CSS mask + цвет patternColor — получаем
 // настоящий монохромный паттерн, а не «плитку».
-// TG-стиль: ровная симметричная «плитка» символов (прямые, без поворота),
-// со смещением чётных рядов и затуханием к центру, чтобы стикер читался.
-function buildSymbols() {
-  const out: { top: number; left: number; size: number; opacity: number; rot: number }[] = [];
-  const cols = 4, rows = 5;
-  const cellW = 100 / cols, cellH = 100 / rows;
-  const size = 13;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const cx = cellW * (c + 0.5) + (r % 2 ? cellW / 2 : -cellW / 2 * 0);
-      const cy = cellH * (r + 0.5);
-      if (cx > 97 || cx < 3) continue;
-      const dist = Math.hypot(cx - 50, cy - 50);
-      const opacity = dist < 20 ? 0.14 : dist < 38 ? 0.26 : 0.4;
-      out.push({ top: cy - size / 2, left: cx - size / 2, size, opacity, rot: 0 });
-    }
-  }
-  return out;
-}
-const SYMBOLS = buildSymbols();
+// TG-стиль: симметричная раскладка символов РАЗНОГО размера и яркости
+// (крупные по углам, средние по сторонам, мелкие ярче у центра).
+const SYMBOLS: { top: number; left: number; size: number; opacity: number; rot: number }[] = [
+  // углы — крупные
+  { top: 6, left: 6, size: 17, opacity: 0.42, rot: 0 },
+  { top: 6, left: 77, size: 17, opacity: 0.42, rot: 0 },
+  { top: 77, left: 6, size: 17, opacity: 0.42, rot: 0 },
+  { top: 77, left: 77, size: 17, opacity: 0.42, rot: 0 },
+  // середины сторон — средние
+  { top: 2, left: 43, size: 12, opacity: 0.28, rot: 0 },
+  { top: 86, left: 43, size: 12, opacity: 0.28, rot: 0 },
+  { top: 43, left: 2, size: 12, opacity: 0.28, rot: 0 },
+  { top: 43, left: 86, size: 12, opacity: 0.28, rot: 0 },
+  // внутреннее кольцо — мелкие, ярче
+  { top: 25, left: 25, size: 9, opacity: 0.52, rot: 0 },
+  { top: 25, left: 66, size: 9, opacity: 0.52, rot: 0 },
+  { top: 66, left: 25, size: 9, opacity: 0.52, rot: 0 },
+  { top: 66, left: 66, size: 9, opacity: 0.52, rot: 0 },
+  // мелкие филлеры у сторон
+  { top: 21, left: 46, size: 6.5, opacity: 0.2, rot: 0 },
+  { top: 73, left: 46, size: 6.5, opacity: 0.2, rot: 0 },
+  { top: 46, left: 21, size: 6.5, opacity: 0.2, rot: 0 },
+  { top: 46, left: 73, size: 6.5, opacity: 0.2, rot: 0 },
+];
 
 function FrogFace({ size = 64 }: { size?: number }) {
   return (
@@ -144,11 +148,12 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
           ) : (
             <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
           )}
+          <span className="frog-card__num">#{frog.number}</span>
           {badge && <span className="frog-card__badge">{badge}</span>}
-          {!hideLabel && (
+          {size === 'lg' && !hideLabel && (
             <div className="frog-card__overlay">
               <span className="frog-card__overlay-name">{frog.model}</span>
-              <span className="frog-card__overlay-meta">#{frog.number} · {frog.backdrop}</span>
+              <span className="frog-card__overlay-meta">{frog.backdrop}</span>
             </div>
           )}
         </div>
