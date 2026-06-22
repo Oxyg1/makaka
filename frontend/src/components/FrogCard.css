@@ -73,7 +73,10 @@
   width: 40%; height: 40%;
   z-index: 6; pointer-events: none;
 }
-.frog-card__ribbon text { font-variant-numeric: tabular-nums; }
+.frog-card__ribbon text {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
 
 .frog-card__badge {
   position: absolute; top: 6px; left: 6px;

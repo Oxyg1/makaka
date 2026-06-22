@@ -27,25 +27,25 @@ const FALLBACK_GRADIENTS: Record<string, string> = {
 // (крупные по углам, средние по сторонам, мелкие ярче у центра).
 const SYMBOLS: { top: number; left: number; size: number; opacity: number; rot: number }[] = [
   // углы — крупные
-  { top: 6, left: 6, size: 17, opacity: 0.42, rot: 0 },
-  { top: 6, left: 77, size: 17, opacity: 0.42, rot: 0 },
-  { top: 77, left: 6, size: 17, opacity: 0.42, rot: 0 },
-  { top: 77, left: 77, size: 17, opacity: 0.42, rot: 0 },
+  { top: 6, left: 6, size: 17, opacity: 0.28, rot: 0 },
+  { top: 6, left: 77, size: 17, opacity: 0.28, rot: 0 },
+  { top: 77, left: 6, size: 17, opacity: 0.28, rot: 0 },
+  { top: 77, left: 77, size: 17, opacity: 0.28, rot: 0 },
   // середины сторон — средние
-  { top: 2, left: 43, size: 12, opacity: 0.28, rot: 0 },
-  { top: 86, left: 43, size: 12, opacity: 0.28, rot: 0 },
-  { top: 43, left: 2, size: 12, opacity: 0.28, rot: 0 },
-  { top: 43, left: 86, size: 12, opacity: 0.28, rot: 0 },
-  // внутреннее кольцо — мелкие, ярче
-  { top: 25, left: 25, size: 9, opacity: 0.52, rot: 0 },
-  { top: 25, left: 66, size: 9, opacity: 0.52, rot: 0 },
-  { top: 66, left: 25, size: 9, opacity: 0.52, rot: 0 },
-  { top: 66, left: 66, size: 9, opacity: 0.52, rot: 0 },
+  { top: 2, left: 43, size: 12, opacity: 0.18, rot: 0 },
+  { top: 86, left: 43, size: 12, opacity: 0.18, rot: 0 },
+  { top: 43, left: 2, size: 12, opacity: 0.18, rot: 0 },
+  { top: 43, left: 86, size: 12, opacity: 0.18, rot: 0 },
+  // внутреннее кольцо — мелкие, чуть ярче
+  { top: 25, left: 25, size: 9, opacity: 0.34, rot: 0 },
+  { top: 25, left: 66, size: 9, opacity: 0.34, rot: 0 },
+  { top: 66, left: 25, size: 9, opacity: 0.34, rot: 0 },
+  { top: 66, left: 66, size: 9, opacity: 0.34, rot: 0 },
   // мелкие филлеры у сторон
-  { top: 21, left: 46, size: 6.5, opacity: 0.2, rot: 0 },
-  { top: 73, left: 46, size: 6.5, opacity: 0.2, rot: 0 },
-  { top: 46, left: 21, size: 6.5, opacity: 0.2, rot: 0 },
-  { top: 46, left: 73, size: 6.5, opacity: 0.2, rot: 0 },
+  { top: 21, left: 46, size: 6.5, opacity: 0.13, rot: 0 },
+  { top: 73, left: 46, size: 6.5, opacity: 0.13, rot: 0 },
+  { top: 46, left: 21, size: 6.5, opacity: 0.13, rot: 0 },
+  { top: 46, left: 73, size: 6.5, opacity: 0.13, rot: 0 },
 ];
 
 function FrogFace({ size = 64 }: { size?: number }) {
@@ -67,6 +67,18 @@ function FrogFace({ size = 64 }: { size?: number }) {
       <path d="M22 42c4 4 16 4 20 0" stroke="#0d1410" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
     </svg>
   );
+}
+
+// Затемнить hex-цвет (умножением на коэффициент) → rgb-строка для ленты.
+function darken(hex: string | null | undefined, f: number): string | null {
+  if (!hex) return null;
+  const m = hex.replace('#', '');
+  if (m.length < 6) return null;
+  const r = Math.round(parseInt(m.slice(0, 2), 16) * f);
+  const g = Math.round(parseInt(m.slice(2, 4), 16) * f);
+  const b = Math.round(parseInt(m.slice(4, 6), 16) * f);
+  if ([r, g, b].some(Number.isNaN)) return null;
+  return `rgb(${r},${g},${b})`;
 }
 
 interface Props {
@@ -101,6 +113,8 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
   const center = frog.center_color ?? info?.centerColor ?? null;
   const edge = frog.edge_color ?? info?.edgeColor ?? center;
   const symbolColor = frog.pattern_color ?? info?.patternColor ?? 'rgba(255,255,255,0.85)';
+  // Лента номера — затемнённый цвет фона (а не чёрный), чтобы тон совпадал.
+  const ribbonColor = darken(edge ?? center, 0.5) ?? 'rgba(13,16,16,0.82)';
 
   // TG-стиль: база = edge-цвет, сверху радиальный «halo» из center-цвета.
   // TG-стиль: ровный радиальный градиент из центра (center→edge), центр по
@@ -149,7 +163,7 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
             <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
           )}
           <svg className="frog-card__ribbon" viewBox="0 0 56 56" preserveAspectRatio="xMaxYMin meet" aria-hidden="true">
-            <path d="M22.34 0 C24.71 0 26.99 0.96 28.64 2.66 L53.51 28.2 C55.11 29.84 56 32.04 56 34.34 V54.24 C56 55.17 55.48 55.48 52.99 55.48 L0.52 3.01 C-0.17 2.32 -0.17 1.21 0.52 0.52 C0.85 0.19 1.30 0 1.76 0 Z" fill="rgba(13,16,16,0.82)" />
+            <path d="M22.34 0 C24.71 0 26.99 0.96 28.64 2.66 L53.51 28.2 C55.11 29.84 56 32.04 56 34.34 V54.24 C56 55.17 55.48 55.48 52.99 55.48 L0.52 3.01 C-0.17 2.32 -0.17 1.21 0.52 0.52 C0.85 0.19 1.30 0 1.76 0 Z" fill={ribbonColor} />
             <text x="33" y="21.5" textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="11" fontWeight="600" transform="rotate(45, 33, 23)">#{frog.number}</text>
           </svg>
           {badge && <span className="frog-card__badge">{badge}</span>}
