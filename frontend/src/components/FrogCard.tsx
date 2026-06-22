@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useId, type CSSProperties } from 'react';
 import type { Frog } from '../types';
 import { getBackdropInfoSync, loadPreload, modelImageUrl, patternImageUrl, type BackdropInfo } from '../utils/changes';
 import LottieGift from './LottieGift';
@@ -69,15 +69,18 @@ function FrogFace({ size = 64 }: { size?: number }) {
   );
 }
 
-// Затемнить hex-цвет (умножением на коэффициент) → rgb-строка для ленты.
-function darken(hex: string | null | undefined, f: number): string | null {
+// Сдвиг hex-цвета на ФИКСИРОВАННУЮ величину по каналам (одинаковое расхождение
+// для всех фонов) → rgb-строка. d<0 — темнее.
+function shiftHex(hex: string | null | undefined, d: number): string | null {
   if (!hex) return null;
   const m = hex.replace('#', '');
   if (m.length < 6) return null;
-  const r = Math.round(parseInt(m.slice(0, 2), 16) * f);
-  const g = Math.round(parseInt(m.slice(2, 4), 16) * f);
-  const b = Math.round(parseInt(m.slice(4, 6), 16) * f);
-  if ([r, g, b].some(Number.isNaN)) return null;
+  const ch = (i: number) => {
+    const v = parseInt(m.slice(i, i + 2), 16);
+    return Number.isNaN(v) ? null : Math.max(0, Math.min(255, v + d));
+  };
+  const r = ch(0), g = ch(2), b = ch(4);
+  if (r === null || g === null || b === null) return null;
   return `rgb(${r},${g},${b})`;
 }
 
@@ -113,11 +116,14 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
   const center = frog.center_color ?? info?.centerColor ?? null;
   const edge = frog.edge_color ?? info?.edgeColor ?? center;
   const symbolColor = frog.pattern_color ?? info?.patternColor ?? 'rgba(255,255,255,0.85)';
-  // Лента номера — затемнённый цвет фона (на 0.2 темнее), чтобы тон совпадал.
-  const ribbonColor = darken(edge ?? center, 0.8) ?? 'rgba(13,16,16,0.82)';
+  // Лента номера = цвет КРАЁВ фона (там она и сидит → сливается с углом),
+  // с реальным градиентом и одинаковым фиксированным расхождением для всех фонов.
   const onTrade = !!badge;
   const ribbonText = onTrade ? badge! : `#${frog.number}`;
-  const ribbonFill = onTrade ? '#16a34a' : ribbonColor;
+  const ribBase = edge ?? center ?? '#0e0f0f';
+  const ribTop = onTrade ? '#1fae5a' : ribBase;
+  const ribBot = onTrade ? '#0e7a3c' : (shiftHex(ribBase, -22) ?? ribBase);
+  const gid = 'rib' + useId().replace(/[:]/g, '');
 
   // TG-стиль: база = edge-цвет, сверху радиальный «halo» из center-цвета.
   // TG-стиль: ровный радиальный градиент из центра (center→edge), центр по
@@ -166,7 +172,13 @@ export default function FrogCard({ frog, size = 'md', badge, hideLabel, animated
             <FrogFace size={size === 'lg' ? 96 : size === 'sm' ? 44 : 72} />
           )}
           <svg className="frog-card__ribbon" viewBox="0 0 56 56" preserveAspectRatio="xMaxYMin meet" aria-hidden="true">
-            <path d="M22.34 0 C24.71 0 26.99 0.96 28.64 2.66 L53.51 28.2 C55.11 29.84 56 32.04 56 34.34 V54.24 C56 55.17 55.48 55.48 52.99 55.48 L0.52 3.01 C-0.17 2.32 -0.17 1.21 0.52 0.52 C0.85 0.19 1.30 0 1.76 0 Z" fill={ribbonFill} />
+            <defs>
+              <linearGradient id={gid} x1="55.56" y1="56" x2="0.44" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor={ribBot} />
+                <stop offset="100%" stopColor={ribTop} />
+              </linearGradient>
+            </defs>
+            <path d="M22.34 0 C24.71 0 26.99 0.96 28.64 2.66 L53.51 28.2 C55.11 29.84 56 32.04 56 34.34 V54.24 C56 55.17 55.48 55.48 52.99 55.48 L0.52 3.01 C-0.17 2.32 -0.17 1.21 0.52 0.52 C0.85 0.19 1.30 0 1.76 0 Z" fill={`url(#${gid})`} />
             <text x="33" y="21.5" textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize={onTrade ? 10 : 11} fontWeight="600" transform="rotate(45, 33, 23)">{ribbonText}</text>
           </svg>
           {size === 'lg' && !hideLabel && (
