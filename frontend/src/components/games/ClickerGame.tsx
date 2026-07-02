@@ -1,14 +1,14 @@
-// «Кликер»: тапай жабку → очки. Апгрейды за очки: сила клика и
-// лягушки-помощники (пассивный доход). Пройди всю цепочку тиров до
-// Короля болота. Бусты — за Монеты. Оффлайн-доход считается по времени
-// последнего сохранения; сервер валидирует скорость прироста и даёт
-// монеты за ачивки (первая покупка каждого тира).
+// «Кликер»: тапай жабку → очки. Криты, кольца от тапа, пузыри болота.
+// Апгрейды за очки: сила клика и лягушки-помощники (пассивный доход).
+// Бусты — за Монеты. Оффлайн-доход по времени последнего сохранения;
+// сервер валидирует скорость прироста и начисляет монеты за ачивки.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getGameProgress, saveGameProgress, spendCoins } from '../../api';
 import { hapticImpact, hapticSuccess, hapticError } from '../../utils/haptics';
 import { modelImageUrl } from '../../utils/changes';
 import Coin from './Coin';
+import { Confetti } from './fx';
 import { CLICKER, HELPER_NAMES, HELPER_EMOJI, fmt } from './economy';
 import './games.css';
 
@@ -21,7 +21,7 @@ interface ClickerState {
   skipNext?: boolean;    // скидка 50% на следующий апгрейд
 }
 
-interface Float { id: number; x: number; y: number; text: string; }
+interface Float { id: number; x: number; y: number; text: string; kind: 'pts' | 'crit' | 'ring'; }
 
 interface Props {
   chain: string[];       // модели: частые → редкие
@@ -29,18 +29,31 @@ interface Props {
   onBalance: (n: number) => void;
   onClose: () => void;
   onResult: () => void;
+  onOpenShop: () => void;
 }
 
 const PRICES = { frenzy: 100, golden: 500, skip: 200 };
 const TIERS = CLICKER.helperPps.length;
+const CRIT_CHANCE = 0.07;
+const CRIT_MULT = 5;
 
 const fresh = (): ClickerState => ({ points: 0, clickLevel: 0, helpers: Array(TIERS).fill(0) });
 
-export default function ClickerGame({ chain, balance, onBalance, onClose, onResult }: Props) {
+// стабильные параметры фоновых пузырей (не пересоздаются на ре-рендер)
+const BUBBLES = Array.from({ length: 7 }, (_, i) => ({
+  x: 12 + (i * 61) % 76,
+  s: 6 + (i * 37) % 9,
+  t: 4.2 + (i * 53) % 30 / 10,
+  d: (i * 97) % 42 / 10,
+}));
+
+export default function ClickerGame({ chain, balance, onBalance, onClose, onResult, onOpenShop }: Props) {
   const [st, setSt] = useState<ClickerState>(fresh);
   const [totalEarned, setTotalEarned] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [floats, setFloats] = useState<Float[]>([]);
+  const [flashRow, setFlashRow] = useState<string | null>(null);
+  const [confettiKey, setConfettiKey] = useState(0);
   const [toast, setToast] = useState('');
   const idRef = useRef(1);
   const dirtyRef = useRef(false);
@@ -83,8 +96,7 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
     return () => clearInterval(t);
   }, [loaded]);
 
-  // ── синк на сервер (раз в 8с + при выходе). Сервер может подрезать score
-  //    и вернуть монеты за ачивки — отражаем и то и другое. ──
+  // ── синк на сервер (раз в 8с + при выходе) ──
   const sync = useCallback(async () => {
     const { st: s, totalEarned: earned } = ref.current;
     try {
@@ -96,6 +108,7 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
       if (r.coins_earned > 0) {
         onBalance(r.balance);
         showToastRef.current(`🏅 Ачивка: +${r.coins_earned} Монет`);
+        setConfettiKey(k => k + 1);
         onResult();
       }
       if (r.score < Math.floor(earned)) setTotalEarned(r.score); // сервер подрезал
@@ -111,31 +124,48 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
   // ── клик ──
   function tap(e: React.PointerEvent) {
     const frenzy = (st.frenzyUntil ?? 0) > Date.now();
-    const power = Math.round(CLICKER.clickPower(st.clickLevel) * (st.golden ? 1.5 : 1) * (frenzy ? 2 : 1));
-    hapticImpact('light');
+    const crit = Math.random() < CRIT_CHANCE;
+    const power = Math.round(
+      CLICKER.clickPower(st.clickLevel)
+      * (st.golden ? 1.5 : 1)
+      * (frenzy ? 2 : 1)
+      * (crit ? CRIT_MULT : 1),
+    );
+    hapticImpact(crit ? 'heavy' : 'light');
     setSt(s => ({ ...s, points: s.points + power }));
     setTotalEarned(v => v + power);
     dirtyRef.current = true;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const f: Float = {
-      id: idRef.current++,
-      x: e.clientX - rect.left + (Math.random() * 24 - 12),
-      y: e.clientY - rect.top - 10,
-      text: `+${fmt(power)}`,
-    };
-    setFloats(list => [...list.slice(-11), f]);
-    setTimeout(() => setFloats(list => list.filter(x => x.id !== f.id)), 750);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const items: Float[] = [
+      { id: idRef.current++, x, y, text: '', kind: 'ring' },
+      {
+        id: idRef.current++,
+        x: x + (Math.random() * 28 - 14),
+        y: y - 12,
+        text: crit ? `КРИТ! +${fmt(power)}` : `+${fmt(power)}`,
+        kind: crit ? 'crit' : 'pts',
+      },
+    ];
+    setFloats(list => [...list.slice(-13), ...items]);
+    setTimeout(() => setFloats(list => list.filter(f => !items.some(i => i.id === f.id))), 950);
   }
 
   // ── апгрейды за очки ──
   function costWithSkip(base: number): number {
     return st.skipNext ? Math.ceil(base / 2) : base;
   }
+  function flash(id: string) {
+    setFlashRow(id);
+    setTimeout(() => setFlashRow(f => (f === id ? null : f)), 520);
+  }
   function buyClick() {
     const cost = costWithSkip(CLICKER.clickCost(st.clickLevel));
     if (st.points < cost) return;
     hapticSuccess();
+    flash('click');
     setSt(s => ({ ...s, points: s.points - cost, clickLevel: s.clickLevel + 1, skipNext: false }));
     dirtyRef.current = true;
   }
@@ -144,6 +174,7 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
     const cost = costWithSkip(CLICKER.helperCost(tier, count));
     if (st.points < cost) return;
     hapticSuccess();
+    flash(`h${tier}`);
     setSt(s => {
       const helpers = [...s.helpers];
       helpers[tier] = (helpers[tier] ?? 0) + 1;
@@ -151,7 +182,10 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
     });
     dirtyRef.current = true;
     // первая покупка тира → сервер начислит монеты, узнаем при синке
-    if (count === 0) setTimeout(sync, 300);
+    if (count === 0) {
+      setConfettiKey(k => k + 1);
+      setTimeout(sync, 300);
+    }
   }
 
   // ── бусты за Монеты ──
@@ -165,7 +199,12 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
       hapticSuccess();
     } catch (e) {
       hapticError();
-      showToast((e as Error).message === 'Не хватает монет' ? 'Не хватает монет 🪙' : (e as Error).message);
+      if ((e as Error).message === 'Не хватает монет') {
+        showToast('Не хватает монет — загляните в магазин 🪙');
+        onOpenShop();
+      } else {
+        showToast((e as Error).message);
+      }
     }
   }
 
@@ -191,11 +230,19 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
         <span className="game-topbar__title">👆 Кликер</span>
-        <span className="game-topbar__coins"><Coin size={16} /> {fmt(balance)}</span>
+        <button className="game-topbar__coins" onClick={() => { hapticImpact('light'); onOpenShop(); }}>
+          <Coin size={16} /> {fmt(balance)} <span className="game-topbar__coins-plus">+</span>
+        </button>
       </div>
 
       <div className="clicker-body">
         <div className="clicker-stage">
+          <div className="clicker-bubbles" aria-hidden="true">
+            {rate > 0 && BUBBLES.map((b, i) => (
+              <i key={i} style={{ '--x': `${b.x}%`, '--s': `${b.s}px`, '--t': `${b.t}s`, '--d': `${b.d}s` } as React.CSSProperties} />
+            ))}
+          </div>
+
           <div className="clicker-points">{fmt(st.points)}</div>
           <div className="clicker-pps">
             {rate > 0 ? `+${fmt(rate)}/сек` : 'тапай жабку!'}
@@ -206,9 +253,12 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
             <FrogArt model={baseModel} />
           </button>
 
-          {floats.map(f => (
-            <span key={f.id} className="click-float" style={{ left: f.x, top: f.y }}>{f.text}</span>
-          ))}
+          {floats.map(f => f.kind === 'ring'
+            ? <span key={f.id} className="click-ring" style={{ left: f.x, top: f.y }} />
+            : <span key={f.id} className={`click-float${f.kind === 'crit' ? ' click-float--crit' : ''}`} style={{ left: f.x, top: f.y }}>{f.text}</span>,
+          )}
+
+          {confettiKey > 0 && <Confetti key={confettiKey} />}
 
           <div className="boost-row" style={{ padding: '10px 0 2px' }}>
             <button className={`boost-btn${frenzyOn ? ' boost-btn--on' : ''}`} disabled={frenzyOn}
@@ -238,17 +288,17 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
 
           <div className="section-title">Апгрейды</div>
 
-          <button className="upg-row" onClick={buyClick} disabled={st.points < clickCost}>
-            <span className="upg-row__icon">👆</span>
-            <span className="upg-row__info">
-              <div className="upg-row__name">Сила клика {st.skipNext && '· 🎟−50%'}</div>
-              <div className="upg-row__sub">+1 за тап · сейчас {fmt(CLICKER.clickPower(st.clickLevel))}</div>
-            </span>
-            <span className="upg-row__cost">
-              {fmt(clickCost)}
-              <div className="upg-row__count">ур. {st.clickLevel}</div>
-            </span>
-          </button>
+          <UpgRow
+            id="click"
+            flashId={flashRow}
+            icon="👆"
+            name={`Сила клика${st.skipNext ? ' · 🎟−50%' : ''}`}
+            sub={`+1 за тап · сейчас ${fmt(CLICKER.clickPower(st.clickLevel))}`}
+            cost={clickCost}
+            count={`ур. ${st.clickLevel}`}
+            points={st.points}
+            onBuy={buyClick}
+          />
 
           {Array.from({ length: TIERS }, (_, t) => {
             const count = st.helpers[t] ?? 0;
@@ -256,24 +306,19 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
             const cost = costWithSkip(CLICKER.helperCost(t, count));
             const model = chain[t + 1]; // тир 0 — следующая после базовой модель
             return (
-              <button
+              <UpgRow
                 key={t}
-                className={`upg-row${locked ? ' upg-row--locked' : ''}`}
-                onClick={() => !locked && buyHelper(t)}
-                disabled={locked || st.points < cost}
-              >
-                <span className="upg-row__icon"><HelperArt model={model} emoji={HELPER_EMOJI[t]} locked={locked} /></span>
-                <span className="upg-row__info">
-                  <div className="upg-row__name">{HELPER_NAMES[t]} {st.skipNext && !locked && '· 🎟−50%'}</div>
-                  <div className="upg-row__sub">
-                    {locked ? `Сначала купите: ${HELPER_NAMES[t - 1]}` : `+${fmt(CLICKER.helperPps[t])}/сек за штуку`}
-                  </div>
-                </span>
-                <span className="upg-row__cost">
-                  {locked ? '🔒' : fmt(cost)}
-                  <div className="upg-row__count">{count > 0 ? `×${count}` : ''}</div>
-                </span>
-              </button>
+                id={`h${t}`}
+                flashId={flashRow}
+                icon={<HelperArt model={model} emoji={HELPER_EMOJI[t]} locked={locked} />}
+                name={`${HELPER_NAMES[t]}${st.skipNext && !locked ? ' · 🎟−50%' : ''}`}
+                sub={locked ? `Сначала купите: ${HELPER_NAMES[t - 1]}` : `+${fmt(CLICKER.helperPps[t])}/сек за штуку`}
+                cost={cost}
+                count={count > 0 ? `×${count}` : ''}
+                points={st.points}
+                locked={locked}
+                onBuy={() => buyHelper(t)}
+              />
             );
           })}
 
@@ -286,6 +331,38 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
 
       {toast && <div className="game-toast">{toast}</div>}
     </div>
+  );
+}
+
+// Строка апгрейда: подсветка «можно купить», флеш при покупке,
+// полоска накопления до цены — видно, сколько осталось.
+function UpgRow({ id, flashId, icon, name, sub, cost, count, points, locked, onBuy }: {
+  id: string; flashId: string | null;
+  icon: React.ReactNode; name: string; sub: string;
+  cost: number; count: string; points: number;
+  locked?: boolean; onBuy: () => void;
+}) {
+  const afford = !locked && points >= cost;
+  const progress = locked ? 0 : Math.min(1, points / cost);
+  return (
+    <button
+      className={`upg-row${locked ? ' upg-row--locked' : ''}${afford ? ' upg-row--afford' : ''}${flashId === id ? ' upg-row--flash' : ''}`}
+      onClick={() => !locked && onBuy()}
+      disabled={locked || !afford}
+    >
+      <span className="upg-row__icon">{icon}</span>
+      <span className="upg-row__info">
+        <div className="upg-row__name">{name}</div>
+        <div className="upg-row__sub">{sub}</div>
+      </span>
+      <span className="upg-row__cost">
+        {locked ? '🔒' : fmt(cost)}
+        <div className="upg-row__count">{count}</div>
+      </span>
+      {!locked && progress < 1 && (
+        <span className="upg-row__bar"><i style={{ transform: `scaleX(${progress})` }} /></span>
+      )}
+    </button>
   );
 }
 

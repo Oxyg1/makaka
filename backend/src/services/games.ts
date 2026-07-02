@@ -28,7 +28,8 @@ export const DAILY_EARN_CAP = 500;          // потолок заработка
 export const COIN_RATE: Record<GameId, number> = { merge: 10, mosquito: 5, clicker: 0 /* монеты только за ачивки */ };
 
 // Потолок очков за один раунд (анти-чит). Выше — обрезаем.
-export const ROUND_CAPS: Record<GameId, number> = { merge: 20000, mosquito: 2600, clicker: 0 };
+// Комары: серия ×2 (буст) и золотые ×3 дают до ~4.5к за идеальный раунд.
+export const ROUND_CAPS: Record<GameId, number> = { merge: 20000, mosquito: 5200, clicker: 0 };
 
 // Минимальный интервал между зачётами раундов, сек (нельзя слать очки очередью).
 export const ROUND_MIN_INTERVAL: Record<GameId, number> = { merge: 25, mosquito: 30, clicker: 0 };

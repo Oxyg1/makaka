@@ -1,12 +1,16 @@
 // «Мерж»: перетаскивай двух одинаковых лягушек друг на друга — получишь
-// более редкую (механика 2048-merge). Цепочка уровней = модели KissedFrog
-// от частых к редким. Очки за слияния конвертируются в Монеты на сервере.
+// более редкую. Цепочка уровней = модели KissedFrog от частых к редким.
+// Очки за слияния конвертируются в Монеты на сервере.
+//
+// Производительность: ghost перетаскивания двигается напрямую через DOM
+// (без ре-рендеров на pointermove), все эффекты — transform/opacity.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getGameProgress, saveGameProgress, spendCoins, submitGameScore } from '../../api';
 import { hapticImpact, hapticSuccess, hapticError } from '../../utils/haptics';
 import { modelImageUrl } from '../../utils/changes';
 import Coin from './Coin';
+import { Confetti, CoinBurst, useCountUp } from './fx';
 import { MERGE_EMOJI, MERGE_MAX_LEVEL, fmt } from './economy';
 import './games.css';
 
@@ -18,8 +22,10 @@ interface MergeSaved {
   field?: number;
   runScore?: number;
   potionUntil?: number;
-  field5?: boolean;
+  maxSeen?: number;
 }
+
+interface CellFx { id: number; idx: number; text?: string }
 
 interface Props {
   chain: string[];               // модели: частые → редкие
@@ -27,12 +33,13 @@ interface Props {
   onBalance: (n: number) => void;
   onClose: () => void;
   onResult: () => void;          // обновить сводку в хабе
+  onOpenShop: () => void;        // не хватает монет → магазин
 }
 
 const SPAWN_MS = 3500;
 const PRICES = { potion: 60, unfreeze: 30, field5: 300 };
 
-export default function MergeGame({ chain, balance, onBalance, onClose, onResult }: Props) {
+export default function MergeGame({ chain, balance, onBalance, onClose, onResult, onOpenShop }: Props) {
   const maxLevel = Math.min(MERGE_MAX_LEVEL, Math.max(chain.length, 6));
   const idRef = useRef(1);
   const [field, setField] = useState(4);
@@ -40,16 +47,27 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
   const [runScore, setRunScore] = useState(0);
   const [best, setBest] = useState(0);
   const [potionUntil, setPotionUntil] = useState(0);
+  const [maxSeen, setMaxSeen] = useState(1);
   const [loaded, setLoaded] = useState(false);
-  const [drag, setDrag] = useState<{ from: number; x: number; y: number } | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
-  const [end, setEnd] = useState<{ score: number; coins: number; best: number } | null>(null);
+  const [denyAt, setDenyAt] = useState<number | null>(null);
+  const [fx, setFx] = useState<CellFx[]>([]);
+  const [mergedAt, setMergedAt] = useState<{ idx: number; key: number } | null>(null);
+  const [confettiKey, setConfettiKey] = useState(0);
+  const [end, setEnd] = useState<{ score: number; coins: number; best: number; record: boolean } | null>(null);
   const [toast, setToast] = useState('');
   const [spawnCd, setSpawnCd] = useState(false);
+  const [spawnTick, setSpawnTick] = useState(0); // перезапуск полоски автоспавна
+
   const boardRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const dropAtRef = useRef<number | null>(null);
   const dirtyRef = useRef(false);
-  const stateRef = useRef({ board, field, runScore, potionUntil });
-  stateRef.current = { board, field, runScore, potionUntil };
+  const stateRef = useRef({ board, field, runScore, potionUntil, maxSeen });
+  stateRef.current = { board, field, runScore, potionUntil, maxSeen };
+
+  const displayScore = useCountUp(runScore, 450);
 
   const newChip = useCallback((l: number, f = false): Chip => ({ id: idRef.current++, l, f }), []);
 
@@ -68,16 +86,17 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
         setBoard(cells);
         setRunScore(Math.max(0, s.runScore ?? 0));
         setPotionUntil(s.potionUntil ?? 0);
+        setMaxSeen(Math.max(1, s.maxSeen ?? 1));
       }
     }).catch(() => {}).finally(() => setLoaded(true));
   }, [newChip, maxLevel]);
 
   // ── автосохранение (раз в 4с, если что-то менялось) + при выходе ──
   const persist = useCallback(() => {
-    const { board: b, field: f, runScore: rs, potionUntil: pu } = stateRef.current;
+    const { board: b, field: f, runScore: rs, potionUntil: pu, maxSeen: ms } = stateRef.current;
     const save: MergeSaved = {
       board: b.map(c => (c ? { l: c.l, ...(c.f ? { f: true } : {}) } : null)),
-      field: f, runScore: rs, potionUntil: pu,
+      field: f, runScore: rs, potionUntil: pu, maxSeen: ms,
     };
     saveGameProgress('merge', { state: save, level: f }).catch(() => {});
   }, []);
@@ -101,7 +120,11 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
       dirtyRef.current = true;
       return nb;
     });
+    setSpawnTick(k => k + 1);
   }, [newChip]);
+
+  const potionOn = Date.now() < potionUntil;
+  const spawnInterval = potionOn ? SPAWN_MS / 2 : SPAWN_MS;
 
   useEffect(() => {
     if (!loaded || end) return;
@@ -112,7 +135,7 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
         meta.last = Date.now();
         doSpawn();
       }
-    }, 500);
+    }, 250);
     return () => clearInterval(t);
   }, [loaded, end, doSpawn]);
 
@@ -121,7 +144,20 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
     hapticImpact('light');
     doSpawn();
     setSpawnCd(true);
-    setTimeout(() => setSpawnCd(false), 2000);
+    setTimeout(() => setSpawnCd(false), 1500);
+  }
+
+  // ── эффекты в клетках ──
+  const addFx = useCallback((idx: number, text?: string) => {
+    const f: CellFx = { id: idRef.current++, idx, text };
+    setFx(list => [...list.slice(-7), f]);
+    setTimeout(() => setFx(list => list.filter(x => x.id !== f.id)), 800);
+  }, []);
+
+  function deny(idx: number) {
+    hapticImpact('light');
+    setDenyAt(idx);
+    setTimeout(() => setDenyAt(null), 320);
   }
 
   // ── drag & drop ──
@@ -138,6 +174,11 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
     return row * field + col;
   }
 
+  function moveGhost(x: number, y: number) {
+    const g = ghostRef.current;
+    if (g) g.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
   function onPointerDown(e: React.PointerEvent) {
     if (end) return;
     const idx = cellIndexAt(e.clientX, e.clientY);
@@ -146,20 +187,27 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
     if (!chip) return;
     if (chip.f) { tryUnfreeze(idx); return; }
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDrag({ from: idx, x: e.clientX, y: e.clientY });
+    hapticImpact('light');
+    setDragFrom(idx);
+    dropAtRef.current = null;
     setDropAt(null);
+    requestAnimationFrame(() => moveGhost(e.clientX, e.clientY));
   }
   function onPointerMove(e: React.PointerEvent) {
-    if (!drag) return;
+    if (dragFrom === null) return;
+    moveGhost(e.clientX, e.clientY); // напрямую в DOM — без ре-рендера
     const idx = cellIndexAt(e.clientX, e.clientY);
-    setDrag(d => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
-    setDropAt(idx !== null && idx !== drag.from ? idx : null);
+    const target = idx !== null && idx !== dragFrom ? idx : null;
+    if (target !== dropAtRef.current) {
+      dropAtRef.current = target;
+      setDropAt(target);
+    }
   }
   function onPointerUp(e: React.PointerEvent) {
-    if (!drag) return;
-    const from = drag.from;
+    if (dragFrom === null) return;
+    const from = dragFrom;
     const to = cellIndexAt(e.clientX, e.clientY);
-    setDrag(null); setDropAt(null);
+    setDragFrom(null); setDropAt(null); dropAtRef.current = null;
     if (to === null || to === from) return;
     setBoard(b => {
       const src = b[from], dst = b[to];
@@ -172,11 +220,18 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
         const gain = nl * nl * 10;
         setRunScore(s => s + gain);
         hapticSuccess();
-        if (nl === maxLevel) showToast(`🏆 Максимальная лягушка! +${gain}`);
+        addFx(to, `+${gain}`);
+        setMergedAt({ idx: to, key: idRef.current++ });
+        if (nl > stateRef.current.maxSeen) {
+          setMaxSeen(nl);
+          setConfettiKey(k => k + 1);
+          hapticImpact('heavy');
+          showToast(nl === maxLevel ? '🏆 Максимальная лягушка!' : `✨ Новая лягушка открыта — ур. ${nl}!`);
+        }
         markDirty();
         return nb;
       }
-      hapticImpact('light');
+      deny(to);
       return b;
     });
   }
@@ -191,7 +246,12 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
       hapticSuccess();
     } catch (e) {
       hapticError();
-      showToast((e as Error).message === 'Не хватает монет' ? 'Не хватает монет 🪙' : (e as Error).message);
+      if ((e as Error).message === 'Не хватает монет') {
+        showToast('Не хватает монет — загляните в магазин 🪙');
+        onOpenShop();
+      } else {
+        showToast((e as Error).message);
+      }
     }
   }
 
@@ -204,7 +264,7 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
         markDirty();
         return nb;
       });
-      showToast('Разморожено ❄️→💧');
+      addFx(idx, '❄️→💧');
     });
   }
 
@@ -225,6 +285,7 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
         markDirty();
         return nb;
       });
+      setConfettiKey(k => k + 1);
       showToast('Поле расширено до 5×5! 🎉');
     });
   }
@@ -247,8 +308,9 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
     try {
       const r = await submitGameScore('merge', runScore);
       onBalance(r.balance);
+      const record = r.score >= r.best && r.score > 0 && r.best > best;
       setBest(r.best);
-      setEnd({ score: r.score, coins: r.coins_earned, best: r.best });
+      setEnd({ score: r.score, coins: r.coins_earned, best: r.best, record });
       onResult();
     } catch (e) {
       showToast((e as Error).message);
@@ -269,8 +331,7 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
     toastT.current = setTimeout(() => setToast(''), 2200);
   }
 
-  const potionOn = Date.now() < potionUntil;
-  const dragChip = drag ? board[drag.from] : null;
+  const dragChip = dragFrom !== null ? board[dragFrom] : null;
 
   return (
     <div className="game-screen">
@@ -279,16 +340,23 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
         <span className="game-topbar__title">🧬 Мерж</span>
-        <span className="game-topbar__coins"><Coin size={16} /> {fmt(balance)}</span>
+        <button className="game-topbar__coins" onClick={() => { hapticImpact('light'); onOpenShop(); }}>
+          <Coin size={16} /> {fmt(balance)} <span className="game-topbar__coins-plus">+</span>
+        </button>
       </div>
 
       <div className="game-body">
         <div className="merge-hud">
           <div>
             <div className="merge-hud__label">Очки раунда</div>
-            <div className="merge-hud__score">{fmt(runScore)}</div>
+            <div className="merge-hud__score">{fmt(displayScore)}</div>
           </div>
           <div className="merge-hud__best">Рекорд: {fmt(best)}</div>
+        </div>
+
+        {/* полоска до следующего автоспавна */}
+        <div className="merge-spawnbar">
+          {loaded && !end && <i key={spawnTick} style={{ animationDuration: `${spawnInterval}ms` }} />}
         </div>
 
         <div className="merge-board-wrap">
@@ -299,27 +367,40 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            onPointerCancel={() => { setDrag(null); setDropAt(null); }}
+            onPointerCancel={() => { setDragFrom(null); setDropAt(null); dropAtRef.current = null; }}
           >
             {board.map((c, i) => (
-              <div key={i} className={`merge-cell${dropAt === i ? ' merge-cell--drop' : ''}`}>
+              <div key={i} className={`merge-cell${dropAt === i ? ' merge-cell--drop' : ''}${denyAt === i ? ' merge-cell--deny' : ''}`}>
                 {c && (
-                  <div className={`merge-chip${c.f ? ' merge-chip--frozen' : ''}${drag?.from === i ? ' merge-chip--drag' : ''}`}>
+                  <div
+                    key={c.id}
+                    className={`merge-chip${c.f ? ' merge-chip--frozen' : ''}${dragFrom === i ? ' merge-chip--drag' : ''}${mergedAt?.idx === i ? ' merge-chip--merged' : ''}`}
+                  >
                     <ChipArt level={c.l} chain={chain} />
                     <span className="merge-chip__lvl">{c.l}</span>
                     {c.f && <span className="merge-chip__ice">❄️</span>}
                   </div>
                 )}
+                {fx.filter(f => f.idx === i).map(f => (
+                  <span key={f.id}>
+                    <span className="merge-ring" />
+                    {f.text && <span className="merge-float">{f.text}</span>}
+                  </span>
+                ))}
               </div>
             ))}
+
+            {confettiKey > 0 && <Confetti key={confettiKey} />}
           </div>
 
           {end && (
             <div className="round-end">
               <div className="round-end__card">
-                <div className="round-end__emoji">🧬</div>
-                <div className="round-end__title">Раунд завершён!</div>
-                <div className="round-end__score">{fmt(end.score)}</div>
+                {end.coins > 0 && <CoinBurst key={end.score} />}
+                {end.record && <Confetti key={-end.score} />}
+                <div className="round-end__emoji">{end.record ? '🏅' : '🧬'}</div>
+                <div className="round-end__title">{end.record ? 'Новый рекорд!' : 'Раунд завершён'}</div>
+                <EndScore value={end.score} />
                 {end.coins > 0 && <div className="round-end__coins"><Coin size={17} /> +{end.coins} Монет</div>}
                 {end.coins === 0 && <div className="round-end__meta">Дневной лимит монет исчерпан — очки всё равно в зачёте!</div>}
                 <div className="round-end__meta">Рекорд: {fmt(end.best)}</div>
@@ -329,6 +410,23 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
               </div>
             </div>
           )}
+        </div>
+
+        {/* цепочка прогрессии: что уже открыто и к чему стремиться */}
+        <div className="merge-chain">
+          {Array.from({ length: maxLevel }, (_, i) => {
+            const lvl = i + 1;
+            const locked = lvl > maxSeen;
+            return (
+              <span key={lvl} style={{ display: 'contents' }}>
+                {i > 0 && <span className="merge-chain__arrow">▸</span>}
+                <span className={`merge-chain__item${locked ? ' merge-chain__item--locked' : ''}${lvl === maxSeen ? ' merge-chain__item--current' : ''}`}>
+                  <ChainArt level={lvl} chain={chain} />
+                  <span className="merge-chain__num">{lvl}</span>
+                </span>
+              </span>
+            );
+          })}
         </div>
 
         <div className="merge-actions">
@@ -356,8 +454,8 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
         </div>
       </div>
 
-      {drag && dragChip && (
-        <div className="merge-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>
+      {dragFrom !== null && dragChip && (
+        <div className="merge-ghost" ref={ghostRef}>
           <ChipArt level={dragChip.l} chain={chain} big />
         </div>
       )}
@@ -367,11 +465,25 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
   );
 }
 
+function EndScore({ value }: { value: number }) {
+  const v = useCountUp(value, 900);
+  return <div className="round-end__score">{fmt(v)}</div>;
+}
+
 function ChipArt({ level, chain, big }: { level: number; chain: string[]; big?: boolean }) {
   const [broken, setBroken] = useState(false);
   const model = chain[level - 1];
   if (model && !broken) {
     return <img className="merge-chip__img" src={modelImageUrl(model, big ? 256 : 128)} alt={model} draggable={false} onError={() => setBroken(true)} />;
   }
-  return <span className="merge-chip__emoji" style={big ? { fontSize: 40 } : undefined}>{MERGE_EMOJI[Math.min(level - 1, MERGE_EMOJI.length - 1)]}</span>;
+  return <span className="merge-chip__emoji" style={big ? { fontSize: 42 } : undefined}>{MERGE_EMOJI[Math.min(level - 1, MERGE_EMOJI.length - 1)]}</span>;
+}
+
+function ChainArt({ level, chain }: { level: number; chain: string[] }) {
+  const [broken, setBroken] = useState(false);
+  const model = chain[level - 1];
+  if (model && !broken) {
+    return <img src={modelImageUrl(model, 64)} alt="" draggable={false} onError={() => setBroken(true)} />;
+  }
+  return <span style={{ fontSize: 18 }}>{MERGE_EMOJI[Math.min(level - 1, MERGE_EMOJI.length - 1)]}</span>;
 }

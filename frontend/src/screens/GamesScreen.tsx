@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { claimDailyBonus, getAttributes, getGamesState } from '../api';
 import type { GameId, GamesState } from '../types';
 import Coin from '../components/games/Coin';
+import { useCountUp } from '../components/games/fx';
 import CoinShop from '../components/games/CoinShop';
 import LeaderboardSheet from '../components/games/LeaderboardSheet';
 import MergeGame from '../components/games/MergeGame';
@@ -78,10 +79,7 @@ export default function GamesScreen({ active }: { active: boolean }) {
           <h1 className="screen__title">Игры</h1>
           <p className="screen__subtitle">Играй, соревнуйся, зарабатывай Монеты</p>
         </div>
-        <button className="coin-chip" onClick={() => { hapticImpact('light'); setShowShop(true); }} aria-label="Магазин монет">
-          <Coin size={20} /> {fmt(balance)}
-          <span className="coin-chip__plus">+</span>
-        </button>
+        <BalanceChip balance={balance} onClick={() => { hapticImpact('light'); setShowShop(true); }} />
       </header>
 
       <div className="screen__scroll">
@@ -140,13 +138,13 @@ export default function GamesScreen({ active }: { active: boolean }) {
       </div>
 
       {openGame === 'merge' && (
-        <MergeGame chain={chain} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} />
+        <MergeGame chain={chain} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
       )}
       {openGame === 'mosquito' && (
-        <MosquitoGame balance={balance} best={state?.games.mosquito.best ?? 0} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} />
+        <MosquitoGame balance={balance} best={state?.games.mosquito.best ?? 0} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
       )}
       {openGame === 'clicker' && (
-        <ClickerGame chain={chain} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} />
+        <ClickerGame chain={chain} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
       )}
 
       {lbGame && <LeaderboardSheet game={lbGame} onClose={() => setLbGame(null)} />}
@@ -154,5 +152,16 @@ export default function GamesScreen({ active }: { active: boolean }) {
 
       {toast && <div className="game-toast">{toast}</div>}
     </div>
+  );
+}
+
+// Баланс с плавным набегом числа — награды «дотекают» на глазах.
+function BalanceChip({ balance, onClick }: { balance: number; onClick: () => void }) {
+  const v = useCountUp(balance, 600);
+  return (
+    <button className="coin-chip" onClick={onClick} aria-label="Магазин монет">
+      <Coin size={20} /> {fmt(v)}
+      <span className="coin-chip__plus">+</span>
+    </button>
   );
 }

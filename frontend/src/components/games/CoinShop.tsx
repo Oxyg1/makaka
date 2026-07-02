@@ -73,12 +73,20 @@ export default function CoinShop({ onClose, onBalance }: Props) {
         <div className="modal-sheet__scroll">
           {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
 
-          {!loading && packs.map(p => (
-            <button key={p.id} className="shop-pack" onClick={() => buy(p)} disabled={buying !== null}>
-              <span className="shop-pack__coins"><Coin size={26} /> {p.coins.toLocaleString('ru-RU')} Монет</span>
-              <span className="shop-pack__stars">{buying === p.id ? '…' : <>⭐ {p.stars}</>}</span>
-            </button>
-          ))}
+          {!loading && packs.map(p => {
+            // выгода относительно самого маленького пакета
+            const base = packs[0] ? packs[0].coins / packs[0].stars : 1;
+            const bonus = Math.round(((p.coins / p.stars) / base - 1) * 100);
+            return (
+              <button key={p.id} className="shop-pack" onClick={() => buy(p)} disabled={buying !== null}>
+                <span className="shop-pack__coins">
+                  <Coin size={26} /> {p.coins.toLocaleString('ru-RU')} Монет
+                  {bonus > 0 && <span className="shop-pack__bonus">+{bonus}% выгоднее</span>}
+                </span>
+                <span className="shop-pack__stars">{buying === p.id ? '…' : <>⭐ {p.stars}</>}</span>
+              </button>
+            );
+          })}
 
           {msg && <p className="shop-note" style={{ color: 'var(--primary)' }}>{msg}</p>}
           {!enabled && !loading && (
