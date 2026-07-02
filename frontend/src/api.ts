@@ -1,4 +1,4 @@
-import type { AppConfig, Attributes, Frog, MarketEntry, Notification, OfferDirection, Order, User, Whale } from './types';
+import type { AppConfig, Attributes, CoinCatalog, Frog, GameId, GameProgress, GamesState, LeaderboardData, MarketEntry, Notification, OfferDirection, Order, User, Whale } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 let initDataRaw = 'mock';
@@ -114,3 +114,29 @@ export function unlinkWallet(address: string): Promise<{ ok: boolean }> {
 
 export function getNotifications(): Promise<Notification[]> { return request<Notification[]>('/api/notifications'); }
 export function markNotificationsRead() { return request<{ success: boolean }>('/api/notifications/read', { method: 'POST' }); }
+
+// ── Игры и «Монеты» ──
+export function getGamesState(): Promise<GamesState> { return request<GamesState>('/api/games/state'); }
+export function claimDailyBonus(): Promise<{ ok: boolean; coins: number; balance: number }> {
+  return request('/api/games/daily-bonus', { method: 'POST' });
+}
+export function getGameProgress<S = unknown>(game: GameId): Promise<GameProgress<S>> {
+  return request<GameProgress<S>>(`/api/games/${game}/progress`);
+}
+export function saveGameProgress(game: GameId, payload: { state?: unknown; score?: number; level?: number }): Promise<{ ok: boolean; score: number; balance: number; coins_earned: number }> {
+  return request(`/api/games/${game}/progress`, { method: 'POST', body: JSON.stringify(payload) });
+}
+export function submitGameScore(game: GameId, score: number): Promise<{ ok: boolean; score: number; best: number; coins_earned: number; balance: number }> {
+  return request(`/api/games/${game}/score`, { method: 'POST', body: JSON.stringify({ score }) });
+}
+export function getLeaderboard(game: GameId): Promise<LeaderboardData> {
+  return request<LeaderboardData>(`/api/games/${game}/leaderboard`);
+}
+export function getCoinBalance(): Promise<{ balance: number }> { return request('/api/coins/balance'); }
+export function getCoinCatalog(): Promise<CoinCatalog> { return request<CoinCatalog>('/api/coins/catalog'); }
+export function spendCoins(boost: string): Promise<{ ok: boolean; balance: number; price: number }> {
+  return request('/api/coins/spend', { method: 'POST', body: JSON.stringify({ boost }) });
+}
+export function purchaseCoins(pack: string): Promise<{ link: string; coins: number; stars: number }> {
+  return request('/api/coins/purchase', { method: 'POST', body: JSON.stringify({ pack }) });
+}

@@ -141,6 +141,54 @@ export interface AppConfig {
   poso_base: string;
 }
 
+// ── Игры и «Монеты» ─────────────────────────────────────────
+export type GameId = 'merge' | 'mosquito' | 'clicker';
+
+export interface GameSummary {
+  best: number;
+  level: number;
+  rank: number | null;
+  players: number;
+  earned_today: number;
+  daily_cap: number;
+}
+
+export interface GamesState {
+  balance: number;
+  daily_available: boolean;
+  daily_bonus: number;
+  games: Record<GameId, GameSummary>;
+}
+
+export interface GameProgress<S = unknown> {
+  score: number;
+  level: number;
+  state: S | null;
+  updated_at: string | null;
+}
+
+export interface LeaderboardEntry {
+  telegram_id: string;
+  score: number;
+  level: number;
+  name: string | null;
+  username: string | null;
+  photo_url: string | null;
+}
+
+export interface LeaderboardData {
+  top: LeaderboardEntry[];
+  me: { score: number; rank: number | null };
+}
+
+export interface CoinPack { id: string; coins: number; stars: number; }
+
+export interface CoinCatalog {
+  boosts: Record<string, number>;
+  packs: CoinPack[];
+  payments_enabled: boolean;
+}
+
 export interface Whale {
   id: string;
   telegram_id?: string;

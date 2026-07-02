@@ -3,12 +3,12 @@ import { authUser, getConfig, getNotifications, getOffers } from './api';
 import { loadPreload } from './utils/changes';
 import type { AppConfig, User } from './types';
 import BottomNav from './components/BottomNav';
-import MarketScreen from './screens/MarketScreen';
+import TradeHubScreen from './screens/TradeHubScreen';
 import WhalesScreen from './screens/WhalesScreen';
-import TradesScreen from './screens/TradesScreen';
+import GamesScreen from './screens/GamesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 
-export type Tab = 'market' | 'whales' | 'trades' | 'profile';
+export type Tab = 'trade' | 'whales' | 'games' | 'profile';
 
 type TgWebApp = {
   initData?: string;
@@ -42,7 +42,7 @@ function TabPane({ active, children }: { active: boolean; children: React.ReactN
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('market');
+  const [activeTab, setActiveTab] = useState<Tab>('trade');
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -50,8 +50,7 @@ export default function App() {
   const [unreadOffers, setUnreadOffers] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
 
-  const [marketKey, setMarketKey] = useState(0);
-  const [tradesKey, setTradesKey] = useState(0);
+  const [tradeKey, setTradeKey] = useState(0);
   const [profileKey, setProfileKey] = useState(0);
 
   useEffect(() => {
@@ -91,22 +90,27 @@ export default function App() {
 
   function changeTab(t: Tab) {
     setActiveTab(t);
-    if (t === 'market') setMarketKey(k => k + 1);
-    if (t === 'trades') setTradesKey(k => k + 1);
+    if (t === 'trade') setTradeKey(k => k + 1);
     if (t === 'profile') setProfileKey(k => k + 1);
   }
 
   return (
     <div className="app">
       <main className="app__content">
-        <TabPane active={activeTab === 'market'}>
-          <MarketScreen myUserId={user?.id ?? null} config={config} refreshKey={marketKey} />
+        <TabPane active={activeTab === 'trade'}>
+          <TradeHubScreen
+            myUserId={user?.id ?? null}
+            config={config}
+            refreshKey={tradeKey}
+            unreadOffers={unreadOffers}
+            onChanged={refreshBadges}
+          />
         </TabPane>
         <TabPane active={activeTab === 'whales'}>
           <WhalesScreen myUserId={user?.id ?? null} config={config} />
         </TabPane>
-        <TabPane active={activeTab === 'trades'}>
-          <TradesScreen myUserId={user?.id ?? null} refreshKey={tradesKey} onChanged={refreshBadges} />
+        <TabPane active={activeTab === 'games'}>
+          <GamesScreen active={activeTab === 'games'} />
         </TabPane>
         <TabPane active={activeTab === 'profile'}>
           <ProfileScreen

@@ -120,6 +120,36 @@ db.exec(`
     telegram_id TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  -- ── Игровая экономика («Монеты») ────────────────────────────
+  -- Баланс игровой валюты. Единый на все мини-игры.
+  CREATE TABLE IF NOT EXISTS user_coins (
+    telegram_id TEXT PRIMARY KEY,
+    balance INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Лог всех движений монет: аудит + анти-чит + идемпотентность платежей.
+  CREATE TABLE IF NOT EXISTS coin_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id TEXT NOT NULL,
+    delta INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    game TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Прогресс в мини-играх: score = лучший результат (лидерборд),
+  -- state_json = сохранение (поле мержа, апгрейды кликера и т.п.).
+  CREATE TABLE IF NOT EXISTS game_progress (
+    telegram_id TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    level INTEGER NOT NULL DEFAULT 0,
+    score INTEGER NOT NULL DEFAULT 0,
+    state_json TEXT,
+    updated_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (telegram_id, game_id)
+  );
 `);
 
 // 2. Миграции — добавляем недостающие колонки в старых БД.
@@ -147,4 +177,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notifs_user ON notifications(user_id, read);
 
   CREATE INDEX IF NOT EXISTS idx_whales_count ON whales(gifts_count DESC);
+
+  CREATE INDEX IF NOT EXISTS idx_coin_tx_user ON coin_transactions(telegram_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_coin_tx_reason ON coin_transactions(reason);
+  CREATE INDEX IF NOT EXISTS idx_game_progress_top ON game_progress(game_id, score DESC);
 `);

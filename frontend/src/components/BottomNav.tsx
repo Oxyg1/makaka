@@ -4,7 +4,7 @@ import { hapticSelection } from '../utils/haptics';
 import './BottomNav.css';
 
 const ICONS: Record<Tab, ReactElement> = {
-  market: (
+  trade: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l4-4 4 4" /><path d="M7 5v8h7" />
       <path d="M21 15l-4 4-4-4" /><path d="M17 19v-8h-7" />
@@ -17,9 +17,12 @@ const ICONS: Record<Tab, ReactElement> = {
       <circle cx="15" cy="13" r="1.2" fill="currentColor" />
     </svg>
   ),
-  trades: (
+  games: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 7h13l-3-3" /><path d="M20 17H7l3 3" />
+      <path d="M6 9h12c2.2 0 4 1.8 4 4 0 4-2 6-3.5 6-1.2 0-2-.7-3-2l-.8-1H9.3l-.8 1c-1 1.3-1.8 2-3 2C4 19 2 17 2 13c0-2.2 1.8-4 4-4z" />
+      <path d="M8 12v3" /><path d="M6.5 13.5h3" />
+      <circle cx="16" cy="12.6" r="0.6" fill="currentColor" />
+      <circle cx="18.2" cy="14.4" r="0.6" fill="currentColor" />
     </svg>
   ),
   profile: (
@@ -30,10 +33,10 @@ const ICONS: Record<Tab, ReactElement> = {
 };
 
 const LABELS: Record<Tab, string> = {
-  market: 'Обмены', whales: 'Холдеры', trades: 'Сделки', profile: 'Профиль',
+  trade: 'Трейд', whales: 'Холдеры', games: 'Игры', profile: 'Профиль',
 };
 
-const TABS: Tab[] = ['market', 'whales', 'trades', 'profile'];
+const TABS: Tab[] = ['trade', 'whales', 'games', 'profile'];
 
 interface Props { activeTab: Tab; onTabChange: (tab: Tab) => void; unreadOffers?: number; unreadNotifs?: number; }
 
@@ -43,7 +46,7 @@ export default function BottomNav({ activeTab, onTabChange, unreadOffers = 0, un
     <nav className="bottom-nav">
       <div className="bottom-nav__indicator" style={{ translate: `${activeIndex * 100}% 0` }} />
       {TABS.map(tab => {
-        const dot = tab === 'trades' ? unreadOffers : tab === 'profile' ? unreadNotifs : 0;
+        const dot = tab === 'trade' ? unreadOffers : tab === 'profile' ? unreadNotifs : 0;
         return (
           <button key={tab}
             className={`bottom-nav__tab${activeTab === tab ? ' bottom-nav__tab--active' : ''}`}

@@ -5,11 +5,17 @@ import FrogCard from '../components/FrogCard';
 import { hapticImpact, hapticSuccess, hapticError, hapticSelection } from '../utils/haptics';
 import './TradesScreen.css';
 
-interface Props { myUserId: number | null; refreshKey?: number; onChanged: () => void; }
+interface Props {
+  myUserId: number | null;
+  refreshKey?: number;
+  onChanged: () => void;
+  /** внутри таба «Трейд»: без своего заголовка и нижнего отступа */
+  embedded?: boolean;
+}
 
 type Tab = 'in' | 'out';
 
-export default function TradesScreen({ myUserId, refreshKey, onChanged }: Props) {
+export default function TradesScreen({ myUserId, refreshKey, onChanged, embedded }: Props) {
   const [tab, setTab] = useState<Tab>('in');
   const [offers, setOffers] = useState<OfferDirection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,9 +35,9 @@ export default function TradesScreen({ myUserId, refreshKey, onChanged }: Props)
   }
 
   return (
-    <div className="screen">
+    <div className={`screen${embedded ? ' screen--embedded' : ''}`}>
       <header className="trades__header">
-        <h1 className="screen__title">Сделки</h1>
+        {!embedded && <h1 className="screen__title">Сделки</h1>}
         <p className="screen__subtitle">Запросы на обмен — входящие и исходящие</p>
         <div className="trades__tabs seg" style={{ '--seg-idx': tab === 'in' ? 0 : 1, '--seg-n': 2 } as React.CSSProperties}>
           <span className="seg__indicator" />

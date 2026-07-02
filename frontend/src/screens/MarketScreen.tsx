@@ -12,6 +12,8 @@ interface Props {
   myUserId: number | null;
   config: AppConfig | null;
   refreshKey?: number;
+  /** внутри таба «Трейд»: без своего заголовка и нижнего отступа */
+  embedded?: boolean;
 }
 
 const SORTS: { v: 'new' | 'rare'; l: string }[] = [
@@ -19,7 +21,7 @@ const SORTS: { v: 'new' | 'rare'; l: string }[] = [
   { v: 'rare', l: 'Редкие' },
 ];
 
-export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
+export default function MarketScreen({ myUserId, config, refreshKey, embedded }: Props) {
   const [items, setItems] = useState<MarketEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER);
@@ -55,11 +57,11 @@ export default function MarketScreen({ myUserId, config, refreshKey }: Props) {
     + (filter.wants_patterns?.length ?? 0);
 
   return (
-    <div className="screen">
+    <div className={`screen${embedded ? ' screen--embedded' : ''}`}>
       <header className="market__header">
         <div className="market__header-top">
           <div>
-            <h1 className="screen__title">Обмены</h1>
+            {!embedded && <h1 className="screen__title">Обмены</h1>}
             <p className="screen__subtitle">
               {loading ? 'Загружаем…' : `${items.length} ${plural(items.length, 'предложение', 'предложения', 'предложений')}`}
             </p>

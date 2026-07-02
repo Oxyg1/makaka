@@ -15,6 +15,8 @@ import configRouter from './routes/config';
 import debugRouter from './routes/debug';
 import visualsRouter from './routes/visuals';
 import ingestRouter from './routes/ingest';
+import gamesRouter from './routes/games';
+import coinsRouter from './routes/coins';
 import { warmup as visualsWarmup } from './services/visuals';
 
 const app = express();
@@ -47,6 +49,8 @@ app.use('/api/config', configRouter);
 app.use('/api/debug', debugRouter);
 app.use('/api/visuals', visualsRouter);
 app.use('/api/ingest', ingestRouter);
+app.use('/api/games', gamesRouter);
+app.use('/api/coins', coinsRouter);
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : String(err);
