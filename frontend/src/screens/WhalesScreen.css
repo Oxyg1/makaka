@@ -1,6 +1,6 @@
 .whales__header {
   position: sticky; top: 0; z-index: 10;
-  background: rgba(13,20,16,0.78);
+  background: rgba(20,20,21,0.78);
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   padding: 14px 16px 12px;
@@ -80,7 +80,7 @@
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   background: var(--primary-gradient);
-  color: #0d1410; font-weight: 800; font-size: 22px;
+  color: #111214; font-weight: 800; font-size: 22px;
   transform: translateZ(0);
   -webkit-mask-image: -webkit-radial-gradient(white, black);
   mask-image: radial-gradient(white, black);
@@ -98,7 +98,7 @@
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 900; letter-spacing: -0.3px;
-  color: #0d1410;
+  color: #111214;
   border: 2px solid var(--bg);
 }
 .podium__item--0 .podium__rank {
@@ -179,7 +179,7 @@
 .whale-row__avatar {
   width: 42px; height: 42px; border-radius: 50%;
   background: var(--primary-gradient);
-  color: #0d1410; font-weight: 800; font-size: 16px;
+  color: #111214; font-weight: 800; font-size: 16px;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
@@ -233,6 +233,6 @@
 }
 .coll__chip:active { transform: scale(0.95); }
 .coll__chip--active {
-  background: var(--primary-gradient); color: #0d1410;
+  background: var(--primary-gradient); color: #111214;
   border-color: transparent; font-weight: 700;
 }

@@ -1,6 +1,6 @@
 .trades__header {
   position: sticky; top: 0; z-index: 10;
-  background: rgba(13,20,16,0.78);
+  background: rgba(20,20,21,0.78);
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   padding: 14px 16px 0;
@@ -28,7 +28,7 @@
 }
 .trades__tab--active {
   background: var(--primary);
-  color: #0d1410;
+  color: #111214;
 }
 
 .trades__list {
@@ -52,7 +52,7 @@
 .trade-card__avatar {
   width: 36px; height: 36px; border-radius: 50%;
   background: var(--primary-gradient);
-  color: #0d1410; font-weight: 800; font-size: 14px;
+  color: #111214; font-weight: 800; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
 }
 .trade-card__name { font-size: 14px; font-weight: 700; }

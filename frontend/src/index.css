@@ -1,14 +1,16 @@
 :root {
-  --bg: #0d1410;
-  --bg-secondary: #131c16;
-  --bg-card: #182018;
-  --bg-input: #131a14;
-  --bg-elev: #1c241d;
+  /* Palette по Portals: нейтральный тёмный без зелёного оттенка,
+     зелёный остаётся акцентом бренда. */
+  --bg: #141415;
+  --bg-secondary: #1a1a1c;
+  --bg-card: #1c1c1e;
+  --bg-input: #18181a;
+  --bg-elev: #232326;
 
-  --text: #eaf3ec;
-  --text-muted: #6f7a72;
-  --text-dim: rgba(234,243,236,0.4);
-  --text-soft: rgba(234,243,236,0.72);
+  --text: #f2f3f2;
+  --text-muted: #6d6d71;
+  --text-dim: rgba(242,243,242,0.4);
+  --text-soft: rgba(242,243,242,0.72);
 
   --primary: #4ade80;
   --primary-2: #16a34a;
@@ -18,45 +20,47 @@
   --warn: #fbbf24;
   --danger: #f87171;
 
-  --border: rgba(255,255,255,0.06);
-  --border-strong: rgba(255,255,255,0.12);
+  --border: rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.13);
 
   --nav-height: 62px;
   --glass-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.10),
-    inset 0 0 0 0.5px rgba(255,255,255,0.05),
-    0 2px 8px rgba(0,0,0,0.18),
-    0 8px 28px rgba(0,0,0,0.28);
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 0 0 0.5px rgba(255,255,255,0.04),
+    0 2px 8px rgba(0,0,0,0.16),
+    0 8px 24px rgba(0,0,0,0.22);
   --glass-shadow-indicator:
-    inset 0 1px 0 rgba(255,255,255,0.18),
-    inset 0 0 0 0.5px rgba(255,255,255,0.10),
-    0 2px 8px rgba(0,0,0,0.24);
-  --card-shadow: 0 2px 20px rgba(0,0,0,0.55);
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 0 0 0.5px rgba(255,255,255,0.08),
+    0 2px 8px rgba(0,0,0,0.22);
+  --card-shadow: 0 2px 20px rgba(0,0,0,0.5);
   --frog-glow: 0 0 0 1px rgba(74,222,128,0.18), 0 12px 36px rgba(22,163,74,0.18);
 
-  /* Portals-style «стеклянная фаска»: яркий внутренний кант сверху-слева,
-     мягкий снизу-справа. Это то, что делает кнопки/карточки объёмными. */
+  /* Portals-glass: мягкий рефлекс сверху-слева + едва заметный снизу.
+     Специально ЛЕГЧЕ оригинала — стекло не должно быть «жирным». */
   --bevel:
-    inset 0 0 0 1px rgba(255,255,255,0.04),
-    inset 1.5px 1px 0 -1px rgba(255,255,255,0.24),
-    inset -1.5px -1px 0 -1px rgba(255,255,255,0.16);
-  --glass-panel: linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.015) 100%);
+    inset 1.8px 3px 0 -2px rgba(255,255,255,0.16),
+    inset 2px 2px 0 -2px rgba(255,255,255,0.11),
+    inset -2px -2px 2px -2px rgba(255,255,255,0.09),
+    inset -1.8px -3px 0 -2px rgba(255,255,255,0.06);
+  --glass-panel: linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 100%);
 
-  --tg-theme-bg-color: #0d1410;
-  --tg-theme-text-color: #eaf3ec;
-  --tg-theme-hint-color: #6f7a72;
+  --tg-theme-bg-color: #141415;
+  --tg-theme-text-color: #f2f3f2;
+  --tg-theme-hint-color: #6d6d71;
   --tg-theme-button-color: #4ade80;
-  --tg-theme-button-text-color: #0d1410;
-  --tg-theme-secondary-bg-color: #131c16;
+  --tg-theme-button-text-color: #10130f;
+  --tg-theme-secondary-bg-color: #1a1a1c;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; height: 100dvh; margin: 0; padding: 0; }
 
 body {
+  /* лёгкие зелёные «свечения» — намёк на бренд, не заливка */
   background:
-    radial-gradient(900px 600px at 80% -10%, rgba(74,222,128,0.10), transparent 60%),
-    radial-gradient(700px 500px at -10% 110%, rgba(22,163,74,0.08), transparent 60%),
+    radial-gradient(900px 600px at 80% -10%, rgba(74,222,128,0.06), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(22,163,74,0.045), transparent 60%),
     var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
@@ -86,7 +90,7 @@ body {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0) 45%),
     var(--primary-gradient);
-  color: #0d1410; border: none; border-radius: 99em;
+  color: #111214; border: none; border-radius: 99em;
   padding: 0 24px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
   -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.12s cubic-bezier(0.34,1.4,0.5,1);
   height: 50px; letter-spacing: -0.2px;
@@ -142,7 +146,7 @@ body {
 @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
 .modal-sheet {
   width: 100%; max-height: 92dvh;
-  background: linear-gradient(180deg, #1b231b 0%, #121912 100%);
+  background: linear-gradient(180deg, #222224 0%, #161617 100%);
   border-radius: 28px 28px 0 0;
   overflow: hidden; display: flex; flex-direction: column;
   animation: sheet-up 0.38s cubic-bezier(0.22,1,0.36,1);
@@ -165,7 +169,7 @@ body {
 .modal-sheet__footer {
   flex-shrink: 0;
   padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(180deg, rgba(19,26,20,0) 0%, rgba(19,26,20,1) 30%);
+  background: linear-gradient(180deg, rgba(22,22,23,0) 0%, rgba(22,22,23,1) 30%);
   border-top: 1px solid var(--border);
   position: relative;
   z-index: 1;
@@ -230,7 +234,7 @@ textarea.field { min-height: 80px; resize: none; }
   position: relative; z-index: 1;
   transition: color 0.2s;
 }
-.seg__btn--active { color: #0d1410 !important; }
+.seg__btn--active { color: #111214 !important; }
 
 /* ── Плавная смена вкладок ────────────────────────────── */
 .tab-pane.pane-in {

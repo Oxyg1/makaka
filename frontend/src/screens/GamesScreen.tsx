@@ -2,7 +2,7 @@
 // лидерборды и магазин монет. Сами игры открываются полноэкранно.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { claimDailyBonus, getAttributes, getGamesState } from '../api';
+import { claimDailyBonus, getGamesState } from '../api';
 import type { GameId, GamesState } from '../types';
 import Coin from '../components/games/Coin';
 import { useCountUp } from '../components/games/fx';
@@ -11,7 +11,7 @@ import LeaderboardSheet from '../components/games/LeaderboardSheet';
 import MergeGame from '../components/games/MergeGame';
 import MosquitoGame from '../components/games/MosquitoGame';
 import ClickerGame from '../components/games/ClickerGame';
-import { fmt } from '../components/games/economy';
+import { fmt, MERGE_CHAIN, CLICKER_CHAIN } from '../components/games/economy';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import './GamesScreen.css';
 
@@ -24,7 +24,6 @@ const GAMES: { id: GameId; title: string; desc: string; emoji: string }[] = [
 export default function GamesScreen({ active }: { active: boolean }) {
   const [state, setState] = useState<GamesState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chain, setChain] = useState<string[]>([]);
   const [openGame, setOpenGame] = useState<GameId | null>(null);
   const [lbGame, setLbGame] = useState<GameId | null>(null);
   const [showShop, setShowShop] = useState(false);
@@ -39,10 +38,6 @@ export default function GamesScreen({ active }: { active: boolean }) {
     if (!active || loadedOnce.current) return;
     loadedOnce.current = true;
     refresh();
-    // цепочка моделей (частые → редкие) — уровни мержа и тиры кликера
-    getAttributes()
-      .then(a => setChain(a.models.map(m => m.v).slice(0, 14)))
-      .catch(() => {});
   }, [active, refresh]);
 
   const setBalance = useCallback((n: number) => {
@@ -102,7 +97,7 @@ export default function GamesScreen({ active }: { active: boolean }) {
               const s = state?.games[g.id];
               return (
                 <article key={g.id} className="game-card" onClick={() => { hapticImpact('light'); setOpenGame(g.id); }}>
-                  <div className={`game-card__art game-card__art--${g.id}`}>{g.emoji}</div>
+                  <GameArt id={g.id} emoji={g.emoji} />
                   <div className="game-card__info">
                     <div className="game-card__title">{g.title}</div>
                     <div className="game-card__desc">{g.desc}</div>
@@ -138,13 +133,13 @@ export default function GamesScreen({ active }: { active: boolean }) {
       </div>
 
       {openGame === 'merge' && (
-        <MergeGame chain={chain} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
+        <MergeGame chain={MERGE_CHAIN} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
       )}
       {openGame === 'mosquito' && (
         <MosquitoGame balance={balance} best={state?.games.mosquito.best ?? 0} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
       )}
       {openGame === 'clicker' && (
-        <ClickerGame chain={chain} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
+        <ClickerGame chain={CLICKER_CHAIN} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
       )}
 
       {lbGame && <LeaderboardSheet game={lbGame} onClose={() => setLbGame(null)} />}
@@ -153,6 +148,23 @@ export default function GamesScreen({ active }: { active: boolean }) {
       {toast && <div className="game-toast">{toast}</div>}
     </div>
   );
+}
+
+// Иконка игры: арт из /assets/games/{id}.png (кладётся на сервер),
+// пока файла нет — градиент с эмодзи.
+function GameArt({ id, emoji }: { id: GameId; emoji: string }) {
+  const [broken, setBroken] = useState(false);
+  if (!broken) {
+    return (
+      <img
+        className="game-card__art game-card__art--img"
+        src={`/assets/games/${id}.png`}
+        alt=""
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return <div className={`game-card__art game-card__art--${id}`}>{emoji}</div>;
 }
 
 // Баланс с плавным набегом числа — награды «дотекают» на глазах.

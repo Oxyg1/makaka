@@ -140,3 +140,6 @@ export function spendCoins(boost: string): Promise<{ ok: boolean; balance: numbe
 export function purchaseCoins(pack: string): Promise<{ link: string; coins: number; stars: number }> {
   return request('/api/coins/purchase', { method: 'POST', body: JSON.stringify({ pack }) });
 }
+export function purchaseCoinsCustom(coins: number): Promise<{ link: string; coins: number; stars: number }> {
+  return request('/api/coins/purchase', { method: 'POST', body: JSON.stringify({ custom: coins }) });
+}

@@ -7,7 +7,7 @@
 .profile__avatar {
   width: 88px; height: 88px; border-radius: 50%;
   background: var(--primary-gradient);
-  color: #0d1410;
+  color: #111214;
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 36px;
   box-shadow: 0 0 0 4px rgba(74,222,128,0.18), 0 12px 32px rgba(22,163,74,0.4);

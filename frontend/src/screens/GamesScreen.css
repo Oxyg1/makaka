@@ -1,7 +1,7 @@
 /* ── Хаб «Игры» ─────────────────────────────────────────── */
 .games__header {
   position: sticky; top: 0; z-index: 10;
-  background: rgba(13,20,16,0.78);
+  background: rgba(20,20,21,0.78);
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   padding: 14px 16px 12px;
@@ -86,6 +86,7 @@
 .game-card__art--merge    { background: linear-gradient(135deg,#a78bfa 0%,#4c1d95 100%); }
 .game-card__art--mosquito { background: linear-gradient(135deg,#6ee7b7 0%,#0e7490 100%); }
 .game-card__art--clicker  { background: linear-gradient(135deg,#fdba74 0%,#b45309 100%); }
+.game-card__art--img      { object-fit: cover; background: var(--bg-elev); }
 
 .game-card__info { flex: 1; min-width: 0; }
 .game-card__title { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
@@ -98,7 +99,7 @@
 
 .game-card__side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .game-card__play {
-  background: var(--primary-gradient); color: #0d1410;
+  background: var(--primary-gradient); color: #111214;
   font-size: 13px; font-weight: 800;
   border: none; border-radius: 99em; padding: 9px 18px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;

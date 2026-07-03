@@ -1,5 +1,23 @@
 import { useState } from 'react';
 
+// Иконка Telegram Stars. Основной арт — /assets/stars.png (кладётся на
+// сервер), пока файла нет — эмодзи.
+export function Star({ size = 15 }: { size?: number }) {
+  const [broken, setBroken] = useState(false);
+  if (!broken) {
+    return (
+      <img
+        src="/assets/stars.png"
+        width={size} height={size}
+        alt="Stars"
+        style={{ display: 'inline-block', verticalAlign: '-2px', objectFit: 'contain' }}
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return <span style={{ fontSize: size * 0.9 }}>⭐</span>;
+}
+
 // Иконка «Монеты». Основной арт кладётся на сервер в /assets/coin.png
 // (казино-стиль, прозрачный фон). Пока файла нет — рисуем SVG-фоллбэк,
 // чтобы интерфейс не ломался.

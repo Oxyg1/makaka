@@ -186,6 +186,7 @@ export interface CoinPack { id: string; coins: number; stars: number; }
 export interface CoinCatalog {
   boosts: Record<string, number>;
   packs: CoinPack[];
+  custom?: { min: number; max: number };
   payments_enabled: boolean;
 }
 

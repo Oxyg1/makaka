@@ -8,7 +8,10 @@ export const CLICKER = {
   helperBaseCost: [50, 300, 1800, 9000, 45000, 220000, 1_000_000, 5_000_000],
   helperCost: (tier: number, count: number) =>
     Math.ceil(CLICKER.helperBaseCost[tier] * Math.pow(1.15, count)),
-  offlineCapSec: 8 * 3600,
+  // Оффлайн-доход: 25% от pps и максимум за 2 часа — иначе баланс
+  // взрывается миллионами после каждого захода.
+  offlineRate: 0.25,
+  offlineCapSec: 2 * 3600,
 };
 
 export const HELPER_NAMES = [
@@ -16,6 +19,37 @@ export const HELPER_NAMES = [
   'Царевна', 'Золотая жаба', 'Древний дух', 'Король болота',
 ];
 export const HELPER_EMOJI = ['🥚', '🐸', '🎺', '🛡️', '👸', '🏆', '🔮', '👑'];
+
+// ── Цепочки моделей KissedFrog (по реальной редкости коллекции) ──
+// Мерж: 12 уровней от самой частой (Brownie, 4%) к редким.
+// Финал — Happy Pepe (0.5%), как самый желанный.
+export const MERGE_CHAIN = [
+  'Brownie',       // 4%
+  'Tide Pod',      // 4%
+  'Lemon Juice',   // 4%
+  'Peach',         // 4%
+  'Melon',         // 3%
+  'Ramune',        // 2.5%
+  'Silver',        // 2%
+  'Desert Frog',   // 1.5%
+  'Prince Ribbit', // 1.5%
+  'Icefrog',       // 1%
+  'Tesla Frog',    // 1%
+  'Happy Pepe',    // 0.5% — финал
+];
+
+// Кликер: базовая жабка + 8 тиров помощников (частые → редкие).
+export const CLICKER_CHAIN = [
+  'Brownie',        // базовая (тапаем её)
+  'Sky Leaper',     // 4%
+  'Frogtart',       // 3%
+  'Starry Night',   // 2.5%
+  'Poison',         // 2.5%
+  'Bronze',         // 2%
+  'Ms. Toad',       // 1.5%
+  'Pond Fairy',     // 1%
+  'Count Croakula', // 0.5% — Король болота
+];
 
 // Эмодзи-лестница уровней мержа (фоллбэк, когда нет картинки модели).
 export const MERGE_EMOJI = ['🥚', '🌱', '🪷', '🐸', '🐢', '🦎', '🐊', '🐉', '👑', '💎', '🌟', '🏆'];

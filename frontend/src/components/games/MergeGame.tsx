@@ -412,6 +412,34 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
           )}
         </div>
 
+        <div className="merge-actions">
+          <div className="boost-row">
+            <button className={`boost-btn${potionOn ? ' boost-btn--on' : ''}`} onClick={buyPotion} disabled={potionOn}>
+              🧪 Зелье спавна {potionOn ? '· активно' : <span className="boost-btn__price"><Coin size={13} />{PRICES.potion}</span>}
+            </button>
+            {field === 4 && (
+              <button className="boost-btn" onClick={buyField5}>
+                📐 Поле 5×5 <span className="boost-btn__price"><Coin size={13} />{PRICES.field5}</span>
+              </button>
+            )}
+            <span className="boost-btn" style={{ cursor: 'default', opacity: 0.7 }}>❄️ тап по льду · <span className="boost-btn__price"><Coin size={13} />{PRICES.unfreeze}</span></span>
+          </div>
+
+          {/* кнопки в одном ряду и обе ВСЕГДА на месте — вёрстка не прыгает */}
+          <div className="merge-btnrow">
+            <button className="merge-spawn" onClick={spawnNow} disabled={spawnCd || !board.some(c => !c)}>
+              {spawnCd ? '…' : '🥚 Подкинуть'}
+            </button>
+            <button
+              className={`btn-ghost merge-finish${stuck ? ' merge-finish--stuck' : ''}`}
+              onClick={finishRound}
+              disabled={!stuck && runScore <= 0}
+            >
+              {stuck ? '🔒 Забрать монеты' : 'Завершить раунд'}
+            </button>
+          </div>
+        </div>
+
         {/* цепочка прогрессии: что уже открыто и к чему стремиться */}
         <div className="merge-chain">
           {Array.from({ length: maxLevel }, (_, i) => {
@@ -427,30 +455,6 @@ export default function MergeGame({ chain, balance, onBalance, onClose, onResult
               </span>
             );
           })}
-        </div>
-
-        <div className="merge-actions">
-          <div className="boost-row">
-            <button className={`boost-btn${potionOn ? ' boost-btn--on' : ''}`} onClick={buyPotion} disabled={potionOn}>
-              🧪 Зелье спавна {potionOn ? '· активно' : <span className="boost-btn__price"><Coin size={13} />{PRICES.potion}</span>}
-            </button>
-            {field === 4 && (
-              <button className="boost-btn" onClick={buyField5}>
-                📐 Поле 5×5 <span className="boost-btn__price"><Coin size={13} />{PRICES.field5}</span>
-              </button>
-            )}
-            <span className="boost-btn" style={{ cursor: 'default', opacity: 0.7 }}>❄️ тап по льду · <span className="boost-btn__price"><Coin size={13} />{PRICES.unfreeze}</span></span>
-          </div>
-
-          <button className="merge-spawn" onClick={spawnNow} disabled={spawnCd || !board.some(c => !c)}>
-            {spawnCd ? '…' : '🥚 Подкинуть лягушку'}
-          </button>
-
-          {(stuck || runScore > 0) && (
-            <button className="btn-ghost merge-finish" onClick={finishRound}>
-              {stuck ? '🔒 Ходов нет — завершить раунд' : 'Завершить раунд и забрать монеты'}
-            </button>
-          )}
         </div>
       </div>
 

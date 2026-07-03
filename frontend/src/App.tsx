@@ -59,8 +59,8 @@ export default function App() {
     tg?.expand?.();
     tg?.ready?.();
     tg?.disableVerticalSwipes?.();
-    tg?.setHeaderColor?.('#0d1410');
-    tg?.setBackgroundColor?.('#0d1410');
+    tg?.setHeaderColor?.('#111214');
+    tg?.setBackgroundColor?.('#111214');
 
     const tgPhotoUrl = tg?.initDataUnsafe?.user?.photo_url ?? null;
     authUser(raw)

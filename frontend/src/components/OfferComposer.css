@@ -36,7 +36,7 @@
 .offer-comp__pick-check {
   position: absolute; top: 8px; left: 8px;
   width: 24px; height: 24px; border-radius: 50%;
-  background: var(--primary); color: #0d1410;
+  background: var(--primary); color: #111214;
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 14px;
   box-shadow: 0 4px 16px rgba(74,222,128,0.6);

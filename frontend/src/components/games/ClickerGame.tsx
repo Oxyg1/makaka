@@ -61,6 +61,9 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
   ref.current = { st, totalEarned };
 
   // ── загрузка + оффлайн-доход ──
+  // Оффлайн капает на 25% от pps и максимум за 2 часа (иначе после суток
+  // паузы падали миллионы). Сразу после начисления сохраняемся — иначе
+  // каждый перезаход начислял бы то же окно ещё раз.
   useEffect(() => {
     getGameProgress<ClickerState>('clicker').then(p => {
       const s: ClickerState = {
@@ -71,11 +74,16 @@ export default function ClickerGame({ chain, balance, onBalance, onClose, onResu
       let earned = p.score;
       if (p.updated_at) {
         const elapsed = Math.min(Math.max(0, (Date.now() - Date.parse(p.updated_at + 'Z')) / 1000), CLICKER.offlineCapSec);
-        const offline = Math.floor(pps(s) * elapsed);
+        const offline = Math.floor(pps(s) * elapsed * CLICKER.offlineRate);
         if (offline > 0) {
           s.points += offline;
           earned += offline;
           showToastRef.current(`💤 Пока вас не было: +${fmt(offline)} очков`);
+          saveGameProgress('clicker', {
+            state: s,
+            score: Math.floor(earned),
+            level: s.helpers.filter(n => n >= 1).length,
+          }).catch(() => {});
         }
       }
       setSt(s);

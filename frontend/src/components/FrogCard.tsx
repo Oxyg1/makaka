@@ -62,9 +62,9 @@ function FrogFace({ size = 64 }: { size?: number }) {
       <circle cx="42" cy="22" r="9" fill="url(#frog-body)"/>
       <circle cx="22" cy="22" r="4" fill="#fff"/>
       <circle cx="42" cy="22" r="4" fill="#fff"/>
-      <circle cx="22.5" cy="23.5" r="1.9" fill="#0d1410"/>
-      <circle cx="42.5" cy="23.5" r="1.9" fill="#0d1410"/>
-      <path d="M22 42c4 4 16 4 20 0" stroke="#0d1410" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      <circle cx="22.5" cy="23.5" r="1.9" fill="#111214"/>
+      <circle cx="42.5" cy="23.5" r="1.9" fill="#111214"/>
+      <path d="M22 42c4 4 16 4 20 0" stroke="#111214" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
     </svg>
   );
 }

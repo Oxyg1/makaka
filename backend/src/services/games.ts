@@ -21,11 +21,14 @@ export function isGameId(v: string): v is GameId {
 }
 
 // ── Экономика: константы ──────────────────────────────────────────────
-export const DAILY_BONUS = 50;              // монет за первый вход в игры за день
-export const DAILY_EARN_CAP = 500;          // потолок заработка монет с одной игры в день
+// Калибровка: монета ≈ 1 Star ≈ 1.2₽. Бесплатный потолок ~125 монет/день
+// (3 игры × 200/кап недостижим за разумную сессию) — монеты ощущаются
+// ценными, бусты подталкивают к магазину.
+export const DAILY_BONUS = 25;              // монет за первый вход в игры за день
+export const DAILY_EARN_CAP = 200;          // потолок заработка монет с одной игры в день
 
 // Сколько ОЧКОВ стоит 1 монета (курс конвертации результата раунда).
-export const COIN_RATE: Record<GameId, number> = { merge: 10, mosquito: 5, clicker: 0 /* монеты только за ачивки */ };
+export const COIN_RATE: Record<GameId, number> = { merge: 25, mosquito: 15, clicker: 0 /* монеты только за ачивки */ };
 
 // Потолок очков за один раунд (анти-чит). Выше — обрезаем.
 // Комары: серия ×2 (буст) и золотые ×3 дают до ~4.5к за идеальный раунд.
@@ -47,13 +50,17 @@ export const BOOST_PRICES: Record<string, number> = {
   'clicker:skip': 200,      // скидка 50% на следующий апгрейд
 };
 
-// Пакеты монет за Telegram Stars (XTR).
+// Пакеты монет за Telegram Stars (XTR). База 1⭐ = 1 монета,
+// крупные пакеты — со скидкой по звёздам (100⭐ ≈ 120₽).
 export const COIN_PACKS: Record<string, { coins: number; stars: number }> = {
-  p100: { coins: 100, stars: 50 },
-  p500: { coins: 500, stars: 225 },
-  p1500: { coins: 1500, stars: 600 },
-  p5000: { coins: 5000, stars: 1750 },
+  p100: { coins: 100, stars: 100 },    // ~120₽
+  p500: { coins: 500, stars: 450 },    // −10%
+  p1500: { coins: 1500, stars: 1275 }, // −15%
+  p5000: { coins: 5000, stars: 4000 }, // −20%
 };
+
+// Произвольная сумма пополнения (1⭐ = 1 монета, без скидки).
+export const CUSTOM_PURCHASE = { min: 50, max: 100_000 };
 
 // ── Формулы кликера (зеркало клиентских — по ним валидируем скорость) ─
 export const CLICKER = {
@@ -61,9 +68,11 @@ export const CLICKER = {
   maxClicksPerSec: 12,
   // pps одного помощника каждого тира и число тиров
   helperPps: [1, 4, 15, 50, 160, 500, 1500, 5000],
-  tierMilestoneCoins: (tier: number) => 15 * (tier + 1), // монет за ПЕРВУЮ покупку тира
-  completionCoins: 300,                                   // за покупку последнего тира
-  offlineCapSec: 8 * 3600,                                // оффлайн-доход максимум за 8ч
+  tierMilestoneCoins: (tier: number) => 10 * (tier + 1), // монет за ПЕРВУЮ покупку тира
+  completionCoins: 200,                                   // за покупку последнего тира
+  // клиент считает оффлайн как 25% pps максимум за 2ч; серверный кап
+  // чуть шире (люфт на несинхронные часы), но тоже жёсткий
+  offlineCapSec: 2.5 * 3600,
 };
 
 export interface ClickerState {
