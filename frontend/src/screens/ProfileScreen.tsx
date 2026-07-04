@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   getNotifications, markNotificationsRead, getMyOrders, cancelOrder,
   getInventory, syncInventory,
@@ -6,7 +6,10 @@ import {
 import type { AppConfig, Frog, Notification, Order, User } from '../types';
 import FrogCard from '../components/FrogCard';
 import FrogDetailModal from '../components/FrogDetailModal';
-import WalletLink from '../components/WalletLink';
+import { Skel, SkelGrid } from '../components/Skeleton';
+
+// TON Connect тяжёлый — грузим отдельным чанком, главный бандл не ждёт
+const WalletLink = lazy(() => import('../components/WalletLink'));
 import { hapticImpact, hapticSuccess, hapticError, hapticSelection } from '../utils/haptics';
 import { isHapticsEnabled, setHapticsEnabled } from '../utils/haptics';
 import './ProfileScreen.css';
@@ -138,7 +141,7 @@ export default function ProfileScreen({ user, config, onNotificationsRead, onCha
         {lastSync && <p className="profile__muted">Обновлено: {lastSync}</p>}
         {syncMsg && <div className={syncErr ? 'profile__alert profile__alert--err' : 'profile__alert'}>{syncMsg}</div>}
 
-        {invLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}><div className="spinner" /></div>}
+        {invLoading && <SkelGrid n={6} className="inv__grid" />}
 
         {!invLoading && items.length === 0 && (
           <div className="empty" style={{ padding: '20px 16px' }}>
@@ -217,7 +220,9 @@ export default function ProfileScreen({ user, config, onNotificationsRead, onCha
 
         {/* ── Кошельки ────────────────────────────── */}
         <div className="section-title">Кошельки TON</div>
-        <WalletLink />
+        <Suspense fallback={<Skel style={{ height: 46, borderRadius: 99 }} />}>
+          <WalletLink />
+        </Suspense>
 
         {/* ── Настройки ───────────────────────────── */}
         <div className="section-title">Настройки</div>

@@ -60,7 +60,13 @@ export default function FrogDetailModal({ frogId, myUserId, onClose, onCreatedOf
           <span style={{ width: 60 }} />
         </div>
         <div className="modal-sheet__scroll">
-          {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>}
+          {loading && (
+            <>
+              <div className="skel" style={{ aspectRatio: '1', borderRadius: 20, maxWidth: 320, margin: '0 auto 14px' }} />
+              <div className="skel" style={{ height: 15, width: '55%', margin: '0 auto 8px' }} />
+              <div className="skel" style={{ height: 12, width: '35%', margin: '0 auto' }} />
+            </>
+          )}
           {!loading && !frog && <div className="empty"><div className="empty__icon">🐸</div><h3>Не найдено</h3></div>}
           {frog && (
             <>

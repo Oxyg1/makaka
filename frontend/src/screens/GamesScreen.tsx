@@ -1,16 +1,19 @@
 // «Игры» — хаб: баланс Монет, дневной бонус, карточки трёх игр,
 // лидерборды и магазин монет. Сами игры открываются полноэкранно.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { claimDailyBonus, getGamesState } from '../api';
 import type { GameId, GamesState } from '../types';
 import Coin from '../components/games/Coin';
 import { useCountUp } from '../components/games/fx';
-import CoinShop from '../components/games/CoinShop';
-import LeaderboardSheet from '../components/games/LeaderboardSheet';
-import MergeGame from '../components/games/MergeGame';
-import MosquitoGame from '../components/games/MosquitoGame';
-import ClickerGame from '../components/games/ClickerGame';
+import { Skel, SkelCard } from '../components/Skeleton';
+
+// Игры и шторки — отдельные чанки: главный бандл не тянет игровой код
+const CoinShop = lazy(() => import('../components/games/CoinShop'));
+const LeaderboardSheet = lazy(() => import('../components/games/LeaderboardSheet'));
+const MergeGame = lazy(() => import('../components/games/MergeGame'));
+const MosquitoGame = lazy(() => import('../components/games/MosquitoGame'));
+const ClickerGame = lazy(() => import('../components/games/ClickerGame'));
 import { fmt, MERGE_CHAIN, CLICKER_CHAIN } from '../components/games/economy';
 import { hapticImpact, hapticSuccess, hapticError } from '../utils/haptics';
 import './GamesScreen.css';
@@ -78,7 +81,14 @@ export default function GamesScreen({ active }: { active: boolean }) {
       </header>
 
       <div className="screen__scroll">
-        {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>}
+        {loading && (
+          <>
+            <Skel style={{ height: 66, borderRadius: 18, marginBottom: 12 }} />
+            <div className="games__list">
+              <SkelCard height={112} /><SkelCard height={112} /><SkelCard height={112} />
+            </div>
+          </>
+        )}
 
         {!loading && state?.daily_available && (
           <div className="daily-card">
@@ -132,20 +142,33 @@ export default function GamesScreen({ active }: { active: boolean }) {
         )}
       </div>
 
-      {openGame === 'merge' && (
-        <MergeGame chain={MERGE_CHAIN} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
-      )}
-      {openGame === 'mosquito' && (
-        <MosquitoGame balance={balance} best={state?.games.mosquito.best ?? 0} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
-      )}
-      {openGame === 'clicker' && (
-        <ClickerGame chain={CLICKER_CHAIN} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
-      )}
+      <Suspense fallback={<GameLoading />}>
+        {openGame === 'merge' && (
+          <MergeGame chain={MERGE_CHAIN} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
+        )}
+        {openGame === 'mosquito' && (
+          <MosquitoGame balance={balance} best={state?.games.mosquito.best ?? 0} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
+        )}
+        {openGame === 'clicker' && (
+          <ClickerGame chain={CLICKER_CHAIN} balance={balance} onBalance={setBalance} onClose={() => { setOpenGame(null); refresh(); }} onResult={refresh} onOpenShop={() => setShowShop(true)} />
+        )}
+      </Suspense>
 
-      {lbGame && <LeaderboardSheet game={lbGame} onClose={() => setLbGame(null)} />}
-      {showShop && <CoinShop onClose={() => setShowShop(false)} onBalance={setBalance} />}
+      <Suspense fallback={null}>
+        {lbGame && <LeaderboardSheet game={lbGame} onClose={() => setLbGame(null)} />}
+        {showShop && <CoinShop onClose={() => setShowShop(false)} onBalance={setBalance} />}
+      </Suspense>
 
       {toast && <div className="game-toast">{toast}</div>}
+    </div>
+  );
+}
+
+// Мгновенный отклик на тап по игре, пока догружается её чанк.
+function GameLoading() {
+  return (
+    <div className="game-screen" style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <div className="spinner" />
     </div>
   );
 }

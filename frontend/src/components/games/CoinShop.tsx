@@ -8,6 +8,7 @@ import type { CoinPack } from '../../types';
 import { hapticImpact, hapticSuccess, hapticError } from '../../utils/haptics';
 import { useSheetSwipe } from '../../utils/useSheetSwipe';
 import Coin, { Star } from './Coin';
+import { Skel } from '../Skeleton';
 import './games.css';
 
 interface Props {
@@ -101,7 +102,9 @@ export default function CoinShop({ onClose, onBalance }: Props) {
           <span style={{ width: 60 }} />
         </div>
         <div className="modal-sheet__scroll">
-          {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
+          {loading && Array.from({ length: 4 }, (_, i) => (
+            <Skel key={i} style={{ height: 62, borderRadius: 17, marginBottom: 9 }} />
+          ))}
 
           {!loading && packs.map(p => {
             // скидка: насколько дешевле, чем базовый курс 1⭐ = 1 монета

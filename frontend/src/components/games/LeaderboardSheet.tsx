@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { getLeaderboard } from '../../api';
 import type { GameId, LeaderboardData } from '../../types';
 import { useSheetSwipe } from '../../utils/useSheetSwipe';
+import { SkelPodium, SkelRow } from '../Skeleton';
 import { fmt } from './economy';
 import './games.css';
 
@@ -36,7 +37,12 @@ export default function LeaderboardSheet({ game, onClose }: { game: GameId; onCl
           <span style={{ width: 60 }} />
         </div>
         <div className="modal-sheet__scroll">
-          {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
+          {loading && (
+            <>
+              <SkelPodium />
+              {Array.from({ length: 4 }, (_, i) => <SkelRow key={i} />)}
+            </>
+          )}
 
           {!loading && data && data.me.rank !== null && (
             <div className="lb-me">

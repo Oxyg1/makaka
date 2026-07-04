@@ -3,6 +3,7 @@ import { getUserFrogs, getWalletFrogs, getWhales, lookupFrog } from '../api';
 import type { AppConfig, Frog, Whale } from '../types';
 import FrogCard from '../components/FrogCard';
 import FrogDetailModal from '../components/FrogDetailModal';
+import { SkelGrid, SkelPodium, SkelRow } from '../components/Skeleton';
 import { hapticImpact, hapticError } from '../utils/haptics';
 import { useSheetSwipe } from '../utils/useSheetSwipe';
 import { frogIconUrl } from '../utils/changes';
@@ -69,7 +70,12 @@ export default function WhalesScreen({ myUserId, config }: Props) {
 
         <div className="section-title">Топ холдеров</div>
 
-        {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
+        {loading && (
+          <>
+            <SkelPodium />
+            {Array.from({ length: 5 }, (_, i) => <SkelRow key={i} />)}
+          </>
+        )}
 
         {!loading && whales.length === 0 && (
           <div className="empty" style={{ padding: 24 }}>
@@ -219,7 +225,7 @@ function WhaleCollection({ whale, onClose, onPick }: { whale: Whale; onClose: ()
           {!whale.telegram_id && !whale.address && (
             <div className="empty"><p>У этого холдера нет публичного идентификатора, коллекция недоступна.</p></div>
           )}
-          {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>}
+          {loading && <SkelGrid n={9} />}
           {!loading && frogs.length === 0 && (whale.telegram_id || whale.address) && (
             <div className="empty"><p>Не удалось загрузить коллекцию.<br />Возможно, холдер скрыл подарки.</p></div>
           )}

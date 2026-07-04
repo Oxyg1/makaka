@@ -128,6 +128,41 @@ body {
 }
 @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.85); opacity: 0.75; } }
 
+/* ── Skeleton-заглушки: shimmer на transform (GPU) ─────── */
+.skel {
+  position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.045);
+  border-radius: 10px;
+}
+.skel::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transform: translateX(-100%);
+  animation: skel-wave 1.4s ease-in-out infinite;
+}
+@keyframes skel-wave { to { transform: translateX(100%); } }
+
+.skel-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; margin-bottom: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.skel-row__lines { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+
+.skel-podium {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 8px; padding: 18px 4px 8px;
+}
+.skel-podium__col {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel::after { animation: none; }
+}
+
 .spinner {
   width: 28px; height: 28px;
   border: 2.5px solid rgba(255,255,255,0.1);

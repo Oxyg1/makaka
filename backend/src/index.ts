@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import 'dotenv/config';
 import './db';
@@ -23,6 +24,7 @@ const app = express();
 const PORT = process.env.PORT ?? 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
+app.use(compression()); // gzip для JSON-ответов (лидерборды, списки лягушек)
 app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json({ limit: '5mb' })); // ingest батчи бывают крупными
 

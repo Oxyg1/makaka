@@ -1,15 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import './index.css';
 import App from './App';
 
-const MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`;
+// TonConnectUIProvider намеренно НЕ здесь: он тяжёлый (~200KB) и нужен
+// только секции кошелька в Профиле — живёт внутри lazy-чанка WalletLink.
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <TonConnectUIProvider manifestUrl={MANIFEST_URL}>
-      <App />
-    </TonConnectUIProvider>
+    <App />
   </StrictMode>
 );

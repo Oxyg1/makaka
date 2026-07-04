@@ -1,15 +1,27 @@
 import { useEffect, useState } from 'react';
-import { useTonConnectUI } from '@tonconnect/ui-react';
+import { TonConnectUIProvider, useTonConnectUI } from '@tonconnect/ui-react';
 import { getWalletChallenge, getLinkedWallets, linkWallet, unlinkWallet } from '../api';
 import { hapticSuccess, hapticError, hapticImpact } from '../utils/haptics';
 import './WalletLink.css';
+
+const MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`;
 
 function shortAddr(a: string): string {
   const tail = a.includes(':') ? a.split(':')[1] : a;
   return tail.length > 10 ? `${tail.slice(0, 4)}…${tail.slice(-4)}` : tail;
 }
 
+// Провайдер живёт здесь же (а не в main.tsx): весь @tonconnect/ui-react
+// подгружается lazy-чанком только когда открыт Профиль.
 export default function WalletLink() {
+  return (
+    <TonConnectUIProvider manifestUrl={MANIFEST_URL}>
+      <WalletLinkInner />
+    </TonConnectUIProvider>
+  );
+}
+
+function WalletLinkInner() {
   const [tonConnectUI] = useTonConnectUI();
   const [linked, setLinked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);

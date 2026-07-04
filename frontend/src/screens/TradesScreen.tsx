@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { acceptOffer, cancelOffer, declineOffer, getOffers } from '../api';
 import type { OfferDirection } from '../types';
 import FrogCard from '../components/FrogCard';
+import { SkelCard } from '../components/Skeleton';
 import { hapticImpact, hapticSuccess, hapticError, hapticSelection } from '../utils/haptics';
 import './TradesScreen.css';
 
@@ -47,7 +48,11 @@ export default function TradesScreen({ myUserId, refreshKey, onChanged, embedded
       </header>
 
       <div className="screen__scroll">
-        {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>}
+        {loading && (
+          <div className="trades__list" style={{ paddingTop: 8 }}>
+            <SkelCard height={190} /><SkelCard height={190} /><SkelCard height={190} />
+          </div>
+        )}
 
         {!loading && offers.length === 0 && (
           <div className="empty">
