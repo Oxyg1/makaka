@@ -1,0 +1,118 @@
+.frog-card {
+  display: flex; flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s cubic-bezier(0.34,1.4,0.5,1), border-color 0.15s;
+  width: 100%;
+  color: var(--text);
+  contain: layout style; /* изоляция раскладки — плавнее скролл больших сеток */
+}
+.frog-card--btn:active { transform: scale(0.98); border-color: var(--border-strong); }
+
+/* Квадрат без зависимости от aspect-ratio (надёжно в TG WebView):
+   распорка ::before задаёт высоту = ширине, контент лежит абсолютно. */
+.frog-card__art { position: relative; width: 100%; }
+.frog-card__art::before { content: ''; display: block; padding-top: 100%; }
+.frog-card__art-fill {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Лёгкий верхний глянец, без нижнего затемнения */
+.frog-card__art-fill::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 38%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Шумовая текстура поверх фона (как у Gift Wiki) — едва заметное зерно */
+.frog-card__art-fill::before {
+  content: '';
+  position: absolute; inset: 0;
+  z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 130px 130px;
+  opacity: 0.05;
+}
+
+/* Символы паттерна, расставленные «звездой» вокруг модели как у TG.
+   Каждый — span с CSS mask: PNG-символ из CDN + цвет patternColor. */
+.frog-card__symbol {
+  position: absolute;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.frog-card__model-img {
+  position: relative; z-index: 2;
+  width: 72%; height: 72%;
+  object-fit: contain;
+  animation: img-in 0.28s ease;
+}
+@keyframes img-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+
+/* Номер — диагональной лентой-уголком в правом верхнем углу (как в Gift Wiki) */
+.frog-card__ribbon {
+  position: absolute; top: -1px; right: -1px;
+  width: 40%; height: 40%;
+  z-index: 6; pointer-events: none;
+}
+.frog-card__ribbon text {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.frog-card__badge {
+  position: absolute; top: 6px; left: 6px;
+  background: var(--primary-gradient); color: #111214;
+  padding: 2px 7px; border-radius: 99em;
+  font-size: 8.5px; font-weight: 800; letter-spacing: 0.1px;
+  box-shadow: var(--bevel);
+  z-index: 5;
+}
+
+/* Имя подарка — оверлеем поверх фона снизу (как в TG/Gift Wiki) */
+.frog-card__overlay {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  z-index: 4;
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 18px 10px 8px;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 100%);
+  pointer-events: none;
+}
+.frog-card__overlay-name {
+  font-size: 13px; font-weight: 800; color: #fff;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.frog-card__overlay-meta {
+  font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,0.82);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* sizes */
+.frog-card--sm .frog-card__model-img { width: 73%; height: 73%; }
+.frog-card--sm .frog-card__ribbon { width: 44%; height: 44%; }
+.frog-card--lg .frog-card__model-img { width: 66%; height: 66%; }
+.frog-card--lg .frog-card__ribbon { width: 30%; height: 30%; }
+.frog-card--lg .frog-card__overlay { padding: 30px 16px 14px; }
+.frog-card--lg .frog-card__overlay-name { font-size: 20px; }
+.frog-card--lg .frog-card__overlay-meta { font-size: 13px; }

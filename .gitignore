@@ -1,0 +1,16 @@
+node_modules
+dist
+*.log
+.env
+*.db
+*.db-*
+backend/logs
+backend/uploads
+.DS_Store
+
+# python
+__pycache__/
+*.pyc
+.venv/
+userbot/.env
+userbot/owners_snapshot.json
