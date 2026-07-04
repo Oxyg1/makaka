@@ -88,6 +88,7 @@ export default function WhalesScreen({ myUserId, config }: Props) {
                     style={{ '--i': i } as React.CSSProperties}
                     onClick={() => { hapticImpact('light'); setOpenWhale(w); }}
                   >
+                    {i === 0 && <span className="podium__crown">👑</span>}
                     <div className="podium__photo-wrap">
                       <div className="podium__photo">
                         {w.kind === 'wallet'
