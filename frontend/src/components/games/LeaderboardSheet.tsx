@@ -57,7 +57,6 @@ export default function LeaderboardSheet({ game, onClose }: { game: GameId; onCl
             <div className="podium">
               {top3.map((e, i) => (
                 <div key={e.telegram_id} className={`podium__item podium__item--${i}`} style={{ '--i': i } as React.CSSProperties}>
-                  {i === 0 && <span className="podium__crown">👑</span>}
                   <div className="podium__photo-wrap">
                     <div className="podium__photo">
                       {e.photo_url ? <img src={e.photo_url} alt="" /> : <span>{(e.name ?? e.username ?? '?')[0]?.toUpperCase()}</span>}

@@ -24,26 +24,26 @@
   --border-strong: rgba(255,255,255,0.13);
 
   --nav-height: 62px;
+  /* Только для реально «плавающих» стеклянных панелей (нижняя навигация,
+     шторки, оверлеи на фото) — не вешаем это на обычные карточки. */
   --glass-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    inset 0 0 0 0.5px rgba(255,255,255,0.04),
-    0 2px 8px rgba(0,0,0,0.16),
-    0 8px 24px rgba(0,0,0,0.22);
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 2px 8px rgba(0,0,0,0.14),
+    0 8px 22px rgba(0,0,0,0.2);
   --glass-shadow-indicator:
-    inset 0 1px 0 rgba(255,255,255,0.16),
-    inset 0 0 0 0.5px rgba(255,255,255,0.08),
-    0 2px 8px rgba(0,0,0,0.22);
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    0 2px 8px rgba(0,0,0,0.2);
   --card-shadow: 0 2px 20px rgba(0,0,0,0.5);
   --frog-glow: 0 0 0 1px rgba(74,222,128,0.18), 0 12px 36px rgba(22,163,74,0.18);
 
-  /* Portals-glass: мягкий рефлекс сверху-слева + едва заметный снизу.
-     Специально ЛЕГЧЕ оригинала — стекло не должно быть «жирным». */
+  /* Обычные карточки почти плоские: тонкая граница + едва заметный
+     верхний блик. Тяжёлое многослойное «стекло» оставляем только для
+     нижней навигации и floating-оверлеев — иначе интерфейс ощущается
+     тяжёлым и «змеиным». */
   --bevel:
-    inset 1.8px 3px 0 -2px rgba(255,255,255,0.16),
-    inset 2px 2px 0 -2px rgba(255,255,255,0.11),
-    inset -2px -2px 2px -2px rgba(255,255,255,0.09),
-    inset -1.8px -3px 0 -2px rgba(255,255,255,0.06);
-  --glass-panel: linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 100%);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.1);
+  --glass-panel: linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(255,255,255,0.003) 100%);
 
   --tg-theme-bg-color: #141415;
   --tg-theme-text-color: #f2f3f2;
@@ -87,14 +87,12 @@ body {
 .screen__scroll::-webkit-scrollbar { display: none; }
 
 .btn-primary {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0) 45%),
-    var(--primary-gradient);
+  background: var(--primary-gradient);
   color: #111214; border: none; border-radius: 99em;
   padding: 0 24px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
   -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.12s cubic-bezier(0.34,1.4,0.5,1);
   height: 50px; letter-spacing: -0.2px;
-  box-shadow: 0 8px 26px rgba(74,222,128,0.45), 0 1.5px 0 rgba(255,255,255,0.45) inset, var(--bevel);
+  box-shadow: 0 4px 20px rgba(74,222,128,0.4), var(--bevel);
 }
 .btn-primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; color: var(--text-soft); }
 .btn-primary:not(:disabled):active { opacity: 0.96; transform: scale(0.97); }
@@ -146,12 +144,12 @@ body {
 @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
 .modal-sheet {
   width: 100%; max-height: 92dvh;
-  background: linear-gradient(180deg, #222224 0%, #161617 100%);
-  border-radius: 28px 28px 0 0;
+  background: var(--bg-elev);
+  border-radius: 24px 24px 0 0;
   overflow: hidden; display: flex; flex-direction: column;
   animation: sheet-up 0.38s cubic-bezier(0.22,1,0.36,1);
   border-top: 1px solid var(--border-strong);
-  box-shadow: 0 -1px 0 rgba(255,255,255,0.10) inset, 0 -24px 60px rgba(0,0,0,0.5);
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.08) inset, 0 -20px 50px rgba(0,0,0,0.4);
 }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .modal-sheet__handle { width: 40px; height: 5px; background: rgba(255,255,255,0.22); border-radius: 99em; margin: 9px auto 0; flex-shrink: 0; }
